@@ -1,0 +1,21 @@
+<nz-modal
+  [nzVisible]="visible"
+  [nzTitle]="title"
+  [nzWidth]="width"
+  [nzFooter]="footerTpl"
+  [nzMaskClosable]="!loading"
+  [nzClosable]="!loading"
+  (nzOnCancel)="onCancel()">
+  <ng-container nzModalContent>
+    <form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <ng-content />
+    </form>
+  </ng-container>
+</nz-modal>
+
+<ng-template #footerTpl>
+  <button nz-button (click)="onCancel()" [disabled]="loading">{{ cancelText }}</button>
+  <button nz-button nzType="primary" [nzLoading]="loading" (click)="onSubmit()">
+    {{ okText }}
+  </button>
+</ng-template>

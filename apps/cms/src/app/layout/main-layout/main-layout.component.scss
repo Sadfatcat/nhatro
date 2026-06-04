@@ -1,0 +1,24 @@
+@use '../../../styles/variables' as *;
+
+.main-layout {
+  min-height: 100vh;
+  padding-top: $header-height;
+}
+
+.content-layout {
+  margin-left: $sidebar-width;
+  transition: margin-left $transition-slow;
+  min-height: calc(100vh - #{$header-height});
+  display: flex;
+  flex-direction: column;
+
+  &.collapsed { margin-left: $sidebar-collapsed-width; }
+}
+
+.page-content {
+  flex: 1;
+  padding: 24px;
+  background: var(--color-bg-subtle);
+  min-height: calc(100vh - #{$header-height} - #{$footer-height});
+  transition: background $transition-base;
+}

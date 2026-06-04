@@ -1,0 +1,41 @@
+@use '../../../../../styles/variables' as *;
+@use '../../../../../styles/mixins' as *;
+
+.filter-wrap {
+  @include card;
+  padding: 16px 24px 0;
+  margin-bottom: 16px;
+}
+
+.filter-header {
+  @include flex-between;
+  cursor: pointer;
+  padding-bottom: 12px;
+  user-select: none;
+
+  .filter-title {
+    font-weight: 500;
+    color: var(--color-text-primary);
+
+    nz-icon { margin-right: 6px; color: var(--color-primary); }
+  }
+}
+
+.filter-body {
+  overflow: hidden;
+  transition: max-height $transition-slow;
+  max-height: 1000px;
+
+  &.collapsed { max-height: 0; }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

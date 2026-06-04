@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@nhatro/shared-types": ["packages/shared-types/src/index.ts"],
+      "@nhatro/shared-auth": ["packages/shared-auth/src/index.ts"],
+      "@nhatro/shared-mocks": ["packages/shared-mocks/src/index.ts"],
+      "@nhatro/ui": ["packages/ui/src/index.ts"]
+    }
+  }
+}

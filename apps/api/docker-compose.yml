@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nhatro-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nhatro
+      POSTGRES_PASSWORD: nhatro
+      POSTGRES_DB: nhatro
+    ports:
+      - "5436:5432"
+    volumes:
+      - nhatro-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nhatro -d nhatro"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: node:18-alpine
+    container_name: nhatro-api
+    restart: unless-stopped
+    working_dir: /workspace/apps/api
+    command: node dist/main.js
+    environment:
+      DATABASE_URL: "postgresql://nhatro:nhatro@postgres:5432/nhatro?schema=public"
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../..:/workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  nhatro-pgdata:

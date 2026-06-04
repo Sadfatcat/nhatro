@@ -1,0 +1,13 @@
+<nz-layout class="main-layout">
+  <app-topbar (toggleSidebar)="toggleSidebar()" />
+
+  <app-sidebar [collapsed]="collapsed()" />
+
+  <nz-layout class="content-layout" [class.collapsed]="collapsed()">
+    <nz-content class="page-content">
+      <router-outlet></router-outlet>
+    </nz-content>
+
+    <app-footer />
+  </nz-layout>
+</nz-layout>

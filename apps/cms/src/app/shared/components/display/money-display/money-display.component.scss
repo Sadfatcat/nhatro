@@ -1,0 +1,7 @@
+.money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+
+  &.negative { color: var(--color-error); }
+  &.zero     { color: var(--color-text-muted); }
+}

@@ -1,0 +1,7 @@
+@if (type === 'skeleton') {
+  <nz-skeleton [nzActive]="active" [nzParagraph]="{ rows }" />
+} @else {
+  <div class="spin-wrap">
+    <nz-spin nzSimple [nzSize]="'large'" />
+  </div>
+}

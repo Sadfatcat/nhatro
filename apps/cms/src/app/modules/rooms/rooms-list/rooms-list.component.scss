@@ -1,0 +1,48 @@
+.rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 32px;
+  max-width: 1500px;
+  margin: 0 auto;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  &__filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__search {
+    width: 260px;
+  }
+
+  &__select {
+    width: 180px;
+  }
+
+  &__table {
+    background: var(--color-bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+  }
+}

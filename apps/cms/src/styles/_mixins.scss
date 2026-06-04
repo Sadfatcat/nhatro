@@ -1,0 +1,127 @@
+@use 'variables' as *;
+
+// ─── Responsive ───────────────────────────────────────────────────────────────
+@mixin respond-to($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    @media (min-width: map-get($breakpoints, $breakpoint)) {
+      @content;
+    }
+  }
+}
+
+// ─── Flex helpers ─────────────────────────────────────────────────────────────
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// ─── Truncate text ────────────────────────────────────────────────────────────
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ─── Scrollbar ────────────────────────────────────────────────────────────────
+@mixin custom-scrollbar {
+  &::-webkit-scrollbar       { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+    &:hover { background: var(--color-border-hover); }
+  }
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+@mixin card($elevated: false) {
+  background: var(--color-bg-card);
+  border-radius: $radius-md;
+  box-shadow: var(--shadow-card);
+
+  @if $elevated {
+    border: 0;
+    box-shadow: var(--shadow-elevated);
+  } @else {
+    border: 1px solid var(--color-border-light);
+  }
+}
+
+// ─── Badge ────────────────────────────────────────────────────────────────────
+@mixin badge-base {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px $space-s;
+  border-radius: 10px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  line-height: 1.5;
+}
+
+// ─── Button base ──────────────────────────────────────────────────────────────
+@mixin btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  cursor: pointer;
+  border: 0;
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  font-weight: $font-weight-normal;
+  line-height: 21px;
+  text-decoration: none;
+  transition: background $transition-fast, box-shadow $transition-fast, color $transition-fast, border-color $transition-fast;
+  white-space: nowrap;
+  user-select: none;
+
+  &:disabled {
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+// ─── Input underline ──────────────────────────────────────────────────────────
+@mixin input-underline {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-text-muted);
+  font-size: $font-size-base;
+  height: 37px;
+  padding: $space-s 0;
+  outline: none;
+  width: 100%;
+  transition: border-color $transition-fast;
+
+  &::placeholder { color: var(--color-text-secondary); }
+
+  &:focus {
+    border-bottom-width: 2px;
+    border-bottom-color: var(--color-border-focus);
+    color: var(--color-text-primary);
+  }
+
+  &:disabled {
+    background: var(--color-bg-subtle);
+    color: var(--color-text-disabled);
+    border-bottom-color: var(--color-border);
+  }
+}
+
+// ─── Elevation helpers ────────────────────────────────────────────────────────
+@mixin elevation($level: 1) {
+  @if $level == 0 { box-shadow: var(--shadow-flat); }
+  @else if $level == 1 { box-shadow: var(--shadow-raised); }
+  @else if $level == 2 { box-shadow: var(--shadow-elevated); }
+  @else if $level == 3 { box-shadow: var(--shadow-floating); }
+  @else if $level == 4 { box-shadow: var(--shadow-modal); }
+}

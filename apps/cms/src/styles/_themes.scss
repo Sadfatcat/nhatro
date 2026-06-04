@@ -1,0 +1,137 @@
+// ─── Light Theme (Whispering Pines) ──────────────────────────────────────────
+:root,
+[data-theme='light'] {
+  // Brand (Primary Forest Green #5D774C, Secondary Sky Blue #356574)
+  --color-primary:        #5d774c;
+  --color-primary-hover:  #455e36;
+  --color-primary-active: #354d27;
+  --color-accent:         #356574;
+  --color-accent-text:    #356574;
+
+  // Secondary container (active nav bg)
+  --color-secondary-container:    #ceecb7;
+  --color-on-secondary-container: #455e36;
+
+  // Backgrounds (Surface #f9faf4)
+  --color-bg-base:             #f9faf4;
+  --color-bg-card:             #ffffff;
+  --color-bg-subtle:           #f4f4ee;
+  --color-bg-container:        #eeeee8;
+  --color-bg-container-high:   #e8e9e3;
+  --color-bg-hover:            #e2e3dd;
+
+  // Text
+  --color-text-primary:   #1a1c19;
+  --color-text-secondary: #44483f;
+  --color-text-muted:     #74796e;
+  --color-text-disabled:  #c4c8bc;
+  --color-text-inverse:   #ffffff;
+
+  // Borders
+  --color-border:         #c4c8bc;
+  --color-border-light:   #dadad5;
+  --color-border-focus:   #5d774c;
+  --color-border-hover:   #74796e;
+
+  // Status
+  --color-success:        #345f56;
+  --color-success-bg:     #beece0;
+  --color-warning:        #b07b3e;
+  --color-warning-bg:     #f3e8d6;
+  --color-error:          #ba1a1a;
+  --color-error-bg:       #ffdad6;
+  --color-info:           #356574;
+  --color-info-bg:        #b7e7f9;
+
+  // Layout (light sidebar)
+  --color-sidebar-bg:        #f4f4ee;
+  --color-sidebar-text:      #44483f;
+  --color-sidebar-active:    #455e36;
+  --color-sidebar-active-bg: #ceecb7;
+  --color-sidebar-border:    #c4c8bc;
+  --color-header-bg:         #f9faf4;
+  --color-header-border:     #c4c8bc;
+  --color-footer-bg:         #eeeee8;
+  --color-footer-text:       #74796e;
+
+  // Elevation (airy, minimal shadows per design spec)
+  --shadow-flat:     none;
+  --shadow-raised:   0 1px 4px rgba(26, 28, 25, 0.06);
+  --shadow-elevated: 0 4px 12px rgba(26, 28, 25, 0.08);
+  --shadow-floating: 0 8px 24px rgba(26, 28, 25, 0.05);
+  --shadow-modal:    0 12px 28px rgba(26, 28, 25, 0.1);
+
+  --shadow-sm:   var(--shadow-raised);
+  --shadow-md:   var(--shadow-elevated);
+  --shadow-lg:   var(--shadow-floating);
+  --shadow-card: var(--shadow-flat);
+}
+
+// ─── Dark Theme (Nocturnal Forest) ───────────────────────────────────────────
+[data-theme='dark'],
+body.theme-dark {
+  // Brand
+  --color-primary:        #b7d7a8;
+  --color-primary-hover:  #c9e5ba;
+  --color-primary-active: #9abd87;
+  --color-accent:         #8eb2ac;
+  --color-accent-text:    #c3ddd9;
+
+  // Secondary container (active nav bg)
+  --color-secondary-container:    #24352f;
+  --color-on-secondary-container: #c9e5ba;
+
+  // Backgrounds
+  --color-bg-base:             #101815;
+  --color-bg-card:             #18211d;
+  --color-bg-subtle:           #1d2823;
+  --color-bg-container:        #202b26;
+  --color-bg-container-high:   #2a3731;
+  --color-bg-hover:            #304039;
+
+  // Text
+  --color-text-primary:   #eef2e9;
+  --color-text-secondary: #c8d0c3;
+  --color-text-muted:     #8d9889;
+  --color-text-disabled:  #58635a;
+  --color-text-inverse:   #101815;
+
+  // Borders
+  --color-border:         #34423b;
+  --color-border-light:   #26332d;
+  --color-border-focus:   #b7d7a8;
+  --color-border-hover:   #5b7067;
+
+  // Status
+  --color-success:        #a9dbc8;
+  --color-success-bg:     #173c34;
+  --color-warning:        #e9c88f;
+  --color-warning-bg:     #44331e;
+  --color-error:          #ffb4ab;
+  --color-error-bg:       #5f1714;
+  --color-info:           #b9dce4;
+  --color-info-bg:        #173a42;
+
+  // Layout
+  --color-sidebar-bg:        #141f1c;
+  --color-sidebar-text:      #c8d0c3;
+  --color-sidebar-active:    #e9f2df;
+  --color-sidebar-active-bg: #24352f;
+  --color-sidebar-border:    #26332d;
+  --color-header-bg:         #141f1c;
+  --color-header-border:     #26332d;
+  --color-footer-bg:         #141f1c;
+  --color-footer-text:       #8d9889;
+
+  // Elevation
+  --shadow-flat:     none;
+  --shadow-raised:   0 1px 5px rgba(0, 0, 0, 0.24);
+  --shadow-elevated: 0 8px 20px rgba(0, 0, 0, 0.26);
+  --shadow-floating: 0 14px 32px rgba(0, 0, 0, 0.28);
+  --shadow-modal:    0 18px 44px rgba(0, 0, 0, 0.34);
+
+  --shadow-sm:   var(--shadow-raised);
+  --shadow-md:   var(--shadow-elevated);
+  --shadow-lg:   var(--shadow-floating);
+  --shadow-card: var(--shadow-flat);
+}

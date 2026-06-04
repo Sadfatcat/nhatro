@@ -1,0 +1,23 @@
+<div class="grid-legend">
+  @for (item of legend; track item.status) {
+    <span class="legend-item">
+      <span class="legend-dot" [style.background]="item.border"></span>
+      {{ item.label }}
+    </span>
+  }
+</div>
+
+<div class="room-grid">
+  @for (room of rooms; track room.id) {
+    <div
+      class="room-cell"
+      [class.selectable]="selectable"
+      [class.selected]="selectedId === room.id"
+      [style]="getStyle(room.status)"
+      nz-tooltip
+      [nzTooltipTitle]="room.roomNumber + ' — ' + getLabel(room.status)"
+      (click)="selectable && roomClick.emit(room)">
+      <span class="room-number">{{ room.roomNumber }}</span>
+    </div>
+  }
+</div>

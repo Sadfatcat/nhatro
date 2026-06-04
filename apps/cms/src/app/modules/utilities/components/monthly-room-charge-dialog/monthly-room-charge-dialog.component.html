@@ -1,0 +1,112 @@
+<app-form-dialog
+  [visible]="visible"
+  [title]="'Tính tiền tháng — Phòng ' + room.roomNumber"
+  [form]="form"
+  [width]="640"
+  okText="Tính & Lưu"
+  (visibleChange)="visibleChange.emit($event)"
+  (submitted)="onSubmit()"
+  (cancelled)="onCancel()">
+
+  <div>
+    <nz-divider nzText="Chỉ số điện" nzOrientation="left" />
+    <nz-row [nzGutter]="16">
+      <nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Chỉ số điện cũ</nz-form-label>
+          <nz-form-control nzErrorTip="Nhập chỉ số điện cũ hợp lệ">
+            <nz-input-number formControlName="oldElectricity" [nzMin]="0" style="width:100%" nzPlaceHolder="0" />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+      <nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Chỉ số điện mới</nz-form-label>
+          <nz-form-control [nzErrorTip]="form.get('newElectricity')?.errors?.['lessThanOld'] ? 'Chỉ số mới phải ≥ chỉ số cũ' : 'Nhập chỉ số điện mới'">
+            <nz-input-number formControlName="newElectricity" [nzMin]="0" style="width:100%" nzPlaceHolder="0" />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+    </nz-row>
+
+    <nz-divider nzText="Chỉ số nước" nzOrientation="left" />
+    <nz-row [nzGutter]="16">
+      <nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Chỉ số nước cũ</nz-form-label>
+          <nz-form-control nzErrorTip="Nhập chỉ số nước cũ hợp lệ">
+            <nz-input-number formControlName="oldWater" [nzMin]="0" style="width:100%" nzPlaceHolder="0" />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+      <nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Chỉ số nước mới</nz-form-label>
+          <nz-form-control [nzErrorTip]="form.get('newWater')?.errors?.['lessThanOld'] ? 'Chỉ số mới phải ≥ chỉ số cũ' : 'Nhập chỉ số nước mới'">
+            <nz-input-number formControlName="newWater" [nzMin]="0" style="width:100%" nzPlaceHolder="0" />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+    </nz-row>
+
+    <nz-divider nzText="Đơn giá" nzOrientation="left" />
+    <nz-row [nzGutter]="16">
+      <nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Đơn giá điện (đ/kWh)</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="electricityUnitPrice" [nzMin]="1" style="width:100%" />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+      <nz-col [nzSpan]="12">
+        <nz-form-item>
+          <nz-form-label nzRequired>Đơn giá nước (đ/m³)</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="waterUnitPrice" [nzMin]="1" style="width:100%" />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+    </nz-row>
+
+    <nz-divider nzText="Phụ thu" nzOrientation="left" />
+    <nz-row [nzGutter]="16">
+      <nz-col [nzSpan]="8">
+        <nz-form-item>
+          <nz-form-label>Phụ thu (đ)</nz-form-label>
+          <nz-form-control>
+            <nz-input-number formControlName="extraFee" [nzMin]="0" style="width:100%" />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+      <nz-col [nzSpan]="16">
+        <nz-form-item>
+          <nz-form-label>Ghi chú phụ thu</nz-form-label>
+          <nz-form-control>
+            <input nz-input formControlName="extraFeeNote" placeholder="Ví dụ: phí vệ sinh, rác..." />
+          </nz-form-control>
+        </nz-form-item>
+      </nz-col>
+    </nz-row>
+
+    <!-- Preview -->
+    <div class="preview-section">
+      <button nz-button type="button" nzType="dashed" style="width:100%;margin-bottom:12px" (click)="recalculate()">
+        Xem trước tính toán
+      </button>
+      @if (preview(); as p) {
+        <div class="preview-grid">
+          <div class="preview-row"><span>Tiêu thụ điện</span><span>{{ p.electricityUsage }} kWh × <app-money-display [value]="p.electricityUnitPrice" /></span></div>
+          <div class="preview-row"><span>Tiền điện</span><strong><app-money-display [value]="p.electricityAmount" /></strong></div>
+          <div class="preview-row"><span>Tiêu thụ nước</span><span>{{ p.waterUsage }} m³ × <app-money-display [value]="p.waterUnitPrice" /></span></div>
+          <div class="preview-row"><span>Tiền nước</span><strong><app-money-display [value]="p.waterAmount" /></strong></div>
+          <div class="preview-row"><span>Tiền phòng</span><strong><app-money-display [value]="room.price" /></strong></div>
+          @if (p.extraFee > 0) {
+            <div class="preview-row"><span>Phụ thu</span><strong><app-money-display [value]="p.extraFee" /></strong></div>
+          }
+          <div class="preview-row total"><span>Tổng cộng</span><strong><app-money-display [value]="p.totalAmount" /></strong></div>
+        </div>
+      }
+    </div>
+  </div>
+</app-form-dialog>

@@ -1,0 +1,18 @@
+{
+  "name": "nhatro",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.8",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "npm run start --workspace @nhatro/cms",
+    "build": "npm run build --workspace @nhatro/cms",
+    "test": "npm run test --workspace @nhatro/cms",
+    "cms:start": "npm run start --workspace @nhatro/cms",
+    "cms:build": "npm run build --workspace @nhatro/cms",
+    "cms:test": "npm run test --workspace @nhatro/cms"
+  }
+}

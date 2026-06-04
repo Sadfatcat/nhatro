@@ -1,0 +1,29 @@
+@use '../../../../../styles/variables' as *;
+@use '../../../../../styles/mixins' as *;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.table-row {
+  cursor: pointer;
+  transition: background-color $transition-fast;
+
+  &:hover td {
+    background-color: var(--color-bg-hover);
+  }
+}
+
+.action-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  button {
+    min-width: unset;
+    padding: 0 8px;
+  }
+}
+

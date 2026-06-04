@@ -1,0 +1,127 @@
+<div class="tenant-home">
+
+  <!-- ── Header container ── -->
+  <div class="page-header-container">
+    <nav class="breadcrumb">
+      <span class="crumb-active">Trang chủ</span>
+    </nav>
+    <div class="welcome-section">
+      <div class="welcome-text">
+        <h2 class="welcome-title">
+          Chào mừng trở về nhà,
+          <span class="welcome-room">phòng {{ room()?.roomNumber ?? '—' }}</span>
+        </h2>
+        <p class="welcome-sub">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Utility stat cards ── -->
+  <div class="util-grid">
+
+    <!-- Điện -->
+    <div class="glass-card">
+      <div class="glass-card__blob glass-card__blob--primary"></div>
+      <div class="glass-card__header">
+        <div class="util-icon util-icon--primary">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+            <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
+          </svg>
+        </div>
+        <span class="util-tag util-tag--primary">ĐIỆN NĂNG</span>
+      </div>
+      <div class="util-stats">
+        <div class="util-stat">
+          <p class="util-stat__label">Tháng trước</p>
+          <p class="util-stat__value">{{ elecPrev() | number }}<span class="util-unit">kWh</span></p>
+        </div>
+        <div class="util-stat">
+          <p class="util-stat__label">Tháng này</p>
+          <p class="util-stat__value">{{ elecCurr() | number }}<span class="util-unit">kWh</span></p>
+        </div>
+        <div class="util-stat util-stat--highlight util-stat--primary">
+          <p class="util-stat__label">Tổng tiêu thụ</p>
+          <p class="util-stat__value">{{ elecUsed() | number }}<span class="util-unit">kWh</span></p>
+          <p class="util-stat__amount">≈ {{ elecAmount() | number:'1.0-0' }}₫</p>
+        </div>
+      </div>
+      @if (lastUpdated()) {
+        <p class="glass-card__note">
+          Cập nhật lần cuối: {{ lastUpdated() | date:'dd/MM/yyyy' }}
+        </p>
+      }
+    </div>
+
+    <!-- Nước -->
+    <div class="glass-card">
+      <div class="glass-card__blob glass-card__blob--tertiary"></div>
+      <div class="glass-card__header">
+        <div class="util-icon util-icon--tertiary">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/>
+          </svg>
+        </div>
+        <span class="util-tag util-tag--tertiary">NƯỚC SẠCH</span>
+      </div>
+      <div class="util-stats">
+        <div class="util-stat">
+          <p class="util-stat__label">Tháng trước</p>
+          <p class="util-stat__value">{{ waterPrev() | number }}<span class="util-unit">m³</span></p>
+        </div>
+        <div class="util-stat">
+          <p class="util-stat__label">Tháng này</p>
+          <p class="util-stat__value">{{ waterCurr() | number }}<span class="util-unit">m³</span></p>
+        </div>
+        <div class="util-stat util-stat--highlight util-stat--tertiary">
+          <p class="util-stat__label">Tổng tiêu thụ</p>
+          <p class="util-stat__value">{{ waterUsed() | number }}<span class="util-unit">m³</span></p>
+          <p class="util-stat__amount">≈ {{ waterAmount() | number:'1.0-0' }}₫</p>
+        </div>
+      </div>
+      @if (lastUpdated()) {
+        <p class="glass-card__note">
+          Cập nhật lần cuối: {{ lastUpdated() | date:'dd/MM/yyyy' }}
+        </p>
+      }
+    </div>
+
+  </div>
+
+  <!-- ── Charts ── -->
+  <div class="chart-grid">
+
+    <div class="chart-card">
+      <div class="chart-card__header">
+        <div>
+          <h3 class="chart-card__title">Tiêu thụ Điện theo tháng</h3>
+          <p class="chart-card__sub">Thống kê 6 tháng gần nhất (kWh)</p>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas #elecChart></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card__header">
+        <div>
+          <h3 class="chart-card__title">Tiêu thụ Nước theo tháng</h3>
+          <p class="chart-card__sub">Thống kê 6 tháng gần nhất (m³)</p>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas #waterChart></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Room photo placeholder ── -->
+  <div class="room-banner">
+    <div class="room-banner__overlay">
+      <span class="room-banner__label">Căn hộ của bạn</span>
+      <h4 class="room-banner__title">Phòng {{ room()?.roomNumber ?? '—' }}</h4>
+    </div>
+  </div>
+
+</div>

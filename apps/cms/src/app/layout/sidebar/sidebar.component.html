@@ -1,0 +1,70 @@
+<aside class="app-sidebar" [class.collapsed]="collapsed">
+
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    @if (!collapsed) {
+      <span class="logo-text">Menu</span>
+    } @else {
+      <span class="logo-icon">M</span>
+    }
+  </div>
+
+  <!-- Nav -->
+  <nav class="sidebar-nav">
+    @for (item of menuItems; track item.key) {
+      @if (canShow(item)) {
+
+        @if (item.divider) {
+          <div class="nav-divider"></div>
+        } @else if (!item.children?.length && item.route) {
+          <a class="nav-item" [class.active]="isActive(item.route)" [href]="item.route" (click)="navigate(item.route); $event.preventDefault()">
+            @if (item.icon) {
+              <nz-icon [nzType]="item.icon" class="nav-icon" />
+            }
+            @if (!collapsed) {
+              <span class="nav-label">{{ item.label }}</span>
+            }
+          </a>
+        } @else if (item.children?.length) {
+          <div class="nav-group" [class.open]="isSubmenuOpen(item)">
+            <div class="nav-item nav-group-header">
+              @if (item.icon) { <nz-icon [nzType]="item.icon" class="nav-icon" /> }
+              @if (!collapsed) {
+                <span class="nav-label">{{ item.label }}</span>
+                <nz-icon nzType="down" class="nav-chevron" />
+              }
+            </div>
+            @if (!collapsed) {
+              <div class="nav-children">
+                @for (child of item.children; track child.key) {
+                  @if (canShow(child)) {
+                      <a class="nav-item nav-child" [class.active]="isActive(child.route)" [href]="child.route" (click)="navigate(child.route); $event.preventDefault()">
+                      @if (child.icon) { <nz-icon [nzType]="child.icon" class="nav-icon" /> }
+                      <span class="nav-label">{{ child.label }}</span>
+                    </a>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+
+      }
+    }
+  </nav>
+
+  <!-- Bottom actions -->
+  @if (!collapsed) {
+    <div class="sidebar-bottom">
+      <button class="btn-add-room" (click)="navigate('/app/rooms/new')">
+        <nz-icon nzType="plus" />
+        Cung cấp phòng
+      </button>
+      <a class="nav-item nav-item--bottom" (click)="navigate('/app/settings')">
+        <nz-icon nzType="setting" class="nav-icon" />
+        <span class="nav-label">Cài đặt</span>
+      </a>
+    </div>
+  }
+
+</aside>

@@ -1,0 +1,120 @@
+<div class="filter-wrap">
+  @if (config.collapsible) {
+    <div class="filter-header" (click)="toggleCollapse()">
+      <span class="filter-title">
+        <nz-icon nzType="filter" />
+        Bộ lọc
+      </span>
+      <nz-icon [nzType]="collapsed() ? 'down' : 'up'" />
+    </div>
+  }
+
+  <div class="filter-body" [class.collapsed]="collapsed()">
+    <form [formGroup]="form" (ngSubmit)="onSearch()">
+      <nz-row [nzGutter]="[16, 8]" nzAlign="bottom">
+
+        @for (field of config.fields; track field.key) {
+          <nz-col [nzSpan]="field.span ?? 6">
+            <nz-form-item>
+              <nz-form-label>{{ field.label }}</nz-form-label>
+              <nz-form-control>
+
+                @switch (field.type) {
+                  @case ('text') {
+                    <input
+                      nz-input
+                      [formControlName]="field.key"
+                      [placeholder]="field.placeholder ?? 'Nhập ' + field.label" />
+                  }
+
+                  @case ('number') {
+                    <input
+                      nz-input
+                      type="number"
+                      [formControlName]="field.key"
+                      [placeholder]="field.placeholder ?? 'Nhập ' + field.label" />
+                  }
+
+                  @case ('select') {
+                    <nz-select
+                      [formControlName]="field.key"
+                      [nzPlaceHolder]="field.placeholder ?? 'Chọn ' + field.label"
+                      nzAllowClear
+                      style="width: 100%">
+                      @for (opt of field.options; track opt.value) {
+                        <nz-option [nzLabel]="opt.label" [nzValue]="opt.value" />
+                      }
+                    </nz-select>
+                  }
+
+                  @case ('multiselect') {
+                    <nz-select
+                      [formControlName]="field.key"
+                      [nzPlaceHolder]="field.placeholder ?? 'Chọn ' + field.label"
+                      nzMode="multiple"
+                      nzAllowClear
+                      style="width: 100%">
+                      @for (opt of field.options; track opt.value) {
+                        <nz-option [nzLabel]="opt.label" [nzValue]="opt.value" />
+                      }
+                    </nz-select>
+                  }
+
+                  @case ('date') {
+                    <nz-date-picker
+                      [formControlName]="field.key"
+                      [nzPlaceHolder]="field.placeholder ?? 'Chọn ngày'"
+                      nzFormat="dd/MM/yyyy"
+                      style="width: 100%" />
+                  }
+
+                  @case ('daterange') {
+                    <nz-range-picker
+                      [formControlName]="field.key"
+                      nzFormat="dd/MM/yyyy"
+                      style="width: 100%" />
+                  }
+
+                  @case ('checkbox') {
+                    <div class="checkbox-group">
+                      @for (opt of field.options; track opt.value) {
+                        <label nz-checkbox [nzValue]="opt.value">{{ opt.label }}</label>
+                      }
+                    </div>
+                  }
+
+                  @case ('radio') {
+                    <nz-radio-group [formControlName]="field.key">
+                      @for (opt of field.options; track opt.value) {
+                        <label nz-radio [nzValue]="opt.value">{{ opt.label }}</label>
+                      }
+                    </nz-radio-group>
+                  }
+                }
+
+              </nz-form-control>
+            </nz-form-item>
+          </nz-col>
+        }
+
+        <nz-col [nzSpan]="6">
+          <nz-form-item>
+            <nz-form-control>
+              <div class="filter-actions">
+                <button nz-button nzType="primary" type="submit">
+                  <nz-icon nzType="search" />
+                  Tìm kiếm
+                </button>
+                <button nz-button type="button" (click)="onReset()">
+                  <nz-icon nzType="reload" />
+                  Đặt lại
+                </button>
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+
+      </nz-row>
+    </form>
+  </div>
+</div>

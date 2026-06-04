@@ -1,0 +1,13 @@
+<nz-form-item>
+  <nz-form-label [nzRequired]="required">
+    {{ label }}
+    @if (hint) {
+      <span class="field-hint">{{ hint }}</span>
+    }
+  </nz-form-label>
+  <nz-form-control
+    [nzValidateStatus]="validationStatus"
+    [nzErrorTip]="resolvedError">
+    <ng-content />
+  </nz-form-control>
+</nz-form-item>

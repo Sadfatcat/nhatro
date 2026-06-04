@@ -1,0 +1,60 @@
+@use '../../../../../styles/variables' as *;
+
+.grid-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $font-size-sm;
+  color: var(--color-text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.room-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  border: 1.5px solid;
+  border-radius: $radius-md;
+  transition: transform $transition-fast, box-shadow $transition-fast;
+  user-select: none;
+
+  &.selectable {
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: var(--shadow-sm);
+    }
+  }
+
+  &.selected {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+}
+
+.room-number {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}

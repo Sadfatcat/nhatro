@@ -1,0 +1,202 @@
+<form
+  nz-form
+  [formGroup]="form"
+  [nzLayout]="schema.layout ?? 'vertical'"
+  (ngSubmit)="onSubmit()">
+
+  <nz-row [nzGutter]="[16, 0]">
+
+    @for (field of schema.fields; track field.key) {
+      @if (isVisible(field.key)) {
+        <nz-col [nzSpan]="getFieldSpan(field)">
+          <nz-form-item>
+            @if (field.type !== 'hidden') {
+              <nz-form-label
+                [nzRequired]="field.validation?.required ?? false"
+                [nzFor]="field.key">
+                {{ field.label }}
+                @if (field.hint) {
+                  <span nz-tooltip [nzTooltipTitle]="field.hint" class="hint-icon">
+                    <nz-icon nzType="question-circle" nzTheme="outline" />
+                  </span>
+                }
+              </nz-form-label>
+            }
+
+            <nz-form-control
+              [nzValidateStatus]="hasError(field) ? 'error' : (getCtrl(field.key).pending ? 'validating' : '')"
+              [nzErrorTip]="getError(field) ?? ''">
+
+              @switch (field.type) {
+                @case ('text') {
+                  @if (field.addonBefore) {
+                    <nz-input-group [nzAddOnBefore]="field.addonBefore">
+                      <input
+                        nz-input
+                        [id]="field.key"
+                        [formControlName]="field.key"
+                        [placeholder]="field.placeholder ?? ''" />
+                    </nz-input-group>
+                  } @else {
+                    <input
+                      nz-input
+                      [id]="field.key"
+                      [formControlName]="field.key"
+                      [placeholder]="field.placeholder ?? ''" />
+                  }
+                }
+
+                @case ('email') {
+                  <input
+                    nz-input
+                    type="email"
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [placeholder]="field.placeholder ?? 'example@email.com'" />
+                }
+
+                @case ('password') {
+                  <nz-input-group [nzSuffix]="pwSuffix">
+                    <input
+                      nz-input
+                      [id]="field.key"
+                      [type]="isPasswordVisible(field.key) ? 'text' : 'password'"
+                      [formControlName]="field.key"
+                      [placeholder]="field.placeholder ?? '••••••••'" />
+                  </nz-input-group>
+                  <ng-template #pwSuffix>
+                    <nz-icon
+                      [nzType]="isPasswordVisible(field.key) ? 'eye' : 'eye-invisible'"
+                      (click)="togglePasswordVisibility(field.key)"
+                      style="cursor: pointer" />
+                  </ng-template>
+                }
+
+                @case ('number') {
+                  <input
+                    nz-input
+                    type="number"
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [placeholder]="field.placeholder ?? '0'" />
+                }
+
+                @case ('tel') {
+                  <input
+                    nz-input
+                    type="tel"
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [placeholder]="field.placeholder ?? '0912 345 678'" />
+                }
+
+                @case ('textarea') {
+                  <textarea
+                    nz-input
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [placeholder]="field.placeholder ?? ''"
+                    [nzAutosize]="{ minRows: 3, maxRows: 8 }">
+                  </textarea>
+                }
+
+                @case ('select') {
+                  <nz-select
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [nzPlaceHolder]="field.placeholder ?? 'Chọn...'"
+                    nzAllowClear
+                    nzShowSearch
+                    style="width: 100%">
+                    @for (opt of field.options; track opt.value) {
+                      <nz-option [nzLabel]="opt.label" [nzValue]="opt.value" />
+                    }
+                  </nz-select>
+                }
+
+                @case ('multiselect') {
+                  <nz-select
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [nzPlaceHolder]="field.placeholder ?? 'Chọn nhiều...'"
+                    nzMode="multiple"
+                    nzAllowClear
+                    nzShowSearch
+                    style="width: 100%">
+                    @for (opt of field.options; track opt.value) {
+                      <nz-option [nzLabel]="opt.label" [nzValue]="opt.value" />
+                    }
+                  </nz-select>
+                }
+
+                @case ('radio') {
+                  <nz-radio-group [formControlName]="field.key">
+                    @for (opt of field.options; track opt.value) {
+                      <label nz-radio [nzValue]="opt.value">{{ opt.label }}</label>
+                    }
+                  </nz-radio-group>
+                }
+
+                @case ('checkbox') {
+                  <label nz-checkbox [formControlName]="field.key">
+                    {{ field.placeholder ?? field.label }}
+                  </label>
+                }
+
+                @case ('date') {
+                  <nz-date-picker
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [nzPlaceHolder]="field.placeholder ?? 'dd/mm/yyyy'"
+                    nzFormat="dd/MM/yyyy"
+                    style="width: 100%" />
+                }
+
+                @case ('datetime') {
+                  <nz-date-picker
+                    [id]="field.key"
+                    [formControlName]="field.key"
+                    [nzPlaceHolder]="field.placeholder ?? 'dd/mm/yyyy HH:mm'"
+                    nzFormat="dd/MM/yyyy HH:mm"
+                    nzShowTime
+                    style="width: 100%" />
+                }
+
+                @case ('file') {
+                  <nz-upload [formControlName]="field.key">
+                    <button nz-button type="button">
+                      <nz-icon nzType="upload" />
+                      Chọn tệp
+                    </button>
+                  </nz-upload>
+                }
+
+                @case ('hidden') {
+                  <input type="hidden" [formControlName]="field.key" />
+                }
+              }
+
+            </nz-form-control>
+          </nz-form-item>
+        </nz-col>
+      }
+    }
+
+  </nz-row>
+
+  <div class="form-actions">
+    <button
+      nz-button
+      nzType="primary"
+      type="submit"
+      [nzLoading]="loading">
+      {{ schema.submitLabel ?? 'Lưu' }}
+    </button>
+    @if (schema.cancelLabel !== null) {
+      <button nz-button type="button" (click)="onCancel()">
+        {{ schema.cancelLabel ?? 'Hủy' }}
+      </button>
+    }
+  </div>
+
+</form>

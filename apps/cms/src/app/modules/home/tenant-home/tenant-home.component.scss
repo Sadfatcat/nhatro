@@ -1,0 +1,255 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+.tenant-home {
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+// ── Welcome ──────────────────────────────────────────────────────────────────
+.welcome-section {
+  padding-bottom: 4px;
+}
+
+.welcome-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+
+.welcome-room {
+  color: var(--color-primary);
+}
+
+.welcome-sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0;
+  text-transform: capitalize;
+}
+
+// ── Glass cards ───────────────────────────────────────────────────────────────
+.util-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.glass-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  &__blob {
+    position: absolute;
+    right: -32px;
+    top: -32px;
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    filter: blur(40px);
+    pointer-events: none;
+
+    &--primary  { background: var(--color-secondary-container); }
+    &--tertiary { background: var(--color-info-bg); }
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__note {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.util-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &--primary  { background: var(--color-secondary-container); color: var(--color-primary); }
+  &--tertiary { background: var(--color-info-bg); color: var(--color-info); }
+}
+
+.util-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 99px;
+
+  &--primary  { color: var(--color-primary); background: var(--color-secondary-container); }
+  &--tertiary { color: var(--color-info);    background: var(--color-info-bg); }
+}
+
+// ── Stat cells ────────────────────────────────────────────────────────────────
+.util-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.util-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  &__label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  &__value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  &__amount {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  &--highlight {
+    padding: 10px 12px;
+    border-radius: 16px;
+
+    .util-stat__label  { font-weight: 700; }
+    .util-stat__value  { font-size: 20px; }
+  }
+
+  &--primary {
+    background: var(--color-secondary-container);
+    border: 1px solid var(--color-border);
+    .util-stat__label { color: var(--color-primary); }
+    .util-stat__value { color: var(--color-primary); }
+  }
+
+  &--tertiary {
+    background: var(--color-info-bg);
+    border: 1px solid var(--color-border);
+    .util-stat__label { color: var(--color-info); }
+    .util-stat__value { color: var(--color-info); }
+  }
+}
+
+.util-unit {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  margin-left: 3px;
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.chart-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 24px;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 2px;
+  }
+
+  &__sub {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+}
+
+.chart-wrap {
+  height: 220px;
+  position: relative;
+}
+
+// ── Room banner ───────────────────────────────────────────────────────────────
+.room-banner {
+  height: 220px;
+  border-radius: 20px;
+  background: url('/anhdep.png') center center / cover no-repeat;
+  border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 60%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 24px 28px;
+  }
+
+  &__label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.75);
+    margin-bottom: 4px;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+}

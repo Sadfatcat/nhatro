@@ -1,0 +1,19 @@
+@use '../../../../../styles/variables' as *;
+
+:host { display: block; }
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.hint-icon {
+  margin-left: 4px;
+  color: var(--color-text-muted);
+  cursor: help;
+  font-size: $font-size-sm;
+}

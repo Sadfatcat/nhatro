@@ -1,0 +1,82 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  username     String?   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         String
+  isActive     Boolean   @default(true)
+  roomId       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  landlord     Landlord?
+  tenant       Tenant?
+}
+
+model Room {
+  id          String         @id @default(cuid())
+  roomNumber  String         @unique
+  floor       Int
+  price       Int
+  status      String         @default("AVAILABLE")
+  description String?
+  branchId    String?
+  landlordId  String?
+  billingDay  Int            @default(15)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tenant      Tenant?
+  landlord    Landlord?      @relation(fields: [landlordId], references: [id])
+  utilityRecord UtilityRecord?
+}
+
+model UtilityRecord {
+  id            String   @id @default(cuid())
+  roomId        String   @unique
+  prevElec      Float    @default(0)
+  currElec      Float    @default(0)
+  prevWater     Float    @default(0)
+  currWater     Float    @default(0)
+  recordedAt    DateTime @default(now())
+  billingMonth  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  room          Room     @relation(fields: [roomId], references: [id])
+}
+
+model Tenant {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  roomId       String    @unique
+  fullName     String
+  phone        String?
+  dateOfBirth  DateTime?
+  hometown     String?
+  nationalId   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id])
+  room         Room      @relation(fields: [roomId], references: [id])
+}
+
+model Landlord {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  fullName  String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  rooms     Room[]
+}

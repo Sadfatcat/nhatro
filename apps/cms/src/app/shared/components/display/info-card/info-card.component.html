@@ -1,0 +1,22 @@
+<nz-card class="info-card" [nzBordered]="false">
+  <div class="card-body">
+    @if (config.icon) {
+      <div class="card-icon" [style.color]="config.color ?? 'var(--color-primary)'">
+        <nz-icon [nzType]="config.icon" nzTheme="outline" />
+      </div>
+    }
+    <div class="card-content">
+      <div class="card-value">
+        {{ config.value }}
+        @if (config.unit) { <span class="card-unit">{{ config.unit }}</span> }
+      </div>
+      <div class="card-title">{{ config.title }}</div>
+    </div>
+  </div>
+  @if (config.trend !== undefined) {
+    <div class="card-trend" [class.positive]="config.trend >= 0" [class.negative]="config.trend < 0">
+      <nz-icon [nzType]="config.trend >= 0 ? 'arrow-up' : 'arrow-down'" />
+      {{ config.trend | number:'1.1-1' }}%
+    </div>
+  }
+</nz-card>

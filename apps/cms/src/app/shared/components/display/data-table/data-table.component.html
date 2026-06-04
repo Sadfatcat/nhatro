@@ -1,0 +1,105 @@
+<nz-table
+  #nzTable
+  [nzData]="config.data"
+  [nzLoading]="config.loading ?? false"
+  [nzBordered]="config.bordered ?? false"
+  [nzSize]="config.size ?? 'default'"
+  [nzScroll]="config.scroll ?? {}"
+  [nzTotal]="config.pagination?.total ?? 0"
+  [nzPageIndex]="config.pagination?.page ?? 1"
+  [nzPageSize]="config.pagination?.pageSize ?? 10"
+  [nzPageSizeOptions]="config.pagination?.pageSizes ?? [10, 20, 50, 100]"
+  [nzShowTotal]="totalTpl"
+  [nzFrontPagination]="false"
+  [nzShowSizeChanger]="true"
+  (nzPageIndexChange)="onPageChange($event)"
+  (nzPageSizeChange)="onPageSizeChange($event)">
+
+  <ng-template #totalTpl let-total>{{ totalLabel }}</ng-template>
+
+  <thead>
+    <tr>
+      @if (config.selectable) {
+        <th nzWidth="48px"
+            [nzChecked]="isAllSelected()"
+            [nzIndeterminate]="isIndeterminate()"
+            (nzCheckedChange)="toggleAll($event)">
+        </th>
+      }
+
+      @for (col of visibleColumns(); track col.key) {
+        <th
+          [nzWidth]="col.width ?? ''"
+          [nzLeft]="col.sticky === 'start'"
+          [nzRight]="col.sticky === 'end'"
+          [nzAlign]="col.align ?? 'left'"
+          [nzColumnKey]="col.key"
+          [nzShowSort]="col.sortable ?? false"
+          (nzSortOrderChange)="onSort(col.key, $any($event))">
+          {{ col.label }}
+        </th>
+      }
+
+      @if (config.actions?.length) {
+        <th nzWidth="120px" nzRight nzAlign="center">Thao tác</th>
+      }
+    </tr>
+  </thead>
+
+  <tbody>
+    @for (row of nzTable.data; track row[config.rowKey]) {
+      <tr (click)="rowClick.emit(row)" class="table-row">
+
+        @if (config.selectable) {
+          <td [nzChecked]="isSelected(row)" (nzCheckedChange)="toggleRow(row)" (click)="$event.stopPropagation()"></td>
+        }
+
+        @for (col of visibleColumns(); track col.key) {
+          <td
+            [nzLeft]="col.sticky === 'start'"
+            [nzRight]="col.sticky === 'end'"
+            [nzAlign]="col.align ?? 'left'"
+            [class]="getCellClass(row, col.key)">
+            @if (getCellTemplate(col.key); as tpl) {
+              <ng-container *ngTemplateOutlet="tpl; context: getCellContext(row, col.key)" />
+            } @else {
+              {{ getCellValue(row, col.key) }}
+            }
+          </td>
+        }
+
+        @if (config.actions?.length) {
+          <td nzRight nzAlign="center" (click)="$event.stopPropagation()">
+            <div class="action-cell">
+              @for (action of config.actions; track action.label) {
+                @if (isActionVisible(action, row)) {
+                  <button
+                    nz-button
+                    nz-tooltip
+                    [nzTooltipTitle]="action.label"
+                    [nzType]="$any(getActionColor(action.color))"
+                    [disabled]="isActionDisabled(action, row)"
+                    nzSize="small"
+                    (click)="action.action(row)">
+                    @if (action.icon) {
+                      <nz-icon [nzType]="action.icon" />
+                    } @else {
+                      {{ action.label }}
+                    }
+                  </button>
+                }
+              }
+            </div>
+          </td>
+        }
+
+      </tr>
+    } @empty {
+      <tr>
+        <td [colSpan]="visibleColumns().length + (config.selectable ? 1 : 0) + (config.actions?.length ? 1 : 0)">
+          <nz-empty [nzNotFoundContent]="config.emptyText ?? 'Không có dữ liệu'" />
+        </td>
+      </tr>
+    }
+  </tbody>
+</nz-table>

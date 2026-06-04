@@ -1,0 +1,10 @@
+<nz-layout class="app-shell">
+  <ng-content select="[sidebar]" />
+  <nz-layout class="shell-body" [class.collapsed]="collapsed">
+    <ng-content select="[topbar]" />
+    <nz-content class="shell-content">
+      <ng-content />
+    </nz-content>
+    <ng-content select="[footer]" />
+  </nz-layout>
+</nz-layout>

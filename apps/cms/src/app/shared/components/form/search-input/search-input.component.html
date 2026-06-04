@@ -1,0 +1,12 @@
+<nz-input-group [nzPrefix]="prefixIcon" [nzSuffix]="inputValue ? clearIcon : undefined">
+  <input
+    nz-input
+    [(ngModel)]="inputValue"
+    [placeholder]="placeholder"
+    (ngModelChange)="onInput($event)" />
+</nz-input-group>
+
+<ng-template #prefixIcon><nz-icon nzType="search" /></ng-template>
+<ng-template #clearIcon>
+  <nz-icon nzType="close-circle" nzTheme="fill" class="clear-icon" (click)="onClear()" />
+</ng-template>

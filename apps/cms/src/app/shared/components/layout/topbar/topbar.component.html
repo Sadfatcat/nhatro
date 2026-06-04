@@ -1,0 +1,90 @@
+<header class="app-header">
+
+  <div class="header-left">
+    <a class="brand-link" routerLink="/app/home" aria-label="NhaTro home">
+      <img class="brand-logo" src="/brand-logo.svg" alt="NhaTro" />
+    </a>
+
+    <ng-content select="[topbar-nav]" />
+
+    @if (showSearch) {
+      <div class="header-search">
+        <nz-icon nzType="search" class="search-icon" />
+        <input class="search-input" placeholder="Tìm kiếm..." type="text" />
+      </div>
+    }
+  </div>
+
+  <!-- Right: actions + user -->
+  <div class="header-right">
+    <button
+      type="button"
+      class="theme-switch"
+      [class.dark]="theme.theme() === 'dark'"
+      [attr.aria-pressed]="theme.theme() === 'dark'"
+      [attr.aria-label]="theme.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+      nz-tooltip
+      [nzTooltipTitle]="theme.theme() === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'"
+      (click)="theme.toggle()">
+      <span class="mode-icon sun" aria-hidden="true">
+        <nz-icon nzType="sun" />
+      </span>
+      <span class="mode-icon moon" aria-hidden="true">
+        <nz-icon nzType="moon" />
+      </span>
+      <span class="theme-thumb" aria-hidden="true">
+        <nz-icon [nzType]="theme.theme() === 'dark' ? 'moon' : 'sun'" />
+      </span>
+    </button>
+
+    <a class="contact-link" [href]="contactHref">Liên hệ</a>
+
+    @if (showUtilityActions) {
+      <div class="header-actions">
+        <button class="action-btn">
+          <nz-badge [nzCount]="3" [nzOverflowCount]="9">
+            <nz-icon nzType="bell" />
+          </nz-badge>
+        </button>
+
+        <button class="action-btn">
+          <nz-icon nzType="question-circle" />
+        </button>
+      </div>
+    }
+
+    @if (showUserMenu) {
+      <div class="header-user" nz-dropdown [nzDropdownMenu]="userMenu" nzTrigger="click">
+        <div class="user-info">
+          <p class="user-name">{{ auth.currentUser()?.fullName ?? 'Admin' }}</p>
+          <p class="user-role">{{ auth.roleLabel() }}</p>
+        </div>
+        <nz-avatar
+          [nzText]="userInitial"
+          [nzSize]="40"
+          style="background-color: var(--color-primary); cursor: pointer; flex-shrink: 0" />
+      </div>
+
+      <nz-dropdown-menu #userMenu="nzDropdownMenu">
+        <ul nz-menu>
+          <li nz-menu-item routerLink="/profile">
+            <nz-icon nzType="user" /> Hồ sơ cá nhân
+          </li>
+          <li nz-menu-item routerLink="/settings">
+            <nz-icon nzType="setting" /> Cài đặt
+          </li>
+          <li nz-menu-divider></li>
+          <li nz-menu-item (click)="onLogout()" class="logout-item">
+            <nz-icon nzType="logout" /> Đăng xuất
+          </li>
+        </ul>
+      </nz-dropdown-menu>
+    }
+
+  </div>
+
+  @if (loading.isLoading()) {
+    <div class="loading-bar"></div>
+  }
+
+</header>

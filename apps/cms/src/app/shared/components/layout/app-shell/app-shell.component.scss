@@ -1,0 +1,18 @@
+@use '../../../../../styles/variables' as *;
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.shell-body {
+  margin-left: $sidebar-width;
+  transition: margin-left $transition-slow;
+
+  &.collapsed { margin-left: $sidebar-collapsed-width; }
+}
+
+.shell-content {
+  padding: 0;
+  min-height: calc(100vh - #{$header-height} - #{$footer-height});
+  background: var(--color-bg-base);
+}

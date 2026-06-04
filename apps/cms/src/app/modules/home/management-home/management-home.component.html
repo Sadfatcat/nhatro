@@ -1,0 +1,345 @@
+<div class="mgmt-home">
+
+  <!-- ── Header container ── -->
+  <div class="page-header-container">
+    <nav class="breadcrumb">
+      <span class="crumb-active">Trang chủ</span>
+    </nav>
+    <div class="page-header">
+      <div>
+        <h1 class="page-header__greeting">Xin chào, <span class="accent">{{ auth.currentUser()?.fullName ?? 'Admin' }}</span></h1>
+        <p class="page-header__date">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
+      </div>
+      <div class="header-badges">
+        <span class="stat-badge stat-badge--primary">{{ occupiedCount() }} / {{ totalRooms() }} phòng đang thuê</span>
+        @if (pendingAmount() > 0) {
+          <span class="stat-badge stat-badge--error">Công nợ: {{ pendingAmount() | number:'1.0-0' }}₫</span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Quick stats ── -->
+  <section class="quick-stats">
+    <div class="qstat-card">
+      <div class="qstat-card__value">{{ totalRooms() }}</div>
+      <div class="qstat-card__label">Tổng số phòng</div>
+      <div class="qstat-card__bar" style="--pct: 100%; --color: var(--color-accent);"></div>
+    </div>
+    <div class="qstat-card">
+      <div class="qstat-card__value" style="color:var(--color-accent)">{{ occupiedCount() }}</div>
+      <div class="qstat-card__label">Đang cho thuê</div>
+      <div class="qstat-card__bar" [style]="'--pct:' + occupancyRate() + '%;--color:var(--color-accent)'"></div>
+    </div>
+    <div class="qstat-card">
+      <div class="qstat-card__value" style="color:var(--color-info)">{{ availableCount() }}</div>
+      <div class="qstat-card__label">Phòng trống</div>
+      <div class="qstat-card__bar" [style]="'--pct:' + (availableCount()/totalRooms()*100) + '%;--color:var(--color-info)'"></div>
+    </div>
+    <div class="qstat-card">
+      <div class="qstat-card__value" style="color:var(--color-error)">{{ maintenanceCount() }}</div>
+      <div class="qstat-card__label">Đang bảo trì</div>
+      <div class="qstat-card__bar" [style]="'--pct:' + (maintenanceCount()/totalRooms()*100) + '%;--color:var(--color-error)'"></div>
+    </div>
+    <div class="qstat-card">
+      <div class="qstat-card__value" style="color:var(--color-error); font-size:18px">{{ pendingAmount() | number:'1.0-0' }}₫</div>
+      <div class="qstat-card__label">Công nợ chưa thu</div>
+      <div class="qstat-card__bar" style="--pct: 100%; --color: var(--color-error);"></div>
+    </div>
+  </section>
+
+  <!-- ── Info row: donut + prices ── -->
+  <div class="info-row">
+    <div class="donut-card">
+      <h3 class="panel-title">Trạng thái phòng</h3>
+      <div class="donut-wrap">
+        <div class="donut-canvas-wrap">
+          <canvas #donutChart></canvas>
+          <div class="donut-center">
+            <span class="donut-pct">{{ occupancyRate() }}%</span>
+            <span class="donut-lbl">lấp đầy</span>
+          </div>
+        </div>
+        <ul class="donut-legend">
+          <li><span class="swatch" style="background:#16898F"></span><span>Đang thuê</span><strong>{{ occupiedCount() }}</strong></li>
+          <li><span class="swatch" style="background:#A2BFD5"></span><span>Phòng trống</span><strong>{{ availableCount() }}</strong></li>
+          <li><span class="swatch" style="background:#ba1a1a"></span><span>Bảo trì</span><strong>{{ maintenanceCount() }}</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="price-card">
+      <div class="price-card__header">
+        <h3 class="panel-title">Đơn giá điện / nước</h3>
+        @if (!editPrices()) {
+          <button class="btn-outline btn-outline--teal" (click)="openPriceEdit()">
+            <nz-icon nzType="setting" /> Chỉnh sửa
+          </button>
+        }
+      </div>
+      @if (editPrices()) {
+        <div class="price-form">
+          <div class="price-form__field">
+            <label>Giá điện (₫ / kWh)</label>
+            <nz-input-number [ngModel]="draftElecPrice()" (ngModelChange)="draftElecPrice.set($event)"
+              [nzMin]="500" [nzStep]="500" style="width:100%" />
+          </div>
+          <div class="price-form__field">
+            <label>Giá nước (₫ / m³)</label>
+            <nz-input-number [ngModel]="draftWaterPrice()" (ngModelChange)="draftWaterPrice.set($event)"
+              [nzMin]="500" [nzStep]="500" style="width:100%" />
+          </div>
+          <div class="price-form__actions">
+            <button class="btn-primary" (click)="savePrices()">Lưu</button>
+            <button class="btn-ghost" (click)="editPrices.set(false)">Hủy</button>
+          </div>
+        </div>
+      } @else {
+        <div class="price-display">
+          <div class="price-item price-item--elec">
+            <span class="price-item__icon">⚡</span>
+            <span class="price-item__label">Điện</span>
+            <strong class="price-item__value">{{ prices().electricityPerKwh | number }}₫<span>/kWh</span></strong>
+          </div>
+          <div class="price-item price-item--water">
+            <span class="price-item__icon">💧</span>
+            <span class="price-item__label">Nước</span>
+            <strong class="price-item__value">{{ prices().waterPerM3 | number }}₫<span>/m³</span></strong>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ── Kanban: 2 cột cạnh nhau ── -->
+  <div class="kanban-wrap">
+
+    <!-- Ngày 15 -->
+    <div class="kanban-col">
+      <div class="kanban-col__header">
+        <div class="kanban-col__title-group">
+          <span class="kanban-day-badge">Ngày 15</span>
+          <span class="kanban-col__count">{{ rooms15Ids().length }} phòng</span>
+        </div>
+        <button class="btn-add-room" (click)="openAddModal(15)">
+          <nz-icon nzType="plus" /> Thêm
+        </button>
+      </div>
+
+      <div class="kanban-col__body">
+        <div class="kanban-list"
+          id="list-15"
+          cdkDropList
+          cdkDropListOrientation="vertical"
+          [cdkDropListData]="rooms15Ids()"
+          [cdkDropListConnectedTo]="['list-30']"
+          (cdkDropListDropped)="onDrop($event)">
+
+          @for (room of roomsForDay(15); track room.roomId) {
+            <div class="kcard" [class.kcard--chot]="isChot(room.roomId)" cdkDrag>
+              <div class="kcard__drag-handle" cdkDragHandle>
+                <nz-icon nzType="holder" />
+              </div>
+              <div class="kcard__body">
+                <div class="kcard__head">
+                  <span class="kcard__number">P.{{ room.roomNumber }}</span>
+                  @if (isChot(room.roomId)) {
+                    <span class="status-badge status-badge--chot">ĐÃ CHỐT</span>
+                  } @else {
+                    <span class="status-badge status-badge--wait">CHỜ</span>
+                  }
+                  <button class="btn-icon-ghost btn-icon-ghost--danger" (click)="removeFromDay(room.roomId)">✕</button>
+                </div>
+                <div class="kcard__readings">
+                  <span class="kcard__reading kcard__reading--elec">
+                    ⚡ {{ (chotReadingOf(room.roomId)?.currElec ?? latestReadings().get(room.roomId)?.utilityRecord?.currElec ?? '—') | number }}
+                  </span>
+                  <span class="kcard__reading kcard__reading--water">
+                    💧 {{ (chotReadingOf(room.roomId)?.currWater ?? latestReadings().get(room.roomId)?.utilityRecord?.currWater ?? '—') | number }}
+                  </span>
+                </div>
+              </div>
+              <button class="btn-update" (click)="openModal(room.roomId)">Cập nhật</button>
+            </div>
+          }
+
+          @if (rooms15Ids().length === 0) {
+            <div class="kanban-col__empty">Chưa có phòng</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Ngày 30 -->
+    <div class="kanban-col">
+      <div class="kanban-col__header">
+        <div class="kanban-col__title-group">
+          <span class="kanban-day-badge">Ngày 30</span>
+          <span class="kanban-col__count">{{ rooms30Ids().length }} phòng</span>
+        </div>
+        <button class="btn-add-room" (click)="openAddModal(30)">
+          <nz-icon nzType="plus" /> Thêm
+        </button>
+      </div>
+
+      <div class="kanban-col__body">
+        <div class="kanban-list"
+          id="list-30"
+          cdkDropList
+          cdkDropListOrientation="vertical"
+          [cdkDropListData]="rooms30Ids()"
+          [cdkDropListConnectedTo]="['list-15']"
+          (cdkDropListDropped)="onDrop($event)">
+
+          @for (room of roomsForDay(30); track room.roomId) {
+            <div class="kcard" [class.kcard--chot]="isChot(room.roomId)" cdkDrag>
+              <div class="kcard__drag-handle" cdkDragHandle>
+                <nz-icon nzType="holder" />
+              </div>
+              <div class="kcard__body">
+                <div class="kcard__head">
+                  <span class="kcard__number">P.{{ room.roomNumber }}</span>
+                  @if (isChot(room.roomId)) {
+                    <span class="status-badge status-badge--chot">ĐÃ CHỐT</span>
+                  } @else {
+                    <span class="status-badge status-badge--wait">CHỜ</span>
+                  }
+                  <button class="btn-icon-ghost btn-icon-ghost--danger" (click)="removeFromDay(room.roomId)">✕</button>
+                </div>
+                <div class="kcard__readings">
+                  <span class="kcard__reading kcard__reading--elec">
+                    ⚡ {{ (chotReadingOf(room.roomId)?.currElec ?? latestReadings().get(room.roomId)?.utilityRecord?.currElec ?? '—') | number }}
+                  </span>
+                  <span class="kcard__reading kcard__reading--water">
+                    💧 {{ (chotReadingOf(room.roomId)?.currWater ?? latestReadings().get(room.roomId)?.utilityRecord?.currWater ?? '—') | number }}
+                  </span>
+                </div>
+              </div>
+              <button class="btn-update" (click)="openModal(room.roomId)">Cập nhật</button>
+            </div>
+          }
+
+          @if (rooms30Ids().length === 0) {
+            <div class="kanban-col__empty">Chưa có phòng</div>
+          }
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ── Reading modal ── -->
+<nz-modal
+  [nzVisible]="!!activeModalRoomId()"
+  [nzTitle]="'Cập nhật chỉ số — Phòng ' + (activeModalRoom()?.roomNumber ?? '')"
+  [nzFooter]="modalFooter"
+  (nzOnCancel)="closeModal()"
+  nzWidth="480px">
+
+  <ng-container *nzModalContent>
+    @if (activeModalRoomId(); as roomId) {
+      <div class="modal-section">
+        <div class="modal-section__title modal-section__title--elec">⚡ Điện</div>
+        <div class="modal-row">
+          <div class="modal-field">
+            <label>Chỉ số trước (kWh)</label>
+            <nz-input-number
+              [ngModel]="getInput(roomId).prevElec"
+              (ngModelChange)="patchInput(roomId, { prevElec: $event })"
+              [nzMin]="0" style="width:100%" />
+          </div>
+          <div class="modal-field">
+            <label>Chỉ số nay (kWh)</label>
+            <nz-input-number
+              [ngModel]="getInput(roomId).currElec"
+              (ngModelChange)="patchInput(roomId, { currElec: $event })"
+              [nzMin]="0" style="width:100%" />
+          </div>
+        </div>
+        <div class="modal-computed modal-computed--elec">
+          Tiêu thụ: <strong>{{ elecUsed() | number }} kWh</strong>
+          &nbsp;—&nbsp;
+          <strong>{{ elecAmount() | number:'1.0-0' }}₫</strong>
+        </div>
+      </div>
+
+      <nz-divider />
+
+      <div class="modal-section">
+        <div class="modal-section__title modal-section__title--water">💧 Nước</div>
+        <div class="modal-row">
+          <div class="modal-field">
+            <label>Chỉ số trước (m³)</label>
+            <nz-input-number
+              [ngModel]="getInput(roomId).prevWater"
+              (ngModelChange)="patchInput(roomId, { prevWater: $event })"
+              [nzMin]="0" style="width:100%" />
+          </div>
+          <div class="modal-field">
+            <label>Chỉ số nay (m³)</label>
+            <nz-input-number
+              [ngModel]="getInput(roomId).currWater"
+              (ngModelChange)="patchInput(roomId, { currWater: $event })"
+              [nzMin]="0" style="width:100%" />
+          </div>
+        </div>
+        <div class="modal-computed modal-computed--water">
+          Tiêu thụ: <strong>{{ waterUsed() | number }} m³</strong>
+          &nbsp;—&nbsp;
+          <strong>{{ waterAmount() | number:'1.0-0' }}₫</strong>
+        </div>
+      </div>
+    }
+  </ng-container>
+
+  <ng-template #modalFooter>
+    <button class="btn-ghost" (click)="closeModal()">Hủy</button>
+    <button class="btn-primary" (click)="saveReading()">Lưu chỉ số</button>
+  </ng-template>
+
+</nz-modal>
+
+<!-- ── Add rooms modal ── -->
+<nz-modal
+  [nzVisible]="!!showAddModal()"
+  [nzTitle]="'Thêm phòng vào Ngày ' + showAddModal()"
+  nzOkText="Thêm"
+  nzCancelText="Hủy"
+  [nzOkDisabled]="selectedRoomIds().size === 0"
+  [nzOkLoading]="saving()"
+  (nzOnOk)="confirmAddToDay()"
+  (nzOnCancel)="showAddModal.set(null)"
+  nzWidth="480px">
+
+  <ng-container *nzModalContent>
+    <input nz-input placeholder="Tìm số phòng..."
+      [(ngModel)]="addSearchValue"
+      (ngModelChange)="addSearchQuery.set($event)"
+      style="margin-bottom:12px" />
+
+    <div style="max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+      @for (room of availableRooms(); track room.roomId) {
+        <label style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; cursor:pointer;"
+          [style.background]="isRoomSelected(room.roomId) ? 'var(--color-secondary-container)' : 'var(--color-bg-subtle)'"
+          (click)="toggleRoomSelect(room.roomId)">
+          <input type="checkbox" [checked]="isRoomSelected(room.roomId)" (click)="$event.stopPropagation()" style="pointer-events:none" />
+          <span style="font-weight:600">P.{{ room.roomNumber }}</span>
+          <span style="color:var(--color-text-muted); font-size:13px">Tầng {{ room.floor }}</span>
+          @if (room.tenant) {
+            <span style="color:var(--color-text-muted); font-size:13px; margin-left:auto">{{ room.tenant.fullName }}</span>
+          }
+        </label>
+      }
+      @if (availableRooms().length === 0) {
+        <p style="text-align:center; color:var(--color-text-muted); padding:24px 0">Không có phòng nào</p>
+      }
+    </div>
+
+    <p style="margin-top:10px; font-size:13px; color:var(--color-text-muted)">
+      Đã chọn: {{ selectedRoomIds().size }} phòng
+    </p>
+  </ng-container>
+
+</nz-modal>

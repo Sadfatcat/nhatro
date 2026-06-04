@@ -1,0 +1,13 @@
+<div class="filter-field">
+  <label class="filter-label">{{ label }}</label>
+  <nz-select
+    [nzPlaceHolder]="placeholder"
+    nzAllowClear
+    [(ngModel)]="value"
+    (ngModelChange)="valueChange.emit($event)"
+    style="min-width: 160px">
+    @for (opt of statusOptions; track opt.value) {
+      <nz-option [nzLabel]="opt.label" [nzValue]="opt.value" />
+    }
+  </nz-select>
+</div>
