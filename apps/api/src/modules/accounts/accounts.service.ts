@@ -30,16 +30,17 @@ export class AccountsService {
         status:     room.status,
         tenant: room.tenant
           ? {
-              tenantId:    room.tenant.id,
-              userId:      room.tenant.user.id,
-              fullName:    room.tenant.fullName,
-              phone:       room.tenant.phone,
-              dateOfBirth: room.tenant.dateOfBirth,
-              hometown:    room.tenant.hometown,
-              nationalId:  room.tenant.nationalId,
-              username:    room.tenant.user.username,
-              email:       room.tenant.user.email,
-              isActive:    room.tenant.user.isActive,
+              tenantId:     room.tenant.id,
+              userId:       room.tenant.user.id,
+              fullName:     room.tenant.fullName,
+              phone:        room.tenant.phone,
+              dateOfBirth:  room.tenant.dateOfBirth,
+              hometown:     room.tenant.hometown,
+              nationalId:   room.tenant.nationalId,
+              tenantIdDate: room.tenant.tenantIdDate ?? null,
+              username:     room.tenant.user.username,
+              email:        room.tenant.user.email,
+              isActive:     room.tenant.user.isActive,
             }
           : null,
       })),
@@ -89,9 +90,10 @@ export class AccountsService {
           roomId:      room.id,
           fullName:    dto.fullName,
           phone:       dto.phone,
-          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
-          hometown:    dto.hometown,
-          nationalId:  dto.nationalId,
+          dateOfBirth:  dto.dateOfBirth  ? new Date(dto.dateOfBirth) : undefined,
+          hometown:     dto.hometown,
+          nationalId:   dto.nationalId,
+          tenantIdDate: dto.tenantIdDate ?? undefined,
         },
       });
       await tx.room.update({ where: { id: room.id }, data: { status: 'OCCUPIED' } });
@@ -123,18 +125,19 @@ export class AccountsService {
 
   async updateTenantInfo(
     roomId: string,
-    data: { fullName?: string; phone?: string; dateOfBirth?: string | null; hometown?: string | null; nationalId?: string | null },
+    data: { fullName?: string; phone?: string; dateOfBirth?: string | null; hometown?: string | null; nationalId?: string | null; tenantIdDate?: string | null },
   ): Promise<void> {
     const room = await this.prisma.room.findUnique({ where: { id: roomId }, include: { tenant: true } });
     if (!room?.tenant) throw new NotFoundException('Phòng chưa có người thuê.');
     await this.prisma.tenant.update({
       where: { id: room.tenant.id },
       data: {
-        fullName:    data.fullName,
-        phone:       data.phone,
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-        hometown:    data.hometown,
-        nationalId:  data.nationalId,
+        fullName:     data.fullName,
+        phone:        data.phone,
+        dateOfBirth:  data.dateOfBirth  ? new Date(data.dateOfBirth) : null,
+        hometown:     data.hometown,
+        nationalId:   data.nationalId,
+        tenantIdDate: data.tenantIdDate ?? null,
       },
     });
   }

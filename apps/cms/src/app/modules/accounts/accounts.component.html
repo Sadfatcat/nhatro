@@ -28,6 +28,13 @@
       <!-- Filter bar -->
       <div class="filter-bar">
         <div class="filter-bar__left">
+          <nz-input-group [nzPrefix]="searchIcon" style="width:200px">
+            <input nz-input placeholder="Tìm phòng, người thuê..."
+              [(ngModel)]="filterSearchValue"
+              (ngModelChange)="filterSearch.set($event); roomPage.set(1)" />
+          </nz-input-group>
+          <ng-template #searchIcon><nz-icon nzType="search" /></ng-template>
+
           <nz-select [(ngModel)]="filterFloorValue" (ngModelChange)="filterFloor.set($event); roomPage.set(1)"
             nzPlaceHolder="Tất cả tầng" nzAllowClear style="width:130px">
             @for (opt of floorOptions(); track opt.value) {
@@ -196,7 +203,7 @@
   <ng-template nzModalContent>
     <div class="form-grid">
       <label>Phòng <span class="req">*</span></label>
-      <nz-select [(ngModel)]="createAccountForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng trống">
+      <nz-select [(ngModel)]="createAccountForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng trống" nzShowSearch>
         @for (r of availableRooms(); track r.roomId) {
           <nz-option [nzValue]="r.roomId" [nzLabel]="'Phòng ' + r.roomNumber + ' — Tầng ' + r.floor" />
         }
@@ -216,7 +223,7 @@
   <ng-template nzModalContent>
     <div class="form-grid">
       <label>Phòng <span class="req">*</span></label>
-      <nz-select [(ngModel)]="assignRoomForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng trống">
+      <nz-select [(ngModel)]="assignRoomForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng trống" nzShowSearch>
         @for (r of availableRooms(); track r.roomId) {
           <nz-option [nzValue]="r.roomId" [nzLabel]="'Phòng ' + r.roomNumber + ' — Tầng ' + r.floor + ' — ' + r.price.toLocaleString('vi-VN') + 'đ'" />
         }
@@ -235,6 +242,8 @@
       <input nz-input [(ngModel)]="assignRoomForm.hometown" placeholder="Hà Nội" />
       <label>CCCD</label>
       <input nz-input [(ngModel)]="assignRoomForm.nationalId" placeholder="012345678901" />
+      <label>Ngày cấp CCCD</label>
+      <input nz-input [(ngModel)]="assignRoomForm.tenantIdDate" placeholder="07/05/2021" />
     </div>
   </ng-template>
 </nz-modal>
@@ -265,6 +274,8 @@
       <input nz-input [(ngModel)]="tenantForm.hometown" />
       <label>CCCD</label>
       <input nz-input [(ngModel)]="tenantForm.nationalId" />
+      <label>Ngày cấp CCCD</label>
+      <input nz-input [(ngModel)]="tenantForm.tenantIdDate" placeholder="07/05/2021" />
     </div>
   </ng-template>
 </nz-modal>

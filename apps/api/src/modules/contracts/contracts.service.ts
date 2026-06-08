@@ -16,7 +16,15 @@ const PizZip        = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 
 const TEMPLATE_PATH = path.join(process.cwd(), 'templates', 'hop_dong_template.docx');
-const UPLOAD_DIR    = path.join(process.cwd(), 'uploads', 'contracts');
+const UPLOAD_DIR    = path.join(process.cwd(), 'storage', 'contracts');
+
+function isPdfPath(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith('.pdf');
+}
+
+function isPdfBuffer(buffer: Buffer): boolean {
+  return buffer.length >= 5 && buffer.subarray(0, 5).toString('ascii') === '%PDF-';
+}
 
 function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return '............';
@@ -48,15 +56,18 @@ function toWords(n: number): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatRow(c: any) {
   return {
-    id:        c.id,
-    roomId:    c.roomId,
-    tenantId:  c.tenantId,
-    startDate: c.startDate,
-    deposit:   c.deposit,
-    status:    c.status,
-    notes:     c.notes,
-    filePath:  c.filePath ?? null,
-    createdAt: c.createdAt,
+    id:               c.id,
+    roomId:           c.roomId,
+    tenantId:         c.tenantId,
+    startDate:        c.startDate,
+    endDate:          c.endDate ?? null,
+    firstBillingDate: c.firstBillingDate ?? null,
+    lastBillingDate:  c.lastBillingDate ?? null,
+    deposit:          c.deposit,
+    status:           c.status,
+    notes:            c.notes,
+    filePath:         c.filePath ?? null,
+    createdAt:        c.createdAt,
     room: {
       roomId:     c.room.id,
       roomNumber: c.room.roomNumber,
@@ -64,12 +75,13 @@ function formatRow(c: any) {
       price:      c.room.price,
     },
     tenant: {
-      tenantId:    c.tenant.id,
-      fullName:    c.tenant.fullName,
-      phone:       c.tenant.phone,
-      dateOfBirth: c.tenant.dateOfBirth,
-      hometown:    c.tenant.hometown,
-      nationalId:  c.tenant.nationalId,
+      tenantId:     c.tenant.id,
+      fullName:     c.tenant.fullName,
+      phone:        c.tenant.phone,
+      dateOfBirth:  c.tenant.dateOfBirth,
+      hometown:     c.tenant.hometown,
+      nationalId:   c.tenant.nationalId,
+      tenantIdDate: c.tenant.tenantIdDate ?? null,
     },
   };
 }
@@ -105,22 +117,25 @@ export class ContractsService {
     const price   = contract.room.price as number;
     const deposit = contract.deposit as number;
     const startDate = contract.startDate ? fmtDate(contract.startDate) : DOTS;
+    const endDate   = contract.endDate   ? fmtDate(contract.endDate)   : DOTS;
     return {
-      tenantName:       contract.tenant.fullName || DOTS,
-      tenantYob:        yob,
-      tenantNationalId: contract.tenant.nationalId || DOTS,
-      tenantIdDate:     DOTS,
-      tenantHometown:   contract.tenant.hometown || DOTS,
-      tenantPhone:      contract.tenant.phone || DOTS,
+      tenantName:        contract.tenant.fullName      || DOTS,
+      tenantYob:         yob,
+      tenantNationalId:  contract.tenant.nationalId    || DOTS,
+      tenantIdDate:      contract.tenant.tenantIdDate  || DOTS,
+      tenantHometown:    contract.tenant.hometown      || DOTS,
+      tenantPhone:       contract.tenant.phone         || DOTS,
       startDate,
-      endDate:          DOTS,
-      roomPrice:        price ? price.toLocaleString('vi-VN') : DOTS,
-      roomPriceWords:   price ? toWords(price) : DOTS,
-      deposit:          deposit ? deposit.toLocaleString('vi-VN') : DOTS,
-      depositWords:     deposit ? toWords(deposit) : DOTS,
-      contractDay:      String(created.getDate()),
-      contractMonth:    String(created.getMonth() + 1),
-      contractYear:     String(created.getFullYear()),
+      endDate,
+      firstBillingDate:  contract.firstBillingDate != null ? String(contract.firstBillingDate) : DOTS,
+      lastBillingDate:   contract.lastBillingDate  != null ? String(contract.lastBillingDate)  : DOTS,
+      roomPrice:         price   ? price.toLocaleString('vi-VN')   : DOTS,
+      roomPriceWords:    price   ? toWords(price)                  : DOTS,
+      deposit:           deposit ? deposit.toLocaleString('vi-VN') : DOTS,
+      depositWords:      deposit ? toWords(deposit)                : DOTS,
+      contractDay:       String(created.getDate()),
+      contractMonth:     String(created.getMonth() + 1),
+      contractYear:      String(created.getFullYear()),
     };
   }
 
@@ -135,23 +150,41 @@ export class ContractsService {
     return doc.getZip().generate({ type: 'nodebuffer' }) as Buffer;
   }
 
+  // Ubuntu/Docker: LIBREOFFICE_BIN=libreoffice (default)
+  // Windows local: LIBREOFFICE_BIN=C:\Program Files\LibreOffice\program\soffice.exe
+  // Converts to /tmp first (always writable), then moves PDF to UPLOAD_DIR.
   private async convertToPdf(docxPath: string): Promise<string> {
-    const outDir = path.dirname(docxPath);
-    const profileDir = `/tmp/lo_profile_${randomUUID()}`;
-    await execFileAsync('libreoffice', [
+    const bin       = process.env['LIBREOFFICE_BIN'] || 'libreoffice';
+    const tmpOutDir = `/tmp/lo_out_${randomUUID()}`;
+    fs.mkdirSync(tmpOutDir, { recursive: true });
+
+    await execFileAsync(bin, [
       '--headless',
-      `--env:UserInstallation=file://${profileDir}`,
       '--convert-to', 'pdf',
-      '--outdir', outDir,
+      '--outdir', tmpOutDir,
       docxPath,
     ], {
       env: { ...process.env, HOME: '/tmp' },
-      timeout: 30000,
+      timeout: 30000, // 5 minutes
     });
-    const pdfPath = docxPath.replace(/\.docx$/, '.pdf');
-    if (!fs.existsSync(pdfPath)) throw new Error('LibreOffice PDF conversion failed');
+
+    const pdfName = path.basename(docxPath).replace(/\.docx$/, '.pdf');
+    const tmpPdf  = path.join(tmpOutDir, pdfName);
+    if (!fs.existsSync(tmpPdf)) throw new Error('LibreOffice PDF conversion failed');
+
+    const destPath = docxPath.replace(/\.docx$/, '.pdf');
+    try {
+      fs.renameSync(tmpPdf, destPath);
+    } catch (e: unknown) {
+      // fallback for cross-filesystem (EXDEV) or permission issues
+      if ((e as NodeJS.ErrnoException).code === 'EXDEV') {
+        fs.copyFileSync(tmpPdf, destPath);
+        fs.unlinkSync(tmpPdf);
+      } else throw e;
+    }
     fs.unlinkSync(docxPath);
-    return pdfPath;
+    try { fs.rmdirSync(tmpOutDir); } catch (_) { /* ignore */ }
+    return destPath;
   }
 
   async preview(dto: CreateContractDto) {
@@ -171,7 +204,16 @@ export class ContractsService {
     if (!room.tenant) throw new NotFoundException('Phòng chưa có người thuê.');
 
     const contract = await this.prisma.contract.create({
-      data: { roomId: dto.roomId, tenantId: room.tenant.id, startDate: new Date(dto.startDate), deposit: dto.deposit ?? 0, notes: dto.notes },
+      data: {
+        roomId:           dto.roomId,
+        tenantId:         room.tenant.id,
+        startDate:        new Date(dto.startDate),
+        endDate:          dto.endDate          ? new Date(dto.endDate) : undefined,
+        firstBillingDate: dto.firstBillingDate ?? undefined,
+        lastBillingDate:  dto.lastBillingDate  ?? undefined,
+        deposit:          dto.deposit ?? 0,
+        notes:            dto.notes,
+      },
       include: INCLUDE,
     });
 
@@ -192,10 +234,13 @@ export class ContractsService {
     await this.prisma.contract.update({
       where: { id },
       data: {
-        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        deposit:   dto.deposit,
-        status:    dto.status,
-        notes:     dto.notes,
+        startDate:        dto.startDate ? new Date(dto.startDate) : undefined,
+        endDate:          dto.endDate   ? new Date(dto.endDate)   : undefined,
+        firstBillingDate: dto.firstBillingDate ?? undefined,
+        lastBillingDate:  dto.lastBillingDate  ?? undefined,
+        deposit:          dto.deposit,
+        status:           dto.status,
+        notes:            dto.notes,
       },
     });
 
@@ -229,7 +274,11 @@ export class ContractsService {
 
     if (c.filePath) {
       const abs = path.join(process.cwd(), c.filePath);
-      if (fs.existsSync(abs)) return { buffer: fs.readFileSync(abs), filename };
+      if (fs.existsSync(abs) && isPdfPath(c.filePath)) {
+        const buf = fs.readFileSync(abs);
+        if (isPdfBuffer(buf)) return { buffer: buf, filename };
+        try { fs.unlinkSync(abs); } catch (_) { /* ignore */ }
+      }
     }
 
     const data     = this.buildTemplateData(formatRow(c));
@@ -247,7 +296,8 @@ export class ContractsService {
     const c = await this.prisma.contract.findUnique({ where: { id }, include: INCLUDE });
     if (!c) throw new NotFoundException('Không tìm thấy hợp đồng.');
 
-    if (file.mimetype !== 'application/pdf') throw new BadRequestException('Chỉ chấp nhận file .pdf.');
+    if (file.mimetype !== 'application/pdf' || !isPdfBuffer(file.buffer))
+      throw new BadRequestException('Chỉ chấp nhận file PDF hợp lệ.');
 
     if (c.filePath) {
       const old = path.join(process.cwd(), c.filePath);

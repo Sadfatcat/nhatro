@@ -1,7 +1,7 @@
 <section class="contracts-page">
 
   <!-- ══ MANAGEMENT VIEW (Admin / Landlord) ══════════════════════════════════ -->
-  @if (isManagement()) {
+  <ng-container *appPermission="'contracts:create'">
 
     <div class="page-header-container">
       <nav class="breadcrumb">
@@ -105,10 +105,10 @@
 
     </div>
 
-  }
+  </ng-container>
 
   <!-- ══ TENANT VIEW ══════════════════════════════════════════════════════════ -->
-  @else {
+  <ng-container *appPermission="'home:view'">
     <div class="page-header-container">
       <nav class="breadcrumb">
         <span class="crumb-active">Hợp đồng của tôi</span>
@@ -170,7 +170,8 @@
         </div>
       </div>
     }
-  }
+
+  </ng-container>
 
 </section>
 
@@ -248,11 +249,11 @@
               {{ uploading() ? 'Đang tải lên...' : 'Upload PDF mới' }}
             </button>
 
-            @if (isAdmin()) {
+            <ng-container *appPermission="'contracts:update-fields'">
               <button nz-button nzType="default" (click)="openEditModal(selected()!)">
                 <span nz-icon nzType="edit"></span> Cập nhật
               </button>
-            }
+            </ng-container>
           </div>
 
           <!-- Delete: click-to-start countdown -->
@@ -298,7 +299,7 @@
       <!-- Form step -->
       <div class="form-grid">
         <label>Phòng <span class="req">*</span></label>
-        <nz-select [(ngModel)]="createForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng đang thuê">
+        <nz-select [(ngModel)]="createForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng đang thuê" nzShowSearch>
           @for (r of occupiedRooms(); track r.roomId) {
             <nz-option [nzValue]="r.roomId" [nzLabel]="'Phòng ' + r.roomNumber + ' — Tầng ' + r.floor + ' — ' + r.price.toLocaleString('vi-VN') + 'đ'" />
           }
@@ -306,6 +307,15 @@
 
         <label>Ngày bắt đầu <span class="req">*</span></label>
         <input nz-input type="date" [(ngModel)]="createForm.startDate" />
+
+        <label>Ngày kết thúc</label>
+        <input nz-input type="date" [(ngModel)]="createForm.endDate" />
+
+        <label>Ngày thanh toán từ</label>
+        <nz-input-number [(ngModel)]="createForm.firstBillingDate" [nzMin]="1" [nzMax]="31" [nzStep]="1" style="width:100%" nzPlaceHolder="VD: 10" />
+
+        <label>Đến ngày</label>
+        <nz-input-number [(ngModel)]="createForm.lastBillingDate" [nzMin]="1" [nzMax]="31" [nzStep]="1" style="width:100%" nzPlaceHolder="VD: 15" />
 
         <label>Tiền cọc (đ)</label>
         <nz-input-number [(ngModel)]="createForm.deposit" [nzMin]="0" [nzStep]="500000"

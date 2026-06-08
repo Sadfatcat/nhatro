@@ -38,4 +38,9 @@ export class CreateRoomAccountDto {
   @IsOptional()
   @IsString()
   nationalId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  tenantIdDate?: string;
 }

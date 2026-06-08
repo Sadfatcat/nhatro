@@ -77,6 +77,8 @@
           <div class="col-card__body">
             <div class="info-grid">
               <div class="info-row"><span class="info-label">Từ ngày</span><strong>{{ fmtDate(contract()!.startDate) }}</strong></div>
+              <div class="info-row"><span class="info-label">Đến ngày</span>{{ fmtDate(contract()!.endDate) }}</div>
+              <div class="info-row"><span class="info-label">Thanh toán</span>{{ contract()!.firstBillingDate ?? '—' }} – {{ contract()!.lastBillingDate ?? '—' }} hàng tháng</div>
               <div class="info-row"><span class="info-label">Đặt cọc</span><app-money-display [value]="contract()!.deposit" /></div>
               <div class="info-row"><span class="info-label">Ngày tạo</span>{{ fmtDate(contract()!.createdAt) }}</div>
               @if (contract()!.notes) {
@@ -113,6 +115,7 @@
               <div class="info-row"><span class="info-label">Năm sinh</span>{{ yearOf(contract()!.tenant.dateOfBirth) }}</div>
               <div class="info-row"><span class="info-label">SĐT</span>{{ contract()!.tenant.phone ?? '—' }}</div>
               <div class="info-row"><span class="info-label">CCCD</span>{{ contract()!.tenant.nationalId ?? '—' }}</div>
+              <div class="info-row"><span class="info-label">Ngày cấp</span>{{ contract()!.tenant.tenantIdDate ?? '—' }}</div>
               <div class="info-row info-row--full"><span class="info-label">Quê quán</span>{{ contract()!.tenant.hometown ?? '—' }}</div>
             </div>
           </div>
@@ -131,17 +134,19 @@
               {{ downloading() ? 'Đang tải...' : 'Tải PDF' }}
             </button>
 
-            <input #fileInput type="file" accept=".pdf,.PDF" style="display:none" (change)="onFileSelected($event)" />
-            <button class="btn btn--secondary action-btn" [disabled]="uploading()" (click)="triggerUpload(fileInput)">
-              <nz-icon [nzType]="uploading() ? 'loading' : 'upload'" [nzSpin]="uploading()" />
-              {{ uploading() ? 'Đang tải lên...' : 'Upload PDF mới' }}
-            </button>
+            <div *appPermission="'contracts:upload'">
+              <input #fileInput type="file" accept=".pdf,.PDF" style="display:none" (change)="onFileSelected($event)" />
+              <button class="btn btn--secondary action-btn" [disabled]="uploading()" (click)="triggerUpload(fileInput)">
+                <nz-icon [nzType]="uploading() ? 'loading' : 'upload'" [nzSpin]="uploading()" />
+                {{ uploading() ? 'Đang tải lên...' : 'Upload PDF mới' }}
+              </button>
+            </div>
 
-            @if (isAdmin()) {
+            <div *appPermission="'contracts:update-fields'">
               <button class="btn btn--secondary action-btn" (click)="openEditModal()">
                 <nz-icon nzType="edit" /> Cập nhật hợp đồng
               </button>
-            }
+            </div>
 
             <div class="action-divider"></div>
 
@@ -186,6 +191,15 @@
     <div class="form-grid">
       <label>Ngày bắt đầu</label>
       <input nz-input type="date" [(ngModel)]="editForm.startDate" />
+
+      <label>Ngày kết thúc</label>
+      <input nz-input type="date" [(ngModel)]="editForm.endDate" />
+
+      <label>Thanh toán từ ngày</label>
+      <nz-input-number [(ngModel)]="editForm.firstBillingDate" [nzMin]="1" [nzMax]="31" [nzStep]="1" style="width:100%" />
+
+      <label>Đến ngày</label>
+      <nz-input-number [(ngModel)]="editForm.lastBillingDate" [nzMin]="1" [nzMax]="31" [nzStep]="1" style="width:100%" />
 
       <label>Tiền cọc (đ)</label>
       <nz-input-number [(ngModel)]="editForm.deposit" [nzMin]="0" [nzStep]="500000"

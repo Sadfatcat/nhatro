@@ -21,16 +21,17 @@ import { PermissionDirective } from '../../core/auth/permission/directives/permi
 const PAGE_SIZE = 10;
 
 interface TenantInfo {
-  tenantId:    string;
-  userId:      string;
-  fullName:    string;
-  phone:       string | null;
-  dateOfBirth: string | null;
-  hometown:    string | null;
-  nationalId:  string | null;
-  username:    string | null;
-  email:       string;
-  isActive:    boolean;
+  tenantId:     string;
+  userId:       string;
+  fullName:     string;
+  phone:        string | null;
+  dateOfBirth:  string | null;
+  hometown:     string | null;
+  nationalId:   string | null;
+  tenantIdDate: string | null;
+  username:     string | null;
+  email:        string;
+  isActive:     boolean;
 }
 
 interface RoomRow {
@@ -85,11 +86,13 @@ export class AccountsComponent implements OnInit {
   filterFloor  = signal<number | null>(null);
   filterSort   = signal<'asc' | 'desc'>('asc');
   filterStatus = signal<string | null>(null);
+  filterSearch = signal('');
 
   // Plain props for ngModel two-way binding (nz-select can't bind signals directly)
   filterFloorValue:  number | null = null;
   filterStatusValue: string | null = null;
   filterSortValue:   'asc' | 'desc' = 'asc';
+  filterSearchValue = '';
 
   floorOptions = computed(() => {
     const floors = [...new Set(this.allRooms().map(r => r.floor))].sort((a, b) => a - b);
@@ -100,8 +103,13 @@ export class AccountsComponent implements OnInit {
     let rows = this.allRooms();
     const floor  = this.filterFloor();
     const status = this.filterStatus();
+    const q      = this.filterSearch().toLowerCase();
     if (floor  !== null) rows = rows.filter(r => r.floor  === floor);
     if (status !== null) rows = rows.filter(r => r.status === status);
+    if (q) rows = rows.filter(r =>
+      r.roomNumber.toLowerCase().includes(q) ||
+      (r.tenant?.fullName.toLowerCase().includes(q) ?? false),
+    );
     rows = [...rows].sort((a, b) =>
       this.filterSort() === 'asc'
         ? a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true })
@@ -147,11 +155,11 @@ export class AccountsComponent implements OnInit {
   // ── Form: Cấp phòng ────────────────────────────────────────────────────────
   assignRoomForm = {
     roomId: '', username: '', password: '',
-    fullName: '', phone: '', dateOfBirth: '', hometown: '', nationalId: '',
+    fullName: '', phone: '', dateOfBirth: '', hometown: '', nationalId: '', tenantIdDate: '',
   };
 
   // ── Form: Thông tin người thuê ─────────────────────────────────────────────
-  tenantForm = { fullName: '', phone: '', dateOfBirth: '', hometown: '', nationalId: '' };
+  tenantForm = { fullName: '', phone: '', dateOfBirth: '', hometown: '', nationalId: '', tenantIdDate: '' };
 
   // ── Giá / trạng thái ───────────────────────────────────────────────────────
   newPrice  = 0;
@@ -191,9 +199,11 @@ export class AccountsComponent implements OnInit {
     this.filterFloor.set(null);
     this.filterStatus.set(null);
     this.filterSort.set('asc');
+    this.filterSearch.set('');
     this.filterFloorValue  = null;
     this.filterStatusValue = null;
     this.filterSortValue   = 'asc';
+    this.filterSearchValue = '';
     this.roomPage.set(1);
   }
 
@@ -218,7 +228,7 @@ export class AccountsComponent implements OnInit {
 
   // ── Cấp phòng (assign) ────────────────────────────────────────────────────
   openAssignRoomModal(): void {
-    this.assignRoomForm = { roomId: '', username: '', password: '', fullName: '', phone: '', dateOfBirth: '', hometown: '', nationalId: '' };
+    this.assignRoomForm = { roomId: '', username: '', password: '', fullName: '', phone: '', dateOfBirth: '', hometown: '', nationalId: '', tenantIdDate: '' };
     this.assignRoomModal.set(true);
   }
   closeAssignRoomModal(): void { this.assignRoomModal.set(false); }
@@ -232,10 +242,11 @@ export class AccountsComponent implements OnInit {
       username:    f.username,
       password:    f.password,
       fullName:    f.fullName,
-      phone:       f.phone || undefined,
-      dateOfBirth: f.dateOfBirth || undefined,
-      hometown:    f.hometown || undefined,
-      nationalId:  f.nationalId || undefined,
+      phone:        f.phone        || undefined,
+      dateOfBirth:  f.dateOfBirth  || undefined,
+      hometown:     f.hometown     || undefined,
+      nationalId:   f.nationalId   || undefined,
+      tenantIdDate: f.tenantIdDate || undefined,
     })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
@@ -249,11 +260,12 @@ export class AccountsComponent implements OnInit {
     this.selectedRoom.set(row);
     const t = row.tenant!;
     this.tenantForm = {
-      fullName:    t.fullName,
-      phone:       t.phone ?? '',
-      dateOfBirth: t.dateOfBirth ? t.dateOfBirth.slice(0, 10) : '',
-      hometown:    t.hometown ?? '',
-      nationalId:  t.nationalId ?? '',
+      fullName:     t.fullName,
+      phone:        t.phone        ?? '',
+      dateOfBirth:  t.dateOfBirth  ? t.dateOfBirth.slice(0, 10) : '',
+      hometown:     t.hometown     ?? '',
+      nationalId:   t.nationalId   ?? '',
+      tenantIdDate: t.tenantIdDate ?? '',
     };
     this.tenantInfoModal.set(true);
   }
@@ -264,11 +276,12 @@ export class AccountsComponent implements OnInit {
     if (!room) return;
     this.saving.set(true);
     this.api.patch(`/accounts/rooms/${room.roomId}/tenant-info`, {
-      fullName:    this.tenantForm.fullName || undefined,
-      phone:       this.tenantForm.phone || undefined,
-      dateOfBirth: this.tenantForm.dateOfBirth || null,
-      hometown:    this.tenantForm.hometown || null,
-      nationalId:  this.tenantForm.nationalId || null,
+      fullName:     this.tenantForm.fullName     || undefined,
+      phone:        this.tenantForm.phone        || undefined,
+      dateOfBirth:  this.tenantForm.dateOfBirth  || null,
+      hometown:     this.tenantForm.hometown     || null,
+      nationalId:   this.tenantForm.nationalId   || null,
+      tenantIdDate: this.tenantForm.tenantIdDate || null,
     })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({

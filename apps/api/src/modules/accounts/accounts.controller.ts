@@ -56,7 +56,7 @@ export class AccountsController {
   @Patch('rooms/:roomId/tenant-info')
   updateTenantInfo(
     @Param('roomId') roomId: string,
-    @Body() body: { fullName?: string; phone?: string; dateOfBirth?: string | null; hometown?: string | null; nationalId?: string | null },
+    @Body() body: { fullName?: string; phone?: string; dateOfBirth?: string | null; hometown?: string | null; nationalId?: string | null; tenantIdDate?: string | null },
   ): Promise<unknown> {
     return this.accounts.updateTenantInfo(roomId, body);
   }

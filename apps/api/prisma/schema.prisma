@@ -65,6 +65,7 @@ model Tenant {
   dateOfBirth DateTime?
   hometown    String?
   nationalId  String?
+  tenantIdDate String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   contracts   Contract[]
@@ -73,18 +74,21 @@ model Tenant {
 }
 
 model Contract {
-  id        String    @id @default(cuid())
-  roomId    String
-  tenantId  String
-  startDate DateTime
-  deposit   Int       @default(0)
-  status    String    @default("ACTIVE")
-  notes     String?
-  filePath  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  room      Room      @relation(fields: [roomId], references: [id])
-  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  id                String    @id @default(cuid())
+  roomId            String
+  tenantId          String
+  startDate         DateTime
+  endDate           DateTime?
+  firstBillingDate  Int?
+  lastBillingDate   Int?
+  deposit           Int       @default(0)
+  status            String    @default("ACTIVE")
+  notes             String?
+  filePath          String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  room              Room      @relation(fields: [roomId], references: [id])
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
 }
 
 model Landlord {

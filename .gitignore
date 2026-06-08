@@ -27,3 +27,4 @@ apps/api/node_modules/
 
 # Uploaded contract files (runtime)
 apps/api/uploads/
+apps/api/storage/

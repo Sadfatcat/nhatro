@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, computed, inject,
+  ChangeDetectionStrategy, Component, inject,
   OnDestroy, OnInit, signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -15,8 +15,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize } from 'rxjs';
-import { ContractStatus, UserRole } from '@nhatro/shared-types';
-import { AuthService } from '../../../core/auth/services/auth.service';
+import { ContractStatus } from '@nhatro/shared-types';
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
@@ -27,10 +26,12 @@ interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 interface ContractRow {
   id: string; roomId: string; tenantId: string;
-  startDate: string; deposit: number; status: ContractStatus;
+  startDate: string; endDate: string | null;
+  firstBillingDate: number | null; lastBillingDate: number | null;
+  deposit: number; status: ContractStatus;
   notes: string | null; createdAt: string; filePath: string | null;
   room:   { roomId: string; roomNumber: string; floor: number; price: number };
-  tenant: { tenantId: string; fullName: string; phone: string | null; dateOfBirth: string | null; hometown: string | null; nationalId: string | null };
+  tenant: { tenantId: string; fullName: string; phone: string | null; dateOfBirth: string | null; hometown: string | null; nationalId: string | null; tenantIdDate: string | null };
 }
 
 @Component({
@@ -49,15 +50,9 @@ interface ContractRow {
 export class ContractDetailComponent implements OnInit, OnDestroy {
   private route     = inject(ActivatedRoute);
   private router    = inject(Router);
-  private auth      = inject(AuthService);
-  private api       = inject(ApiService);
+private api       = inject(ApiService);
   private toast     = inject(ToastService);
   private sanitizer = inject(DomSanitizer);
-
-  readonly UserRole = UserRole;
-
-  role    = computed(() => this.auth.role());
-  isAdmin = computed(() => this.role() === UserRole.ADMIN);
 
   contract   = signal<ContractRow | null>(null);
   loading    = signal(true);
@@ -72,7 +67,7 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
 
   // Edit modal
   editModal = signal(false);
-  editForm  = { startDate: '', deposit: 0 };
+  editForm  = { startDate: '', endDate: '', firstBillingDate: 0, lastBillingDate: 0, deposit: 0 };
 
   // Delete countdown
   deleteCountdown = signal(30);
@@ -89,7 +84,10 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     this.loadContract(id);
   }
 
-  ngOnDestroy(): void { this.clearCountdown(); }
+  ngOnDestroy(): void {
+    this.clearCountdown();
+    if (this._blobUrl) { URL.revokeObjectURL(this._blobUrl); this._blobUrl = null; }
+  }
 
   private loadContract(id: string): void {
     this.loading.set(true);
@@ -112,20 +110,32 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     this.api.getBlob(`/contracts/${contractId}/download`)
       .pipe(finalize(() => this.pdfLoading.set(false)))
       .subscribe({
-        next: blob => {
-          const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-          this._blobUrl = url;
-          this.pdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
-        },
+        next: blob => { this.applyPdfBlob(blob); },
         error: () => this.toast.error('Không thể tải file hợp đồng.'),
       });
+  }
+
+  private applyPdfBlob(blob: Blob): void {
+    if (!blob || blob.size === 0) { this.toast.error('File hợp đồng rỗng.'); return; }
+    blob.slice(0, 5).text().then(header => {
+      if (header !== '%PDF-') { this.toast.error('File hợp đồng không phải PDF hợp lệ.'); return; }
+      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      this._blobUrl = url;
+      this.pdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
+    }).catch(() => this.toast.error('Không thể tải file hợp đồng.'));
   }
 
   // ── Edit ────────────────────────────────────────────────────────────────────
   openEditModal(): void {
     const c = this.contract();
     if (!c) return;
-    this.editForm = { startDate: c.startDate ? c.startDate.slice(0, 10) : '', deposit: c.deposit };
+    this.editForm = {
+      startDate:        c.startDate ? c.startDate.slice(0, 10) : '',
+      endDate:          c.endDate   ? c.endDate.slice(0, 10)   : '',
+      firstBillingDate: c.firstBillingDate ?? 0,
+      lastBillingDate:  c.lastBillingDate  ?? 0,
+      deposit:          c.deposit,
+    };
     this.editModal.set(true);
   }
 
@@ -134,8 +144,11 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     if (!id) return;
     this.saving.set(true);
     this.api.patch<ApiResponse<ContractRow>>(`/contracts/${id}`, {
-      startDate: this.editForm.startDate || undefined,
-      deposit:   this.editForm.deposit,
+      startDate:        this.editForm.startDate        || undefined,
+      endDate:          this.editForm.endDate          || undefined,
+      firstBillingDate: this.editForm.firstBillingDate || undefined,
+      lastBillingDate:  this.editForm.lastBillingDate  || undefined,
+      deposit:          this.editForm.deposit,
     })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({

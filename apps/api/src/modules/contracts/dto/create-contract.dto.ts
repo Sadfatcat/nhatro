@@ -1,4 +1,4 @@
-import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, Min, Max } from 'class-validator';
 
 export class CreateContractDto {
   @IsString()
@@ -6,6 +6,18 @@ export class CreateContractDto {
 
   @IsDateString()
   startDate: string;
+
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
+
+  @IsInt() @Min(1) @Max(31)
+  @IsOptional()
+  firstBillingDate?: number;
+
+  @IsInt() @Min(1) @Max(31)
+  @IsOptional()
+  lastBillingDate?: number;
 
   @IsInt()
   @Min(0)

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -16,8 +16,8 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize } from 'rxjs';
 import { ContractStatus, RoomStatus } from '@nhatro/shared-types';
-import { UserRole } from '@nhatro/shared-types';
 import { AuthService } from '../../core/auth/services/auth.service';
+import { PermissionService } from '../../core/auth/permission/services/permission.service';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../shared/components/feedback/toast/toast.service';
 import { MoneyDisplayComponent } from '../../shared/components/display/money-display/money-display.component';
@@ -62,17 +62,12 @@ interface RoomOption { roomId: string; roomNumber: string; floor: number; price:
   ],
 })
 export class ContractsComponent implements OnInit, OnDestroy {
-  private auth      = inject(AuthService);
-  private api       = inject(ApiService);
-  private toast     = inject(ToastService);
-  private sanitizer = inject(DomSanitizer);
-
-  readonly UserRole = UserRole;
-
-  // ── Role helpers ──────────────────────────────────────────────────────────────
-  role         = computed(() => this.auth.role());
-  isManagement = computed(() => this.role() === UserRole.ADMIN || this.role() === UserRole.LANDLORD);
-  isAdmin      = computed(() => this.role() === UserRole.ADMIN);
+  private auth        = inject(AuthService);
+  private api         = inject(ApiService);
+  private toast       = inject(ToastService);
+  private sanitizer   = inject(DomSanitizer);
+  private router      = inject(Router);
+  private permissions = inject(PermissionService);
 
   // ── Core state ────────────────────────────────────────────────────────────────
   loading     = signal(false);
@@ -120,7 +115,7 @@ export class ContractsComponent implements OnInit, OnDestroy {
   selected       = signal<ContractRow | null>(null);
 
   // ── Create form & preview ─────────────────────────────────────────────────────
-  createForm  = { roomId: '', startDate: '', deposit: 0, notes: '' };
+  createForm  = { roomId: '', startDate: '', endDate: '', firstBillingDate: 0, lastBillingDate: 0, deposit: 0, notes: '' };
   previewMode = signal(false);
   previewData = signal<PreviewData | null>(null);
   previewing  = signal(false);
@@ -155,17 +150,24 @@ export class ContractsComponent implements OnInit, OnDestroy {
     this.api.getBlob(`/contracts/${contractId}/download`)
       .pipe(finalize(() => this.pdfLoading.set(false)))
       .subscribe({
-        next: blob => {
-          this._blobUrl = URL.createObjectURL(blob);
-          this.pdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(this._blobUrl));
-        },
+        next: blob => { this.applyPdfBlob(blob); },
         error: () => this.toast.error('Không thể tải file hợp đồng.'),
       });
   }
 
+  private applyPdfBlob(blob: Blob): void {
+    if (!blob || blob.size === 0) { this.toast.error('File hợp đồng rỗng.'); return; }
+    blob.slice(0, 5).text().then(header => {
+      if (header !== '%PDF-') { this.toast.error('File hợp đồng không phải PDF hợp lệ.'); return; }
+      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      this._blobUrl = url;
+      this.pdfUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
+    }).catch(() => this.toast.error('Không thể tải file hợp đồng.'));
+  }
+
   load(): void {
     this.loading.set(true);
-    if (this.isManagement()) {
+    if (this.permissions.hasPermission('contracts:create')) {
       this.api.get<ApiResponse<ContractRow[]>>('/contracts')
         .pipe(finalize(() => this.loading.set(false)))
         .subscribe({
@@ -178,7 +180,7 @@ export class ContractsComponent implements OnInit, OnDestroy {
       this.api.get<ApiResponse<ContractRow | null>>(`/contracts/room/${roomId}`)
         .pipe(finalize(() => this.loading.set(false)))
         .subscribe({
-          next:  r => { this.myContract.set(r.data); if (r.data) this.loadPdf(r.data.id); },
+          next:  r => { if (r.data) this.router.navigate(['/app/contracts', r.data.id]); else this.loading.set(false); },
           error: () => this.toast.error('Không tải được hợp đồng.'),
         });
     }
@@ -204,7 +206,7 @@ export class ContractsComponent implements OnInit, OnDestroy {
 
   // ── Create ────────────────────────────────────────────────────────────────────
   openCreateModal(): void {
-    this.createForm = { roomId: '', startDate: '', deposit: 0, notes: '' };
+    this.createForm = { roomId: '', startDate: '', endDate: '', firstBillingDate: 0, lastBillingDate: 0, deposit: 0, notes: '' };
     this.previewMode.set(false);
     this.previewData.set(null);
     this.loadOccupiedRooms();
@@ -224,10 +226,13 @@ export class ContractsComponent implements OnInit, OnDestroy {
     }
     this.previewing.set(true);
     this.api.post<ApiResponse<PreviewData>>('/contracts/preview', {
-      roomId:    this.createForm.roomId,
-      startDate: this.createForm.startDate,
-      deposit:   this.createForm.deposit || 0,
-      notes:     this.createForm.notes   || undefined,
+      roomId:           this.createForm.roomId,
+      startDate:        this.createForm.startDate,
+      endDate:          this.createForm.endDate          || undefined,
+      firstBillingDate: this.createForm.firstBillingDate || undefined,
+      lastBillingDate:  this.createForm.lastBillingDate  || undefined,
+      deposit:          this.createForm.deposit          || 0,
+      notes:            this.createForm.notes            || undefined,
     })
       .pipe(finalize(() => this.previewing.set(false)))
       .subscribe({
@@ -241,10 +246,13 @@ export class ContractsComponent implements OnInit, OnDestroy {
   confirmCreate(): void {
     this.saving.set(true);
     this.api.post<ApiResponse<unknown>>('/contracts', {
-      roomId:    this.createForm.roomId,
-      startDate: this.createForm.startDate,
-      deposit:   this.createForm.deposit || 0,
-      notes:     this.createForm.notes   || undefined,
+      roomId:           this.createForm.roomId,
+      startDate:        this.createForm.startDate,
+      endDate:          this.createForm.endDate          || undefined,
+      firstBillingDate: this.createForm.firstBillingDate || undefined,
+      lastBillingDate:  this.createForm.lastBillingDate  || undefined,
+      deposit:          this.createForm.deposit          || 0,
+      notes:            this.createForm.notes            || undefined,
     })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
