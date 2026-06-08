@@ -7,7 +7,10 @@ import { Permission } from '../policies/role-permissions';
 export class PermissionService {
   private auth = inject(AuthService);
 
-  private permissions = computed(() => ROLE_PERMISSIONS[this.auth.role()] ?? []);
+  private permissions = computed(() => {
+    const role = this.auth.role();
+    return role ? (ROLE_PERMISSIONS[role] ?? []) : [];
+  });
 
   hasPermission(permission: Permission | string): boolean {
     return this.permissions().includes(permission as Permission);

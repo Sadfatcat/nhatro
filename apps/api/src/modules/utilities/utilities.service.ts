@@ -15,8 +15,31 @@ export class UtilitiesService {
   async findAll() {
     const rooms = await this.prisma.room.findMany({
       orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
-      include: { utilityRecord: true, tenant: { include: { user: true } } },
+      include: {
+        utilityRecord: true,
+        tenant: { select: { id: true, fullName: true, user: { select: { username: true } } } },
+      },
     });
+
+    const missing = rooms.filter(r => !r.utilityRecord);
+    if (missing.length > 0) {
+      const now          = new Date();
+      const billingMonth = this.currentBillingMonth();
+      await this.prisma.utilityRecord.createMany({
+        data: missing.map(r => ({
+          roomId: r.id,
+          prevElec: 0, currElec: 0,
+          prevWater: 0, currWater: 0,
+          recordedAt: now,
+          billingMonth,
+        })),
+        skipDuplicates: true,
+      });
+      const seeded = await this.prisma.utilityRecord.findMany({ where: { roomId: { in: missing.map(r => r.id) } } });
+      const seedMap = new Map(seeded.map(u => [u.roomId, u]));
+      rooms.forEach(r => { if (!r.utilityRecord) r.utilityRecord = seedMap.get(r.id) ?? null; });
+    }
+
     return rooms.map(r => this.mapRoom(r));
   }
 
@@ -26,6 +49,17 @@ export class UtilitiesService {
       include: { utilityRecord: true },
     });
     if (!room) throw new NotFoundException('Không tìm thấy phòng.');
+    if (!room.utilityRecord) {
+      room.utilityRecord = await this.prisma.utilityRecord.create({
+        data: {
+          roomId,
+          prevElec: 0, currElec: 0,
+          prevWater: 0, currWater: 0,
+          recordedAt: new Date(),
+          billingMonth: this.currentBillingMonth(),
+        },
+      });
+    }
     return this.mapRoom(room);
   }
 
@@ -34,7 +68,7 @@ export class UtilitiesService {
     if (!room) throw new NotFoundException('Không tìm thấy phòng.');
 
     const now          = new Date();
-    const billingMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const billingMonth = this.currentBillingMonth();
 
     const record = await this.prisma.utilityRecord.upsert({
       where:  { roomId },
@@ -63,6 +97,15 @@ export class UtilitiesService {
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Không tìm thấy phòng.');
     return this.prisma.room.update({ where: { id: roomId }, data: { billingDay } });
+  }
+
+  async setBillingDayBulk(roomIds: string[], billingDay: number) {
+    return this.prisma.room.updateMany({ where: { id: { in: roomIds } }, data: { billingDay } });
+  }
+
+  private currentBillingMonth(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   }
 
   private mapRoom(room: any) {

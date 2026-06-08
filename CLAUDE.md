@@ -30,9 +30,6 @@ You are functioning as the Lead Fullstack Engineer for the **Inn Management Syst
 ## 2. System Business Flow
 
 ### Roles & Access
-* **Guest** is the default unauthenticated role when a user enters the CMS/public web.
-* **Guest** does not log in and can only view public room listings, including room price, images, status, and basic description.
-* **Guest** cannot access dashboard, contracts, invoices, tenants, payments, or administrative features.
 * **Tenant** accounts are created by `Admin` or `Landlord` after the rental agreement.
 * **Tenant** is assigned directly to the rented room and can view only assigned room data, own contract, own invoices, and own payment status.
 * **Admin** and **Landlord** can manage rooms, create tenant accounts, assign tenants to rooms, create contracts, generate invoices, and record payments.
@@ -87,7 +84,30 @@ interface ApiResponse<T> {
 }
 ```
 
-## 4. Token & Performance Optimization Rules
+## 4. Plan → Implement Workflow
+
+When the user says **"plan"** before a task:
+1. Spawn a Plan agent with `model: "opus"` to research the codebase and design the approach.
+2. Review the agent's output, then present the plan to the user for confirmation.
+3. When the user says **"implement"** (or approves), execute the plan as Sonnet.
+
+```
+Agent({
+  description: "<short task description>",
+  subagent_type: "Plan with opus",
+  model: "opus",
+  prompt: "<comprehensive context: files, business rules, constraints, what to design>"
+})
+```
+
+Rules:
+- Only spawn Opus for tasks with genuine architectural complexity or multi-layer changes.
+- For simple/obvious tasks, plan inline as Sonnet — no need to spawn.
+- Always pass full context in the prompt (file paths, existing patterns, constraints) — the agent starts cold.
+
+---
+
+## 5. Token & Performance Optimization Rules
 
 * Be brief. As short as possible. No filler words, no manners, no hedging. Direct answers only. 
 * Thinking process — same rule: concise, no deliberation narration.
@@ -103,3 +123,53 @@ interface ApiResponse<T> {
 * Never rewrite an entire Angular component or NestJS service. Output ONLY the modified methods or added lines.
 * Use clear locator comments like `// Insert after line X` or `// Replace method Y` to indicate code placement.
 * **Before implementing any FE/UI/UX feature or new page**, always ask: which roles can access this module, which actions are restricted to which roles, and confirm before writing any code or permission assignments.
+
+1. Think Before Coding
+Don't assume. Don't hide confusion. Surface tradeoffs.
+
+Before implementing:
+
+State your assumptions explicitly. If uncertain, ask.
+If multiple interpretations exist, present them - don't pick silently.
+If a simpler approach exists, say so. Push back when warranted.
+If something is unclear, stop. Name what's confusing. Ask.
+2. Simplicity First
+Minimum code that solves the problem. Nothing speculative.
+
+No features beyond what was asked.
+No abstractions for single-use code.
+No "flexibility" or "configurability" that wasn't requested.
+No error handling for impossible scenarios.
+If you write 200 lines and it could be 50, rewrite it.
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+3. Surgical Changes
+Touch only what you must. Clean up only your own mess.
+
+When editing existing code:
+
+Don't "improve" adjacent code, comments, or formatting.
+Don't refactor things that aren't broken.
+Match existing style, even if you'd do it differently.
+If you notice unrelated dead code, mention it - don't delete it.
+When your changes create orphans:
+
+Remove imports/variables/functions that YOUR changes made unused.
+Don't remove pre-existing dead code unless asked.
+The test: Every changed line should trace directly to the user's request.
+
+4. Goal-Driven Execution
+Define success criteria. Loop until verified.
+
+Transform tasks into verifiable goals:
+
+"Add validation" → "Write tests for invalid inputs, then make them pass"
+"Fix the bug" → "Write a test that reproduces it, then make it pass"
+"Refactor X" → "Ensure tests pass before and after"
+For multi-step tasks, state a brief plan:
+
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+

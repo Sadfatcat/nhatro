@@ -114,133 +114,85 @@
   <!-- ── Kanban: 2 cột cạnh nhau ── -->
   <div class="kanban-wrap">
 
-    <!-- Ngày 15 -->
+    @for (day of billingDays; track day) {
     <div class="kanban-col">
       <div class="kanban-col__header">
         <div class="kanban-col__title-group">
-          <span class="kanban-day-badge">Ngày 15</span>
-          <span class="kanban-col__count">{{ rooms15Ids().length }} phòng</span>
+          <span class="kanban-day-badge" [class.kanban-day-badge--30]="day === 30">Ngày {{ day }}</span>
+          <span class="kanban-col__count">{{ (day === 15 ? rooms15() : rooms30()).length }} phòng</span>
         </div>
-        <button class="btn-add-room" (click)="openAddModal(15)">
+        <button class="btn-add-room" (click)="openAddModal(day)">
           <nz-icon nzType="plus" /> Thêm
         </button>
       </div>
 
       <div class="kanban-col__body">
-        <div class="kanban-list"
-          id="list-15"
-          cdkDropList
-          cdkDropListOrientation="vertical"
-          [cdkDropListData]="rooms15Ids()"
-          [cdkDropListConnectedTo]="['list-30']"
-          (cdkDropListDropped)="onDrop($event)">
-
-          @for (room of roomsForDay(15); track room.roomId) {
-            <div class="kcard" [class.kcard--chot]="isChot(room.roomId)" cdkDrag>
-              <div class="kcard__drag-handle" cdkDragHandle>
-                <nz-icon nzType="holder" />
-              </div>
-              <div class="kcard__body">
-                <div class="kcard__head">
-                  <span class="kcard__number">P.{{ room.roomNumber }}</span>
-                  @if (isChot(room.roomId)) {
-                    <span class="status-badge status-badge--chot">ĐÃ CHỐT</span>
-                  } @else {
-                    <span class="status-badge status-badge--wait">CHỜ</span>
-                  }
-                  <button class="btn-icon-ghost btn-icon-ghost--danger" (click)="removeFromDay(room.roomId)">✕</button>
-                </div>
-                <div class="kcard__readings">
-                  <span class="kcard__reading kcard__reading--elec">
-                    ⚡ {{ (chotReadingOf(room.roomId)?.currElec ?? latestReadings().get(room.roomId)?.utilityRecord?.currElec ?? '—') | number }}
+        <div class="kanban-list">
+          @for (room of roomsForDay(day); track room.roomId) {
+            <div class="kcard" [class.kcard--chot]="isChot(room.roomId)">
+              <span class="kcard__number">P.{{ room.roomNumber }}</span>
+              <div class="kcard__readings">
+                <span class="kcard__reading kcard__reading--elec">
+                  <span class="kcard__reading-icon kcard__reading-icon--elec">⚡</span>
+                  <span class="kcard__reading-meta">
+                    <span class="kcard__reading-label">ĐIỆN</span>
+                    <span class="kcard__reading-val">{{ (chotReadingOf(room.roomId)?.currElec ?? latestReadings().get(room.roomId)?.utilityRecord?.currElec ?? 0) | number }}</span>
                   </span>
-                  <span class="kcard__reading kcard__reading--water">
-                    💧 {{ (chotReadingOf(room.roomId)?.currWater ?? latestReadings().get(room.roomId)?.utilityRecord?.currWater ?? '—') | number }}
+                </span>
+                <span class="kcard__reading kcard__reading--water">
+                  <span class="kcard__reading-icon kcard__reading-icon--water">💧</span>
+                  <span class="kcard__reading-meta">
+                    <span class="kcard__reading-label">NƯỚC</span>
+                    <span class="kcard__reading-val">{{ (chotReadingOf(room.roomId)?.currWater ?? latestReadings().get(room.roomId)?.utilityRecord?.currWater ?? 0) | number }}</span>
                   </span>
-                </div>
+                </span>
               </div>
-              <button class="btn-update" (click)="openModal(room.roomId)">Cập nhật</button>
+              <div class="kcard__actions">
+                @if (isChot(room.roomId)) {
+                  <span class="status-badge status-badge--chot">ĐÃ CHỐT</span>
+                } @else {
+                  <span class="status-badge status-badge--wait">CHỜ</span>
+                }
+                <button class="btn-icon-ghost btn-icon-ghost--danger" (click)="removeFromDay(room.roomId)">✕</button>
+                <button class="btn-update" [class.btn-update--active]="!isChot(room.roomId)" (click)="openModal(room.roomId)">Cập nhật</button>
+              </div>
             </div>
           }
-
-          @if (rooms15Ids().length === 0) {
+          @if ((day === 15 ? rooms15() : rooms30()).length === 0) {
             <div class="kanban-col__empty">Chưa có phòng</div>
           }
         </div>
+        @if ((day === 15 ? totalPages15() : totalPages30()) > 1) {
+          <div class="kanban-pagination">
+            <button class="kanban-page-btn" [disabled]="(day === 15 ? page15() : page30()) === 1" (click)="prevPage(day)">
+              <nz-icon nzType="left" />
+            </button>
+            <span>{{ day === 15 ? page15() : page30() }} / {{ day === 15 ? totalPages15() : totalPages30() }}</span>
+            <button class="kanban-page-btn" [disabled]="(day === 15 ? page15() : page30()) === (day === 15 ? totalPages15() : totalPages30())" (click)="nextPage(day)">
+              <nz-icon nzType="right" />
+            </button>
+          </div>
+        }
       </div>
     </div>
-
-    <!-- Ngày 30 -->
-    <div class="kanban-col">
-      <div class="kanban-col__header">
-        <div class="kanban-col__title-group">
-          <span class="kanban-day-badge">Ngày 30</span>
-          <span class="kanban-col__count">{{ rooms30Ids().length }} phòng</span>
-        </div>
-        <button class="btn-add-room" (click)="openAddModal(30)">
-          <nz-icon nzType="plus" /> Thêm
-        </button>
-      </div>
-
-      <div class="kanban-col__body">
-        <div class="kanban-list"
-          id="list-30"
-          cdkDropList
-          cdkDropListOrientation="vertical"
-          [cdkDropListData]="rooms30Ids()"
-          [cdkDropListConnectedTo]="['list-15']"
-          (cdkDropListDropped)="onDrop($event)">
-
-          @for (room of roomsForDay(30); track room.roomId) {
-            <div class="kcard" [class.kcard--chot]="isChot(room.roomId)" cdkDrag>
-              <div class="kcard__drag-handle" cdkDragHandle>
-                <nz-icon nzType="holder" />
-              </div>
-              <div class="kcard__body">
-                <div class="kcard__head">
-                  <span class="kcard__number">P.{{ room.roomNumber }}</span>
-                  @if (isChot(room.roomId)) {
-                    <span class="status-badge status-badge--chot">ĐÃ CHỐT</span>
-                  } @else {
-                    <span class="status-badge status-badge--wait">CHỜ</span>
-                  }
-                  <button class="btn-icon-ghost btn-icon-ghost--danger" (click)="removeFromDay(room.roomId)">✕</button>
-                </div>
-                <div class="kcard__readings">
-                  <span class="kcard__reading kcard__reading--elec">
-                    ⚡ {{ (chotReadingOf(room.roomId)?.currElec ?? latestReadings().get(room.roomId)?.utilityRecord?.currElec ?? '—') | number }}
-                  </span>
-                  <span class="kcard__reading kcard__reading--water">
-                    💧 {{ (chotReadingOf(room.roomId)?.currWater ?? latestReadings().get(room.roomId)?.utilityRecord?.currWater ?? '—') | number }}
-                  </span>
-                </div>
-              </div>
-              <button class="btn-update" (click)="openModal(room.roomId)">Cập nhật</button>
-            </div>
-          }
-
-          @if (rooms30Ids().length === 0) {
-            <div class="kanban-col__empty">Chưa có phòng</div>
-          }
-        </div>
-      </div>
-    </div>
+    }
 
   </div>
 
 </div>
 
 <!-- ── Reading modal ── -->
+@if (activeModalRoomId(); as roomId) {
 <nz-modal
-  [nzVisible]="!!activeModalRoomId()"
+  [nzVisible]="true"
   [nzTitle]="'Cập nhật chỉ số — Phòng ' + (activeModalRoom()?.roomNumber ?? '')"
   [nzFooter]="modalFooter"
   (nzOnCancel)="closeModal()"
+  (keydown.enter)="saveReading()"
   nzWidth="480px">
 
   <ng-container *nzModalContent>
-    @if (activeModalRoomId(); as roomId) {
-      <div class="modal-section">
+    <div class="modal-section">
         <div class="modal-section__title modal-section__title--elec">⚡ Điện</div>
         <div class="modal-row">
           <div class="modal-field">
@@ -291,7 +243,6 @@
           <strong>{{ waterAmount() | number:'1.0-0' }}₫</strong>
         </div>
       </div>
-    }
   </ng-container>
 
   <ng-template #modalFooter>
@@ -300,6 +251,7 @@
   </ng-template>
 
 </nz-modal>
+}
 
 <!-- ── Add rooms modal ── -->
 <nz-modal
@@ -317,9 +269,18 @@
     <input nz-input placeholder="Tìm số phòng..."
       [(ngModel)]="addSearchValue"
       (ngModelChange)="addSearchQuery.set($event)"
-      style="margin-bottom:12px" />
+      style="margin-bottom:8px" />
 
-    <div style="max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+    @if (availableRooms().length > 0) {
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--color-text-secondary)" (click)="toggleSelectAll()">
+          <input type="checkbox" [checked]="isAllSelected()" (click)="$event.stopPropagation()" style="pointer-events:none" />
+          Chọn tất cả ({{ availableRooms().length }})
+        </label>
+      </div>
+    }
+
+    <div style="max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
       @for (room of availableRooms(); track room.roomId) {
         <label style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; cursor:pointer;"
           [style.background]="isRoomSelected(room.roomId) ? 'var(--color-secondary-container)' : 'var(--color-bg-subtle)'"

@@ -1,0 +1,198 @@
+<section class="detail-page">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <a class="crumb-link" (click)="goBack()">Hợp đồng</a>
+    <span class="crumb-sep">›</span>
+    <span class="crumb-active">
+      @if (contract()) { Phòng {{ contract()!.room.roomNumber }} } @else { Chi tiết }
+    </span>
+  </nav>
+
+  @if (loading()) {
+    <div class="detail-loading">
+      <nz-spin nzSimple [nzSize]="'large'" />
+    </div>
+  } @else if (contract()) {
+
+    <!-- Page header -->
+    <div class="detail-header">
+      <div class="detail-header__left">
+        <button class="btn btn--ghost" (click)="goBack()">
+          <nz-icon nzType="arrow-left" /> Quay lại
+        </button>
+        <div>
+          <h1>Hợp đồng — Phòng {{ contract()!.room.roomNumber }}</h1>
+          <p>Người thuê: <strong>{{ contract()!.tenant.fullName }}</strong> · Tạo: {{ fmtDate(contract()!.createdAt) }}</p>
+        </div>
+      </div>
+      <app-status-badge [status]="contract()!.status" />
+    </div>
+
+    <!-- 2-column layout -->
+    <div class="detail-body">
+
+      <!-- LEFT: PDF preview -->
+      <div class="detail-col detail-col--pdf">
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="file-pdf" />
+            <span>Xem hợp đồng</span>
+          </div>
+          <div class="col-card__body pdf-wrap">
+            @if (pdfLoading()) {
+              <div class="pdf-loading">
+                <nz-spin nzSimple [nzSize]="'large'" />
+                <p>Đang tải hợp đồng...</p>
+              </div>
+            } @else if (pdfUrl()) {
+              <object [data]="pdfUrl()" type="application/pdf" class="pdf-frame">
+                <div class="pdf-fallback">
+                  <nz-icon nzType="file-pdf" style="font-size:48px;color:var(--color-text-muted)" />
+                  <p>Trình duyệt không hỗ trợ xem PDF trực tiếp.</p>
+                  <button class="btn btn--primary" (click)="downloadPdf()">
+                    <nz-icon nzType="download" /> Tải về để xem
+                  </button>
+                </div>
+              </object>
+            } @else {
+              <div class="pdf-fallback">
+                <nz-icon nzType="file-unknown" style="font-size:48px;color:var(--color-text-muted)" />
+                <p>Chưa có file hợp đồng.</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Info + Actions -->
+      <div class="detail-col detail-col--info">
+
+        <!-- Contract info card -->
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="file-text" />
+            <span>Thông tin hợp đồng</span>
+          </div>
+          <div class="col-card__body">
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Từ ngày</span><strong>{{ fmtDate(contract()!.startDate) }}</strong></div>
+              <div class="info-row"><span class="info-label">Đặt cọc</span><app-money-display [value]="contract()!.deposit" /></div>
+              <div class="info-row"><span class="info-label">Ngày tạo</span>{{ fmtDate(contract()!.createdAt) }}</div>
+              @if (contract()!.notes) {
+                <div class="info-row info-row--full"><span class="info-label">Ghi chú</span>{{ contract()!.notes }}</div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Room info card -->
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="home" />
+            <span>Thông tin phòng</span>
+          </div>
+          <div class="col-card__body">
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Phòng</span><strong>Phòng {{ contract()!.room.roomNumber }}</strong></div>
+              <div class="info-row"><span class="info-label">Tầng</span>{{ contract()!.room.floor }}</div>
+              <div class="info-row"><span class="info-label">Giá thuê</span><app-money-display [value]="contract()!.room.price" /><span class="per-month">/tháng</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tenant info card -->
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="user" />
+            <span>Thông tin người thuê</span>
+          </div>
+          <div class="col-card__body">
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Họ tên</span><strong>{{ contract()!.tenant.fullName }}</strong></div>
+              <div class="info-row"><span class="info-label">Năm sinh</span>{{ yearOf(contract()!.tenant.dateOfBirth) }}</div>
+              <div class="info-row"><span class="info-label">SĐT</span>{{ contract()!.tenant.phone ?? '—' }}</div>
+              <div class="info-row"><span class="info-label">CCCD</span>{{ contract()!.tenant.nationalId ?? '—' }}</div>
+              <div class="info-row info-row--full"><span class="info-label">Quê quán</span>{{ contract()!.tenant.hometown ?? '—' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions card -->
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="tool" />
+            <span>Thao tác</span>
+          </div>
+          <div class="col-card__body actions-body">
+
+            <button class="btn btn--secondary action-btn" [disabled]="downloading()" (click)="downloadPdf()">
+              <nz-icon [nzType]="downloading() ? 'loading' : 'download'" [nzSpin]="downloading()" />
+              {{ downloading() ? 'Đang tải...' : 'Tải PDF' }}
+            </button>
+
+            <input #fileInput type="file" accept=".pdf,.PDF" style="display:none" (change)="onFileSelected($event)" />
+            <button class="btn btn--secondary action-btn" [disabled]="uploading()" (click)="triggerUpload(fileInput)">
+              <nz-icon [nzType]="uploading() ? 'loading' : 'upload'" [nzSpin]="uploading()" />
+              {{ uploading() ? 'Đang tải lên...' : 'Upload PDF mới' }}
+            </button>
+
+            @if (isAdmin()) {
+              <button class="btn btn--secondary action-btn" (click)="openEditModal()">
+                <nz-icon nzType="edit" /> Cập nhật hợp đồng
+              </button>
+            }
+
+            <div class="action-divider"></div>
+
+            <!-- Delete: click-to-start -->
+            <div *appPermission="'contracts:delete'">
+              @if (!deleteCounting() && !deleteArmed()) {
+                <button class="btn btn--danger action-btn" (click)="startDeleteCountdown()">
+                  <nz-icon nzType="delete" /> Xoá hợp đồng
+                </button>
+              } @else if (deleteCounting()) {
+                <button class="btn btn--danger-outline action-btn" disabled>
+                  <nz-icon nzType="loading" nzSpin /> Xoá ({{ deleteCountdown() }}s)...
+                </button>
+              } @else {
+                <button class="btn btn--danger action-btn"
+                  nz-popconfirm
+                  nzPopconfirmTitle="Xác nhận xoá hợp đồng phòng {{ contract()!.room.roomNumber }}? Hành động này không thể hoàn tác."
+                  nzOkText="Xoá" nzCancelText="Huỷ"
+                  (nzOnConfirm)="confirmDelete()"
+                  [disabled]="saving()">
+                  <nz-icon nzType="delete" /> Xác nhận xoá
+                </button>
+              }
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  }
+
+</section>
+
+
+<!-- Modal: Cập nhật hợp đồng (Admin) -->
+<nz-modal [nzVisible]="editModal()" nzTitle="Cập nhật hợp đồng"
+  nzOkText="Lưu & Tạo lại PDF" [nzOkLoading]="saving()"
+  (nzOnOk)="submitEdit()" (nzOnCancel)="editModal.set(false)">
+  <ng-template nzModalContent>
+    <div class="form-grid">
+      <label>Ngày bắt đầu</label>
+      <input nz-input type="date" [(ngModel)]="editForm.startDate" />
+
+      <label>Tiền cọc (đ)</label>
+      <nz-input-number [(ngModel)]="editForm.deposit" [nzMin]="0" [nzStep]="500000"
+        [nzFormatter]="priceFormatter" [nzParser]="priceParser" style="width:100%" />
+    </div>
+    <p style="margin-top:12px;font-size:12px;color:var(--color-text-muted)">
+      Sau khi lưu, hệ thống sẽ tự động tạo lại file PDF hợp đồng với thông tin mới.
+    </p>
+  </ng-template>
+</nz-modal>

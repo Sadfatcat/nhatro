@@ -1,0 +1,271 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+:host { display: block; }
+
+.contracts-page {
+  display:        flex;
+  flex-direction: column;
+  gap:            16px;
+  padding:        24px 32px;
+  max-width:      1500px;
+  margin:         0 auto;
+}
+
+// ─── Filter bar ───────────────────────────────────────────────────────────────
+.filter-bar {
+  @include flex-between;
+  flex-wrap: wrap;
+  gap:       10px;
+  margin-bottom: 16px;
+
+  &__left, &__right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+}
+
+.toolbar-title { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
+
+// ─── Table actions ────────────────────────────────────────────────────────────
+.action-group { display: flex; gap: 2px; }
+
+// ─── Tenant view wrappers ─────────────────────────────────────────────────────
+.contract-loading,
+.contract-empty {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             12px;
+  padding:         64px 0;
+  color:           var(--color-text-muted);
+  font-size:       15px;
+}
+
+.contract-wrapper {
+  display:     flex;
+  justify-content: center;
+  padding-bottom: 40px;
+}
+
+// ─── Contract document (A4 paper style) ──────────────────────────────────────
+.contract-document {
+  background:  #fff;
+  box-shadow:  0 2px 12px rgba(0,0,0,.12);
+  width:       794px;      // A4 @ 96dpi
+  font-family: 'Times New Roman', 'DejaVu Serif', serif;
+  font-size:   14px;
+  line-height: 1.65;
+  color:       #111;
+}
+
+.contract-page {
+  padding: 60px 72px;
+
+  // visual page break between the two pages
+  + .contract-page {
+    border-top: 2px dashed #ddd;
+    margin-top: 0;
+  }
+
+  p { margin: 0 0 4px; }
+  .mb-8  { margin-bottom: 8px;  }
+  .mb-12 { margin-bottom: 12px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mb-24 { margin-bottom: 24px; }
+}
+
+// ─── Contract heading ─────────────────────────────────────────────────────────
+.contract-heading {
+  text-align:    center;
+  margin-bottom: 20px;
+
+  &__nation  { font-weight: 700; font-size: 15px; margin: 0; letter-spacing: .5px; }
+  &__motto   { text-decoration: underline; margin: 3px 0 0; }
+  &__title   { font-size: 20px; font-weight: 700; letter-spacing: 1px; margin: 16px 0 0; }
+
+  &--compact &__title { font-size: 16px; margin-top: 10px; }
+}
+
+.section-title { font-weight: 700; margin: 8px 0 4px !important; }
+
+.contract-members-intro {
+  text-align: center;
+  margin:     12px 0 12px !important;
+}
+
+// ─── Signature block ──────────────────────────────────────────────────────────
+.contract-signatures {
+  display:         flex;
+  justify-content: space-between;
+  margin-top:      32px;
+  text-align:      center;
+}
+
+.contract-sig {
+  width: 45%;
+  p { margin: 0; }
+
+  &__space { height: 56px; }
+}
+
+// ─── Modal contract detail ────────────────────────────────────────────────────
+.contract-modal-doc { padding: 4px 0; }
+
+.info-grid    { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.info-row     { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.info-label   { min-width: 90px; color: var(--color-text-secondary); font-weight: 600; font-size: 12px; }
+
+.tenant-detail {
+  &__title { font-weight: 600; font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; }
+}
+
+.notes-block {
+  background:    var(--color-bg-subtle);
+  border:        1px solid var(--color-border-light);
+  border-radius: $radius-sm;
+  padding:       10px 14px;
+  margin-top:    12px;
+  font-size:     13px;
+
+  &__label { font-weight: 600; color: var(--color-text-secondary); margin-bottom: 4px; }
+}
+
+.divider { border: none; border-top: 1px solid var(--color-border-light); margin: 16px 0; }
+
+// ─── Form grid (modal) ────────────────────────────────────────────────────────
+.form-grid {
+  display:               grid;
+  grid-template-columns: 110px 1fr;
+  gap:                   12px;
+  align-items:           center;
+
+  label { color: var(--color-text-secondary); font-weight: 600; font-size: 13px; }
+  .req  { color: var(--color-danger); }
+}
+
+// ─── Tenant contract box ──────────────────────────────────────────────────────
+.tenant-contract-wrapper {
+  display:         flex;
+  justify-content: center;
+  padding:         24px 0 40px;
+}
+
+.tenant-contract-box {
+  width:         480px;
+  border:        2px solid var(--color-border-light);
+  border-radius: $radius-md;
+  box-shadow:    0 2px 12px rgba(0,0,0,.08);
+  background:    #fff;
+  overflow:      hidden;
+
+  &__header {
+    display:         flex;
+    align-items:     center;
+    gap:             10px;
+    padding:         18px 24px;
+    background:      var(--color-bg-subtle);
+    border-bottom:   1px solid var(--color-border-light);
+    font-weight:     700;
+    font-size:       15px;
+    letter-spacing:  .5px;
+  }
+
+  &__body {
+    padding: 20px 24px;
+  }
+
+  &__footer {
+    padding:      16px 24px;
+    border-top:   1px solid var(--color-border-light);
+    display:      flex;
+    justify-content: center;
+  }
+}
+
+// ─── Detail modal (2-column) ──────────────────────────────────────────────────
+.detail-modal {
+  &__cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  &__footer {
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    padding-top:     16px;
+    gap:             8px;
+  }
+
+  &__footer-left { display: flex; gap: 8px; }
+  &__footer-right {}
+}
+
+.detail-col {
+  &__title {
+    font-weight:   700;
+    font-size:     12px;
+    color:         var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 8px;
+  }
+}
+
+.info-row--full { flex-direction: column; align-items: flex-start; gap: 2px; }
+
+// ─── Preview box (create modal preview step) ──────────────────────────────────
+.preview-box {
+  background:    var(--color-bg-subtle);
+  border:        1px solid var(--color-border-light);
+  border-radius: $radius-sm;
+  padding:       16px;
+}
+
+.preview-note {
+  font-size:   12px;
+  color:       var(--color-text-muted);
+  margin-top:  12px;
+  font-style:  italic;
+}
+
+// ─── Modal footer buttons ─────────────────────────────────────────────────────
+.modal-form-footer {
+  display:         flex;
+  justify-content: flex-end;
+  gap:             8px;
+  margin-top:      20px;
+  padding-top:     16px;
+  border-top:      1px solid var(--color-border-light);
+}
+
+// ─── PDF preview ──────────────────────────────────────────────────────────────
+.pdf-preview {
+  margin-bottom: 16px;
+  border:        1px solid var(--color-border-light);
+  border-radius: $radius-sm;
+  overflow:      hidden;
+}
+
+.pdf-frame {
+  width:      100%;
+  height:     480px;
+  display:    block;
+  background: #f5f5f5;
+}
+
+// ─── Danger outline button ────────────────────────────────────────────────────
+.btn--danger-outline {
+  border:  1px solid var(--color-danger);
+  color:   var(--color-danger);
+  background: transparent;
+  opacity: .6;
+  cursor:  not-allowed;
+}
+
+// ─── Print ────────────────────────────────────────────────────────────────────
+@media print {
+  .contracts-page > *:not(.tenant-contract-wrapper) { display: none !important; }
+}

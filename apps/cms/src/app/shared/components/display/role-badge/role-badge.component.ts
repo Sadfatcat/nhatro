@@ -6,7 +6,6 @@ const ROLE_MAP: Record<UserRole, { label: string; color: string }> = {
   [UserRole.ADMIN]:    { label: 'Quản trị viên', color: 'purple' },
   [UserRole.LANDLORD]: { label: 'Chủ trọ',       color: 'blue' },
   [UserRole.TENANT]:   { label: 'Người thuê',     color: 'cyan' },
-  [UserRole.GUEST]:    { label: 'Khách',          color: 'default' },
 };
 
 @Component({

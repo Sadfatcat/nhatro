@@ -25,49 +25,66 @@ model User {
 }
 
 model Room {
-  id          String         @id @default(cuid())
-  roomNumber  String         @unique
-  floor       Int
-  price       Int
-  status      String         @default("AVAILABLE")
-  description String?
-  branchId    String?
-  landlordId  String?
-  billingDay  Int            @default(15)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  tenant      Tenant?
-  landlord    Landlord?      @relation(fields: [landlordId], references: [id])
+  id            String         @id @default(cuid())
+  roomNumber    String         @unique
+  floor         Int
+  price         Int
+  status        String         @default("AVAILABLE")
+  description   String?
+  branchId      String?
+  landlordId    String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  billingDay    Int            @default(15)
+  contracts     Contract[]
+  landlord      Landlord?      @relation(fields: [landlordId], references: [id])
+  tenant        Tenant?
   utilityRecord UtilityRecord?
 }
 
 model UtilityRecord {
-  id            String   @id @default(cuid())
-  roomId        String   @unique
-  prevElec      Float    @default(0)
-  currElec      Float    @default(0)
-  prevWater     Float    @default(0)
-  currWater     Float    @default(0)
-  recordedAt    DateTime @default(now())
-  billingMonth  String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  room          Room     @relation(fields: [roomId], references: [id])
+  id           String   @id @default(cuid())
+  roomId       String   @unique
+  prevElec     Float    @default(0)
+  currElec     Float    @default(0)
+  prevWater    Float    @default(0)
+  currWater    Float    @default(0)
+  recordedAt   DateTime @default(now())
+  billingMonth String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  room         Room     @relation(fields: [roomId], references: [id])
 }
 
 model Tenant {
-  id           String    @id @default(cuid())
-  userId       String    @unique
-  roomId       String    @unique
-  fullName     String
-  phone        String?
-  dateOfBirth  DateTime?
-  hometown     String?
-  nationalId   String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  user         User      @relation(fields: [userId], references: [id])
-  room         Room      @relation(fields: [roomId], references: [id])
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  roomId      String     @unique
+  fullName    String
+  phone       String?
+  dateOfBirth DateTime?
+  hometown    String?
+  nationalId  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  contracts   Contract[]
+  room        Room       @relation(fields: [roomId], references: [id])
+  user        User       @relation(fields: [userId], references: [id])
+}
+
+model Contract {
+  id        String    @id @default(cuid())
+  roomId    String
+  tenantId  String
+  startDate DateTime
+  deposit   Int       @default(0)
+  status    String    @default("ACTIVE")
+  notes     String?
+  filePath  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  room      Room      @relation(fields: [roomId], references: [id])
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
 }
 
 model Landlord {

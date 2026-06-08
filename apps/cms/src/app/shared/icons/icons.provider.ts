@@ -31,6 +31,7 @@ import {
   LogoutOutline,
   RightOutline,
   ArrowRightOutline,
+  LeftOutline,
   DownOutline,
   // Status
   CheckCircleOutline,
@@ -73,6 +74,7 @@ export const APP_ICONS = [
   LogoutOutline,
   RightOutline,
   ArrowRightOutline,
+  LeftOutline,
   DownOutline,
   CheckCircleOutline,
   ExclamationCircleOutline,

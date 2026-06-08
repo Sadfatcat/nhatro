@@ -1,17 +1,21 @@
-you may misunderstanding of room account page
-create room account is permanent, in my (admin) charge, just can be change password by me
-renter be signed with rooms is by me or landlord assigned when they rent that, their information is update later when click in "cấp phòng" button
-i mean renter sections doest not take data from rooms account, it takes from personnal renter information admin or landlord update when using "cấp phòng" modal
+CONTRACT WORK FLOW AND SETTING UP
 
-as i see in "cấp phòng" function popup, there are username and password register for new renter, quite good
+Note: owner = admin and landlord (if called)
 
-so suggest me on 2 work flow:
-1 is keep the old flow, rooms account is on my charge, and i give the account for renter then assigned their infomation into that rooms for manament
+I want you first answer me did the create contract include the contract sheet i've gave you
 
-2 is remove the flow: separate rooms and renter account, make them in 1: create new renter account by their infomation, username, password, and room asign in 1 modal and if them leave, i will deleted their account and the room be free, if any new renter, i will create new account and asigned it to the room they rent, and provide them the account
+remove contract's end date
 
-I prefer the second work flow
+i want the flow should be in permission view: 
+Tenant view: contain just their own contract being created by the owner
+the contract being contained in a rectangle box, allow to download, but CANNOT fix
 
-Add delete renter account in system by actually delete them from database
+Owner view: a table of all rooms having contract right now, allow viewing detail actions, with the modal of contract view, beside is rooms and tenant infomation, a download and upload contract, delete also. For deleting button, after clicking must countdown 30s to change the button =true and actually allow to click, after clicking popup a alert to confirm and alert owner after delete it
 
-add change password in system for landlord,admin and tenant, but just admin can change them
+Answer me in this format:
+1: First question
+2: How do you understand this TASK
+3: Draw down a draft to the page layout also
+4: Plan and ask for this task if need to confirm carefully (using opus for planning and sonet for implementing)
+
+WAIT FOR APPROVAL AND COMFIRMATION TO IMPLEMENT

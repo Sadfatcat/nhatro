@@ -30,15 +30,6 @@ export interface RoomChargeResult {
   totalAmount:         number;
 }
 
-function minThanValidator(controlName: string) {
-  return (control: import('@angular/forms').AbstractControl) => {
-    const parent = control.parent;
-    if (!parent) return null;
-    const ref = parent.get(controlName)?.value ?? 0;
-    return control.value < ref ? { lessThanOld: true } : null;
-  };
-}
-
 @Component({
   selector:        'app-monthly-room-charge-dialog',
   standalone:      true,

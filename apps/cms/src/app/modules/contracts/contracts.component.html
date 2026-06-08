@@ -1,0 +1,395 @@
+<section class="contracts-page">
+
+  <!-- ══ MANAGEMENT VIEW (Admin / Landlord) ══════════════════════════════════ -->
+  @if (isManagement()) {
+
+    <div class="page-header-container">
+      <nav class="breadcrumb">
+        <span class="crumb-active">Hợp đồng</span>
+      </nav>
+      <div class="page-header">
+        <div>
+          <h1>Quản lý hợp đồng</h1>
+          <p>Tạo và quản lý hợp đồng thuê nhà.</p>
+        </div>
+        <div class="page-header__actions">
+          <button class="btn btn--primary" *appPermission="'contracts:create'" (click)="openCreateModal()">
+            <nz-icon nzType="plus" /> Tạo hợp đồng
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="filter-bar__left">
+          <nz-input-group [nzPrefix]="searchIcon" style="width:220px">
+            <input nz-input [(ngModel)]="filterSearchValue"
+              (ngModelChange)="filterSearch.set($event); page.set(1)"
+              placeholder="Phòng hoặc tên người thuê" />
+          </nz-input-group>
+          <ng-template #searchIcon><nz-icon nzType="search" /></ng-template>
+
+          <nz-select [(ngModel)]="filterStatusValue"
+            (ngModelChange)="filterStatus.set($event); page.set(1)"
+            nzPlaceHolder="Tất cả trạng thái" nzAllowClear style="width:180px">
+            <nz-option nzValue="ACTIVE"     nzLabel="Hiệu lực" />
+            <nz-option nzValue="EXPIRED"    nzLabel="Hết hạn" />
+            <nz-option nzValue="TERMINATED" nzLabel="Đã kết thúc" />
+          </nz-select>
+
+          <button class="btn btn--secondary" (click)="resetFilters()">
+            <nz-icon nzType="reload" /> Đặt lại
+          </button>
+        </div>
+        <div class="filter-bar__right">
+          <span class="toolbar-title">{{ filteredContracts().length }} hợp đồng</span>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <nz-table [nzData]="pagedRows()" [nzLoading]="loading()" [nzShowPagination]="false" nzSize="middle">
+        <thead>
+          <tr>
+            <th>Phòng</th>
+            <th>Người thuê</th>
+            <th>Từ ngày</th>
+            <th>Tiền cọc</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of pagedRows(); track row.id) {
+            <tr>
+              <td><strong>Phòng {{ row.room.roomNumber }}</strong></td>
+              <td>{{ row.tenant.fullName }}</td>
+              <td>{{ fmtDate(row.startDate) }}</td>
+              <td><app-money-display [value]="row.deposit" /></td>
+              <td><app-status-badge [status]="row.status" /></td>
+              <td>
+                <div class="action-group">
+                  <button nz-button nzType="text" nzSize="small"
+                    nz-tooltip nzTooltipTitle="Xem chi tiết"
+                    [routerLink]="['/app/contracts', row.id]">
+                    <span nz-icon nzType="eye"></span>
+                  </button>
+                  <button nz-button nzType="text" nzSize="small"
+                    nz-tooltip nzTooltipTitle="Chỉnh sửa"
+                    *appPermission="'contracts:update'"
+                    (click)="openEditModal(row)">
+                    <span nz-icon nzType="edit"></span>
+                  </button>
+                  @if (row.status === 'ACTIVE') {
+                    <button nz-button nzType="text" nzSize="small"
+                      nz-tooltip nzTooltipTitle="Kết thúc / Hết hạn"
+                      *appPermission="'contracts:update'"
+                      (click)="openTerminateModal(row)">
+                      <span nz-icon nzType="stop"></span>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      <app-paginator
+        [total]="filteredContracts().length"
+        [page]="page()"
+        [pageSize]="10"
+        (pageChange)="page.set($event)" />
+
+    </div>
+
+  }
+
+  <!-- ══ TENANT VIEW ══════════════════════════════════════════════════════════ -->
+  @else {
+    <div class="page-header-container">
+      <nav class="breadcrumb">
+        <span class="crumb-active">Hợp đồng của tôi</span>
+      </nav>
+      <div class="page-header">
+        <div>
+          <h1>Hợp đồng thuê nhà</h1>
+          <p>Thông tin hợp đồng thuê nhà hiện tại của bạn.</p>
+        </div>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="contract-loading">
+        <nz-icon nzType="loading" nzSpin style="font-size:32px;color:var(--color-primary)" />
+      </div>
+    } @else if (!myContract()) {
+      <div class="contract-empty">
+        <nz-icon nzType="file-text" style="font-size:48px;color:var(--color-text-muted)" />
+        <p>Bạn chưa có hợp đồng nào.</p>
+      </div>
+    } @else {
+      <div class="tenant-contract-wrapper">
+        <div class="tenant-contract-box">
+          <div class="tenant-contract-box__header">
+            <nz-icon nzType="file-text" style="font-size:24px" />
+            <span>HỢP ĐỒNG THUÊ NHÀ Ở</span>
+          </div>
+
+          <div class="tenant-contract-box__body">
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Phòng</span><strong>Phòng {{ myContract()?.room?.roomNumber }}</strong></div>
+              <div class="info-row"><span class="info-label">Tầng</span>{{ myContract()?.room?.floor }}</div>
+              <div class="info-row"><span class="info-label">Giá thuê</span><app-money-display [value]="myContract()?.room?.price ?? 0" /><span>/tháng</span></div>
+              <div class="info-row"><span class="info-label">Đặt cọc</span><app-money-display [value]="myContract()?.deposit ?? 0" /></div>
+              <div class="info-row"><span class="info-label">Từ ngày</span>{{ fmtDate(myContract()?.startDate) }}</div>
+              <div class="info-row"><span class="info-label">Trạng thái</span><app-status-badge [status]="myContract()?.status ?? 'ACTIVE'" /></div>
+              @if (myContract()?.notes) {
+                <div class="info-row"><span class="info-label">Ghi chú</span>{{ myContract()?.notes }}</div>
+              }
+            </div>
+
+            <div class="pdf-preview" style="margin-top:16px">
+              <nz-spin [nzSpinning]="pdfLoading()">
+                @if (pdfUrl()) {
+                  <iframe [src]="pdfUrl()" class="pdf-frame" frameborder="0"></iframe>
+                }
+              </nz-spin>
+            </div>
+          </div>
+
+          <div class="tenant-contract-box__footer">
+            <button class="btn btn--primary" [disabled]="downloading()"
+              (click)="downloadPdf(myContract()!.id, myContract()!.room.roomNumber)">
+              <nz-icon [nzType]="downloading() ? 'loading' : 'download'" [nzSpin]="downloading()" />
+              {{ downloading() ? 'Đang tải...' : 'Tải hợp đồng (PDF)' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+</section>
+
+
+<!-- ══ Modal: Xem chi tiết hợp đồng (management) ═══════════════════════════ -->
+<nz-modal [nzVisible]="viewModal()" nzTitle="Chi tiết hợp đồng"
+  [nzWidth]="760" [nzFooter]="null"
+  (nzOnCancel)="closeViewModal()">
+  <ng-template nzModalContent>
+    @if (selected()) {
+      <div class="detail-modal">
+
+        <!-- PDF preview -->
+        <div class="pdf-preview">
+          <nz-spin [nzSpinning]="pdfLoading()">
+            @if (pdfUrl()) {
+              <iframe [src]="pdfUrl()" class="pdf-frame" frameborder="0"></iframe>
+            }
+          </nz-spin>
+        </div>
+
+        <!-- Two-column layout -->
+        <div class="detail-modal__cols">
+
+          <!-- Left: contract info -->
+          <div class="detail-col">
+            <p class="detail-col__title">Thông tin hợp đồng</p>
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Trạng thái</span><app-status-badge [status]="selected()!.status" /></div>
+              <div class="info-row"><span class="info-label">Từ ngày</span><strong>{{ fmtDate(selected()!.startDate) }}</strong></div>
+              <div class="info-row"><span class="info-label">Đặt cọc</span><app-money-display [value]="selected()!.deposit" /></div>
+              <div class="info-row"><span class="info-label">Ngày tạo</span>{{ fmtDate(selected()!.createdAt) }}</div>
+              @if (selected()?.notes) {
+                <div class="info-row info-row--full"><span class="info-label">Ghi chú</span>{{ selected()!.notes }}</div>
+              }
+            </div>
+          </div>
+
+          <!-- Right: room + tenant info -->
+          <div class="detail-col">
+            <p class="detail-col__title">Thông tin phòng</p>
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Phòng</span><strong>Phòng {{ selected()!.room.roomNumber }}</strong></div>
+              <div class="info-row"><span class="info-label">Tầng</span>{{ selected()!.room.floor }}</div>
+              <div class="info-row"><span class="info-label">Giá thuê</span><app-money-display [value]="selected()!.room.price" /><span>/tháng</span></div>
+            </div>
+
+            <p class="detail-col__title" style="margin-top:16px">Thông tin người thuê</p>
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Họ tên</span><strong>{{ selected()!.tenant.fullName }}</strong></div>
+              <div class="info-row"><span class="info-label">Năm sinh</span>{{ yearOf(selected()!.tenant.dateOfBirth) }}</div>
+              <div class="info-row"><span class="info-label">SĐT</span>{{ selected()!.tenant.phone ?? '—' }}</div>
+              <div class="info-row"><span class="info-label">CCCD</span>{{ selected()!.tenant.nationalId ?? '—' }}</div>
+              <div class="info-row info-row--full"><span class="info-label">Quê quán</span>{{ selected()!.tenant.hometown ?? '—' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="detail-modal__footer">
+          <div class="detail-modal__footer-left">
+            <!-- Download -->
+            <button class="btn btn--secondary" [disabled]="downloading()"
+              (click)="downloadPdf(selected()!.id, selected()!.room.roomNumber)">
+              <nz-icon [nzType]="downloading() ? 'loading' : 'download'" [nzSpin]="downloading()" />
+              {{ downloading() ? 'Đang tải...' : 'Tải PDF' }}
+            </button>
+
+            <!-- Upload -->
+            <input #fileInput type="file" accept=".pdf,.PDF" style="display:none"
+              (change)="onFileSelected($event, selected()!.id)" />
+            <button class="btn btn--secondary" [disabled]="uploading()"
+              (click)="triggerUpload(fileInput)">
+              <nz-icon [nzType]="uploading() ? 'loading' : 'upload'" [nzSpin]="uploading()" />
+              {{ uploading() ? 'Đang tải lên...' : 'Upload PDF mới' }}
+            </button>
+
+            @if (isAdmin()) {
+              <button nz-button nzType="default" (click)="openEditModal(selected()!)">
+                <span nz-icon nzType="edit"></span> Cập nhật
+              </button>
+            }
+          </div>
+
+          <!-- Delete: click-to-start countdown -->
+          <div class="detail-modal__footer-right" *appPermission="'contracts:delete'">
+            @if (!deleteCounting() && !deleteArmed()) {
+              <button class="btn btn--danger" (click)="startDeleteCountdown()">
+                <nz-icon nzType="delete" />
+                Xoá
+              </button>
+            } @else if (deleteCounting()) {
+              <button class="btn btn--danger-outline" disabled>
+                <nz-icon nzType="delete" />
+                Xoá ({{ deleteCountdown() }}s)...
+              </button>
+            } @else {
+              <button class="btn btn--danger"
+                nz-popconfirm
+                nzPopconfirmTitle="Xác nhận xoá hợp đồng phòng {{ selected()!.room.roomNumber }}? Hành động này không thể hoàn tác."
+                nzOkText="Xoá" nzCancelText="Huỷ"
+                (nzOnConfirm)="confirmDelete()"
+                [disabled]="saving()">
+                <nz-icon nzType="delete" />
+                Xoá hợp đồng
+              </button>
+            }
+          </div>
+        </div>
+
+      </div>
+    }
+  </ng-template>
+</nz-modal>
+
+
+<!-- ══ Modal: Tạo hợp đồng ══════════════════════════════════════════════════ -->
+<nz-modal [nzVisible]="createModal()"
+  [nzTitle]="previewMode() ? 'Xem trước hợp đồng' : 'Tạo hợp đồng mới'"
+  [nzFooter]="null"
+  (nzOnCancel)="closeCreateModal()">
+  <ng-template nzModalContent>
+
+    @if (!previewMode()) {
+      <!-- Form step -->
+      <div class="form-grid">
+        <label>Phòng <span class="req">*</span></label>
+        <nz-select [(ngModel)]="createForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng đang thuê">
+          @for (r of occupiedRooms(); track r.roomId) {
+            <nz-option [nzValue]="r.roomId" [nzLabel]="'Phòng ' + r.roomNumber + ' — Tầng ' + r.floor + ' — ' + r.price.toLocaleString('vi-VN') + 'đ'" />
+          }
+        </nz-select>
+
+        <label>Ngày bắt đầu <span class="req">*</span></label>
+        <input nz-input type="date" [(ngModel)]="createForm.startDate" />
+
+        <label>Tiền cọc (đ)</label>
+        <nz-input-number [(ngModel)]="createForm.deposit" [nzMin]="0" [nzStep]="500000"
+          [nzFormatter]="priceFormatter" [nzParser]="priceParser" style="width:100%" />
+
+        <label>Ghi chú</label>
+        <textarea nz-input [(ngModel)]="createForm.notes" [nzAutosize]="{ minRows:2, maxRows:4 }"></textarea>
+      </div>
+      <div class="modal-form-footer">
+        <button class="btn btn--secondary" (click)="closeCreateModal()">Huỷ</button>
+        <button class="btn btn--primary" [disabled]="previewing()" (click)="submitPreview()">
+          <nz-icon [nzType]="previewing() ? 'loading' : 'eye'" [nzSpin]="previewing()" />
+          {{ previewing() ? 'Đang tải...' : 'Xem trước' }}
+        </button>
+      </div>
+
+    } @else {
+      <!-- Preview step -->
+      @if (previewData()) {
+        <div class="preview-box">
+          <div class="info-grid">
+            <div class="info-row"><span class="info-label">Phòng</span><strong>Phòng {{ previewData()!.room.roomNumber }} — Tầng {{ previewData()!.room.floor }}</strong></div>
+            <div class="info-row"><span class="info-label">Giá thuê</span><app-money-display [value]="previewData()!.room.price" /><span>/tháng</span></div>
+            <div class="info-row"><span class="info-label">Người thuê</span><strong>{{ previewData()!.tenant.fullName }}</strong></div>
+            <div class="info-row"><span class="info-label">Năm sinh</span>{{ yearOf(previewData()!.tenant.dateOfBirth) }}</div>
+            <div class="info-row"><span class="info-label">SĐT</span>{{ previewData()!.tenant.phone ?? '—' }}</div>
+            <div class="info-row"><span class="info-label">CCCD</span>{{ previewData()!.tenant.nationalId ?? '—' }}</div>
+            <div class="info-row info-row--full"><span class="info-label">Quê quán</span>{{ previewData()!.tenant.hometown ?? '—' }}</div>
+            <div class="info-row"><span class="info-label">Từ ngày</span><strong>{{ fmtDate(previewData()!.contract.startDate) }}</strong></div>
+            <div class="info-row"><span class="info-label">Đặt cọc</span><app-money-display [value]="previewData()!.contract.deposit" /></div>
+            @if (previewData()!.contract.notes) {
+              <div class="info-row info-row--full"><span class="info-label">Ghi chú</span>{{ previewData()!.contract.notes }}</div>
+            }
+          </div>
+          <p class="preview-note">Sau khi xác nhận, hệ thống sẽ tạo hợp đồng và tự động điền thông tin vào file DOCX.</p>
+        </div>
+      }
+      <div class="modal-form-footer">
+        <button class="btn btn--secondary" (click)="backToForm()">
+          <nz-icon nzType="arrow-left" /> Quay lại
+        </button>
+        <button class="btn btn--primary" [disabled]="saving()" (click)="confirmCreate()">
+          <nz-icon [nzType]="saving() ? 'loading' : 'check'" [nzSpin]="saving()" />
+          {{ saving() ? 'Đang lưu...' : 'Xác nhận & Lưu' }}
+        </button>
+      </div>
+    }
+
+  </ng-template>
+</nz-modal>
+
+
+<!-- ══ Modal: Chỉnh sửa hợp đồng ════════════════════════════════════════════ -->
+<nz-modal [nzVisible]="editModal()" nzTitle="Chỉnh sửa hợp đồng"
+  nzOkText="Lưu" [nzOkLoading]="saving()"
+  (nzOnOk)="submitEdit()" (nzOnCancel)="closeEditModal()">
+  <ng-template nzModalContent>
+    <div class="form-grid">
+      <label>Ngày bắt đầu</label>
+      <input nz-input type="date" [(ngModel)]="editForm.startDate" />
+
+      <label>Tiền cọc (đ)</label>
+      <nz-input-number [(ngModel)]="editForm.deposit" [nzMin]="0" [nzStep]="500000"
+        [nzFormatter]="priceFormatter" [nzParser]="priceParser" style="width:100%" />
+    </div>
+  </ng-template>
+</nz-modal>
+
+
+<!-- ══ Modal: Kết thúc / Hết hạn ═══════════════════════════════════════════ -->
+<nz-modal [nzVisible]="terminateModal()" nzTitle="Cập nhật trạng thái hợp đồng"
+  nzOkText="Xác nhận" [nzOkLoading]="saving()"
+  (nzOnOk)="submitTerminate()" (nzOnCancel)="closeTerminateModal()">
+  <ng-template nzModalContent>
+    <p>
+      Hợp đồng phòng <strong>{{ selected()?.room?.roomNumber }}</strong> —
+      người thuê <strong>{{ selected()?.tenant?.fullName }}</strong>
+    </p>
+    <div class="form-grid" style="margin-top:12px">
+      <label>Trạng thái mới</label>
+      <nz-select [(ngModel)]="terminateStatusValue" (ngModelChange)="terminateStatus = $event" style="width:100%">
+        <nz-option nzValue="TERMINATED" nzLabel="Đã kết thúc (chủ động)" />
+        <nz-option nzValue="EXPIRED"    nzLabel="Hết hạn (tự nhiên)" />
+      </nz-select>
+    </div>
+  </ng-template>
+</nz-modal>

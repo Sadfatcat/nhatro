@@ -2,17 +2,15 @@ export enum UserRole {
   ADMIN = 'ADMIN',
   LANDLORD = 'LANDLORD',
   TENANT = 'TENANT',
-  GUEST = 'GUEST',
 }
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.ADMIN]: 'Quản trị viên',
   [UserRole.LANDLORD]: 'Chủ trọ',
   [UserRole.TENANT]: 'Người thuê',
-  [UserRole.GUEST]: 'Khách',
 };
 
-export interface MockUser {
+export interface AuthUser {
   id: string;
   email: string;
   password?: string;
@@ -24,11 +22,11 @@ export interface MockUser {
 }
 
 export interface AuthState {
-  user: MockUser | null;
+  user: AuthUser | null;
   token: string | null;
   expiresAt: string | null;
   isAuthenticated: boolean;
-  role: UserRole;
+  role: UserRole | null;
 }
 
 export interface LoginDto {

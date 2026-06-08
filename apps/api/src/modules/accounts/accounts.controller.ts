@@ -67,6 +67,15 @@ export class AccountsController {
     return { success: true, data: null, message: 'Đã xoá tài khoản người thuê.' };
   }
 
+  @Patch('users/:userId/role')
+  async changeUserRole(
+    @Param('userId') userId: string,
+    @Body() body: { role: 'LANDLORD' | 'ADMIN' },
+  ): Promise<unknown> {
+    await this.accounts.changeUserRole(userId, body.role);
+    return { success: true, data: null, message: 'Đã cập nhật vai trò thành công.' };
+  }
+
   @Patch('users/:userId/password')
   async changePassword(
     @Param('userId') userId: string,

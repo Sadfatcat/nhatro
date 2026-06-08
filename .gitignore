@@ -24,3 +24,6 @@ Thumbs.db
 
 # Prisma generated (keep schema, ignore migrations if using db push)
 apps/api/node_modules/
+
+# Uploaded contract files (runtime)
+apps/api/uploads/

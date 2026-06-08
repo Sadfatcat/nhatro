@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { MOCK_USERS } from '@nhatro/shared-mocks';
-import { MockUser } from '@nhatro/shared-types';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { FormBuilderComponent } from '../../../shared/components/form/form-builder/form-builder.component';
 import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
@@ -21,8 +19,7 @@ export class LoginComponent {
   private route  = inject(ActivatedRoute);
   private msg    = inject(NzMessageService);
 
-  loading    = signal(false);
-  mockUsers  = MOCK_USERS;
+  loading = signal(false);
 
   schema: FormSchema = {
     submitLabel: 'Đăng nhập',
@@ -52,10 +49,6 @@ export class LoginComponent {
     ],
   };
 
-  quickLogin(user: MockUser): void {
-    this.onSubmit({ identifier: user.email, password: user.password ?? '' });
-  }
-
   onSubmit(value: Record<string, unknown>): void {
     this.loading.set(true);
     this.auth
@@ -65,10 +58,7 @@ export class LoginComponent {
           this.msg.success('Đăng nhập thành công!');
           this.router.navigateByUrl(this.route.snapshot.queryParamMap.get('returnUrl') || this.auth.defaultRoute());
         },
-        error: (err: Error) => {
-          this.msg.error(err?.message ?? 'Đăng nhập thất bại');
-          this.loading.set(false);
-        },
+        error: () => this.loading.set(false),
       });
   }
 }

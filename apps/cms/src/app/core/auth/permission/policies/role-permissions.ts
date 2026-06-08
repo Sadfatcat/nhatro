@@ -10,7 +10,6 @@ export type Permission =
   | 'rooms:create'
   | 'rooms:update'
   | 'rooms:delete'
-  | 'rooms:view-public'
   | 'tenants:view'
   | 'tenants:create'
   | 'tenants:update'
@@ -34,7 +33,6 @@ export type Permission =
   | 'accounts:create'
   | 'accounts:rooms'
   | 'accounts:landlords'
-  | 'utilities:view'
   | 'utilities:record'
   | 'utilities:set-billing-day';
 
@@ -50,7 +48,6 @@ export const ALL_PERMISSIONS: Permission[] = [
   'rooms:create',
   'rooms:update',
   'rooms:delete',
-  'rooms:view-public',
   'tenants:view',
   'tenants:create',
   'tenants:update',
@@ -74,27 +71,20 @@ export const ALL_PERMISSIONS: Permission[] = [
   'accounts:create',
   'accounts:rooms',
   'accounts:landlords',
-  'utilities:view',
   'utilities:record',
   'utilities:set-billing-day',
 ];
 
 // ── Role assignments ──────────────────────────────────────────────────────────
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.GUEST]: [
-    'rooms:view-public',
-  ],
   [UserRole.TENANT]: [
     'home:view',
-    'rooms:view-public',
-    'rooms:view',
     'contracts:view',
     'invoices:view',
     'utilities:view',
   ],
   [UserRole.LANDLORD]: [
     'management-home:view',
-    'rooms:view-public',
     'rooms:view',
     'rooms:create',
     'rooms:update',
@@ -115,7 +105,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'accounts:create',
     'accounts:rooms',
     'dashboard:view',
-    'utilities:view',
     'utilities:record',
     'utilities:set-billing-day',
   ],

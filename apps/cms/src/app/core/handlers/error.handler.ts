@@ -21,8 +21,12 @@ export class ErrorHandlerService {
         this.handleValidation(err);
         break;
       case 401:
-        this.auth.logout();
-        this.router.navigate(['/login']);
+        if (this.router.url.startsWith('/login') || err.url?.includes('/auth/login')) {
+          this.msg.error('Tên đăng nhập hoặc mật khẩu không đúng.');
+        } else {
+          this.auth.logout();
+          this.router.navigate(['/login']);
+        }
         break;
       case 403:
         this.router.navigate(['/403']);

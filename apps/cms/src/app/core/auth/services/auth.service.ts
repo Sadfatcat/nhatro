@@ -2,14 +2,14 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { AuthState, LoginDto, USER_ROLE_LABELS, UserRole } from '../auth.types';
-import { MockAuthStorageService } from './mock-auth-storage.service';
+import { AuthStorageService } from './auth-storage.service';
 import { ROLE_PERMISSIONS } from '../permission/policies/role-permissions';
 import { Permission } from '../permission/policies/role-permissions';
 import { ApiService } from '../../services/api.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private mockStorage = inject(MockAuthStorageService);
+  private mockStorage = inject(AuthStorageService);
   private api = inject(ApiService);
 
   authState       = signal<AuthState>(this.mockStorage.getState());
@@ -17,7 +17,7 @@ export class AuthService {
   token           = computed(() => this.authState().token);
   role            = computed(() => this.authState().role);
   isAuthenticated = computed(() => this.authState().isAuthenticated);
-  roleLabel       = computed(() => USER_ROLE_LABELS[this.role()]);
+  roleLabel       = computed(() => this.role() ? USER_ROLE_LABELS[this.role()!] : '');
 
   hasRole(role: UserRole | string): boolean {
     return this.role() === role;
@@ -28,7 +28,8 @@ export class AuthService {
   }
 
   hasPermission(permission: Permission | string): boolean {
-    return (ROLE_PERMISSIONS[this.role()] ?? []).includes(permission as Permission);
+    const role = this.role();
+    return role ? (ROLE_PERMISSIONS[role] ?? []).includes(permission as Permission) : false;
   }
 
   hasAllPermissions(...perms: Array<Permission | string>): boolean {
@@ -50,6 +51,6 @@ export class AuthService {
 
   logout(): void {
     this.mockStorage.clearState();
-    this.authState.set(this.mockStorage.guestState());
+    this.authState.set(this.mockStorage.unauthenticatedState());
   }
 }

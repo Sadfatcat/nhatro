@@ -24,11 +24,9 @@ export const routes: Routes = [
     path:      'app',
     component: MainLayoutComponent,
     children: [
-      // Public route — accessible by guests (rooms:view-public is in GUEST permissions)
       {
         path:          'rooms',
-        canActivate:   [permissionGuard],
-        data:          { permissions: ['rooms:view-public'] },
+        canActivate:   [authGuard],
         loadComponent: () => import('./modules/rooms/rooms-list/rooms-list.component').then(m => m.RoomsListComponent),
       },
 
@@ -54,6 +52,18 @@ export const routes: Routes = [
             canActivate:   [permissionGuard],
             data:          { permissions: ['dashboard:view'] },
             loadComponent: () => import('./modules/dashboard/dashboard.component').then(m => m.DashboardComponent),
+          },
+          {
+            path:          'contracts',
+            canActivate:   [permissionGuard],
+            data:          { permissions: ['contracts:view'] },
+            loadComponent: () => import('./modules/contracts/contracts.component').then(m => m.ContractsComponent),
+          },
+          {
+            path:          'contracts/:id',
+            canActivate:   [permissionGuard],
+            data:          { permissions: ['contracts:view'] },
+            loadComponent: () => import('./modules/contracts/contract-detail/contract-detail.component').then(m => m.ContractDetailComponent),
           },
           {
             path:          'tenants',

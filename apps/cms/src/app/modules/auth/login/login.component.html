@@ -7,19 +7,3 @@
   [schema]="schema"
   [loading]="loading()"
   (submitted)="onSubmit($event)" />
-
-<div class="login-hint">
-  <strong>Đăng nhập nhanh (dev):</strong>
-  <div class="quick-login-list">
-    @for (user of mockUsers; track user.id) {
-      <button
-        class="quick-login-btn"
-        type="button"
-        [disabled]="loading()"
-        (click)="quickLogin(user)">
-        <span class="role-badge">{{ user.role }}</span>
-        <span class="user-name">{{ user.fullName }}</span>
-      </button>
-    }
-  </div>
-</div>

@@ -37,9 +37,9 @@ export interface Contract {
   roomId: string;
   tenantId: string;
   startDate: string;
-  endDate?: string;
   deposit: number;
   status: ContractStatus;
+  filePath?: string;
 }
 
 export interface Invoice {

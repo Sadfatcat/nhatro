@@ -145,6 +145,7 @@
             <th>Tên đăng nhập</th>
             <th>SĐT</th>
             <th>Số phòng</th>
+            <th>Vai trò</th>
             <th>Trạng thái</th>
             <th>Thao tác</th>
           </tr>
@@ -157,16 +158,28 @@
               <td>{{ row.phone ?? '-' }}</td>
               <td>{{ row.roomCount }}</td>
               <td>
+                <nz-tag [nzColor]="row.role === 'ADMIN' ? 'purple' : 'blue'">
+                  {{ row.role === 'ADMIN' ? 'Admin' : 'Chủ nhà' }}
+                </nz-tag>
+              </td>
+              <td>
                 <nz-tag [nzColor]="row.isActive ? 'green' : 'red'">
                   {{ row.isActive ? 'Hoạt động' : 'Khóa' }}
                 </nz-tag>
               </td>
               <td>
-                <button nz-button nzType="text" nzSize="small"
-                  nz-tooltip nzTooltipTitle="Đổi mật khẩu"
-                  (click)="openChangePasswordForUser(row.userId)">
-                  <span nz-icon nzType="setting"></span>
-                </button>
+                <div style="display:flex;gap:4px">
+                  <button nz-button nzType="text" nzSize="small"
+                    nz-tooltip [nzTooltipTitle]="row.role === 'ADMIN' ? 'Hạ xuống Chủ nhà' : 'Nâng lên Admin'"
+                    (click)="openChangeRoleModal(row)">
+                    <span nz-icon nzType="swap"></span>
+                  </button>
+                  <button nz-button nzType="text" nzSize="small"
+                    nz-tooltip nzTooltipTitle="Đổi mật khẩu"
+                    (click)="openChangePasswordForUser(row.userId)">
+                    <span nz-icon nzType="setting"></span>
+                  </button>
+                </div>
               </td>
             </tr>
           }
@@ -317,6 +330,30 @@
   <ng-template nzModalContent>
     <p>Bạn có chắc muốn xoá tài khoản của <strong>{{ selectedRoom()?.tenant?.fullName }}</strong> khỏi hệ thống?</p>
     <p style="color: var(--color-text-muted); font-size: 13px;">Phòng <strong>{{ selectedRoom()?.roomNumber }}</strong> sẽ được trả về trạng thái trống.</p>
+  </ng-template>
+</nz-modal>
+
+<!-- ── Modal: Đổi vai trò ── -->
+<nz-modal [nzVisible]="changeRoleModal()" nzTitle="Đổi vai trò"
+  nzOkText="Xác nhận" nzCancelText="Huỷ"
+  [nzOkLoading]="saving()"
+  (nzOnOk)="submitChangeRole()"
+  (nzOnCancel)="closeChangeRoleModal()">
+  <ng-template nzModalContent>
+    <p>
+      Đổi vai trò của <strong>{{ selectedLandlord()?.fullName }}</strong> từ
+      <nz-tag [nzColor]="selectedLandlord()?.role === 'ADMIN' ? 'purple' : 'blue'">
+        {{ selectedLandlord()?.role === 'ADMIN' ? 'Admin' : 'Chủ nhà' }}
+      </nz-tag>
+      thành
+    </p>
+    <div class="form-grid" style="margin-top:12px">
+      <label>Vai trò mới</label>
+      <nz-select [(ngModel)]="newRole" style="width:100%">
+        <nz-option nzValue="LANDLORD" nzLabel="Chủ nhà" />
+        <nz-option nzValue="ADMIN"    nzLabel="Admin" />
+      </nz-select>
+    </div>
   </ng-template>
 </nz-modal>
 

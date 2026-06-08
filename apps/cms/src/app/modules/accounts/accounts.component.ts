@@ -44,13 +44,14 @@ interface RoomRow {
 
 interface LandlordRow {
   userId:     string;
-  landlordId: string;
+  landlordId: string | null;
   username:   string;
   fullName:   string;
   phone:      string | null;
   isActive:   boolean;
   createdAt:  string;
   roomCount:  number;
+  role:       'LANDLORD' | 'ADMIN';
 }
 
 interface AccountsResponse { rooms: RoomRow[]; landlords: LandlordRow[]; }
@@ -126,6 +127,9 @@ export class AccountsComponent implements OnInit {
   priceModal         = signal(false);
   statusModal        = signal(false);
   landlordModal      = signal(false);
+  changeRoleModal    = signal(false);
+  selectedLandlord   = signal<LandlordRow | null>(null);
+  newRole: 'LANDLORD' | 'ADMIN' = 'LANDLORD';
   deleteModal        = signal(false);
   changePasswordModal = signal(false);
 
@@ -332,6 +336,26 @@ export class AccountsComponent implements OnInit {
       .subscribe({
         next:  () => { this.toast.success('Đã xoá tài khoản người thuê.'); this.closeDeleteModal(); this.load(); },
         error: () => this.toast.error('Không xoá được tài khoản.'),
+      });
+  }
+
+  // ── Đổi vai trò ──────────────────────────────────────────────────────────
+  openChangeRoleModal(row: LandlordRow): void {
+    this.selectedLandlord.set(row);
+    this.newRole = row.role === 'ADMIN' ? 'LANDLORD' : 'ADMIN';
+    this.changeRoleModal.set(true);
+  }
+  closeChangeRoleModal(): void { this.changeRoleModal.set(false); this.selectedLandlord.set(null); }
+
+  submitChangeRole(): void {
+    const user = this.selectedLandlord();
+    if (!user) return;
+    this.saving.set(true);
+    this.api.patch(`/accounts/users/${user.userId}/role`, { role: this.newRole })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next:  () => { this.toast.success('Đã cập nhật vai trò.'); this.closeChangeRoleModal(); this.load(); },
+        error: () => this.toast.error('Không đổi được vai trò.'),
       });
   }
 

@@ -1,5 +1,5 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy, Component,
+  AfterViewInit, Component,
   computed, ElementRef, inject, OnInit, signal, ViewChild,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -9,8 +9,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
-import { Chart, registerables } from 'chart.js';
+import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
 import { finalize } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
@@ -18,7 +17,7 @@ import { ToastService } from '../../../shared/components/feedback/toast/toast.se
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { RoomWithUtility } from '@nhatro/shared-types';
 
-Chart.register(...registerables);
+Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 type BillingDay = 15 | 30;
@@ -26,11 +25,10 @@ type ReadingInput = { prevElec: number; currElec: number; prevWater: number; cur
 
 @Component({
   selector:        'app-management-home',
-  standalone:      true,
-  templateUrl:     './management-home.component.html',
-  styleUrls:       ['./management-home.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:         [CommonModule, DatePipe, FormsModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzDividerModule, DragDropModule],
+  standalone:  true,
+  templateUrl: './management-home.component.html',
+  styleUrls:   ['./management-home.component.scss'],
+  imports:     [CommonModule, DatePipe, FormsModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzDividerModule],
 })
 export class ManagementHomeComponent implements OnInit, AfterViewInit {
   @ViewChild('donutChart') donutRef!: ElementRef<HTMLCanvasElement>;
@@ -77,17 +75,37 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   );
 
   // ── Kanban — grouped by billingDay from real data ─────────────────────────
-  rooms15 = computed(() => this.rooms().filter(r => r.billingDay === 15 && r.status === 'OCCUPIED'));
-  rooms30 = computed(() => this.rooms().filter(r => r.billingDay === 30 && r.status === 'OCCUPIED'));
+  private toNum = (s: string) => parseInt(s.replace(/\D/g, ''), 10) || 0;
+  private sortRooms = (a: RoomWithUtility, b: RoomWithUtility) => this.toNum(a.roomNumber) - this.toNum(b.roomNumber);
 
-  // For CDK drag-drop (needs mutable arrays)
+  rooms15 = computed(() => this.rooms().filter(r => r.billingDay === 15 && r.status === 'OCCUPIED').sort(this.sortRooms));
+  rooms30 = computed(() => this.rooms().filter(r => r.billingDay === 30 && r.status === 'OCCUPIED').sort(this.sortRooms));
+
   rooms15Ids = signal<string[]>([]);
   rooms30Ids = signal<string[]>([]);
 
+  readonly PAGE_SIZE = 5;
+  page15 = signal(1);
+  page30 = signal(1);
+
+  totalPages15 = computed(() => Math.ceil(this.rooms15().length / this.PAGE_SIZE));
+  totalPages30 = computed(() => Math.ceil(this.rooms30().length / this.PAGE_SIZE));
+
   roomsForDay(day: BillingDay): RoomWithUtility[] {
-    const ids    = day === 15 ? this.rooms15Ids() : this.rooms30Ids();
-    const roomMap = new Map(this.rooms().map(r => [r.roomId, r]));
-    return ids.map(id => roomMap.get(id)).filter((r): r is RoomWithUtility => !!r);
+    const rooms = day === 15 ? this.rooms15() : this.rooms30();
+    const page  = day === 15 ? this.page15()  : this.page30();
+    return rooms.slice((page - 1) * this.PAGE_SIZE, page * this.PAGE_SIZE);
+  }
+
+  prevPage(day: BillingDay): void {
+    if (day === 15) this.page15.update(p => Math.max(1, p - 1));
+    else            this.page30.update(p => Math.max(1, p - 1));
+  }
+
+  nextPage(day: BillingDay): void {
+    const total = day === 15 ? this.totalPages15() : this.totalPages30();
+    if (day === 15) this.page15.update(p => Math.min(total, p + 1));
+    else            this.page30.update(p => Math.min(total, p + 1));
   }
 
   // ── Add-room modal ────────────────────────────────────────────────────────
@@ -130,23 +148,31 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     return this.selectedRoomIds().has(roomId);
   }
 
+  isAllSelected = computed(() => {
+    const rooms = this.availableRooms();
+    return rooms.length > 0 && rooms.every(r => this.selectedRoomIds().has(r.roomId));
+  });
+
+  toggleSelectAll(): void {
+    const rooms = this.availableRooms();
+    if (this.isAllSelected()) {
+      this.selectedRoomIds.set(new Set());
+    } else {
+      this.selectedRoomIds.set(new Set(rooms.map(r => r.roomId)));
+    }
+  }
+
   confirmAddToDay(): void {
-    const day  = this.showAddModal();
-    const ids  = [...this.selectedRoomIds()];
+    const day = this.showAddModal();
+    const ids = [...this.selectedRoomIds()];
     if (!day || ids.length === 0) return;
     this.saving.set(true);
-    let done = 0;
-    ids.forEach(roomId => {
-      this.api.patch<ApiResponse<unknown>>(`/utilities/${roomId}/billing-day`, { billingDay: day })
-        .subscribe(() => {
-          done++;
-          if (done === ids.length) {
-            this.saving.set(false);
-            this.showAddModal.set(null);
-            this.loadData();
-          }
-        });
-    });
+    this.api.patch<ApiResponse<unknown>>('/utilities/bulk/billing-day', { roomIds: ids, billingDay: day })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe(() => {
+        this.showAddModal.set(null);
+        this.loadData();
+      });
   }
 
   removeFromDay(roomId: string): void {
@@ -158,23 +184,6 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     }
   }
 
-  onDrop(event: CdkDragDrop<string[]>): void {
-    const newDay: BillingDay = event.container.id === 'list-15' ? 15 : 30;
-    if (event.previousContainer === event.container) {
-      const ids = [...event.container.data];
-      moveItemInArray(ids, event.previousIndex, event.currentIndex);
-      if (event.container.id === 'list-15') this.rooms15Ids.set(ids);
-      else                                  this.rooms30Ids.set(ids);
-    } else {
-      const roomId = event.previousContainer.data[event.previousIndex];
-      const prev   = [...event.previousContainer.data];
-      const curr   = [...event.container.data];
-      transferArrayItem(prev, curr, event.previousIndex, event.currentIndex);
-      if (event.previousContainer.id === 'list-15') { this.rooms15Ids.set(prev); this.rooms30Ids.set(curr); }
-      else                                          { this.rooms30Ids.set(prev); this.rooms15Ids.set(curr); }
-      this.api.patch<ApiResponse<unknown>>(`/utilities/${roomId}/billing-day`, { billingDay: newDay }).subscribe();
-    }
-  }
 
   // ── Reading modal ─────────────────────────────────────────────────────────
   activeModalRoomId = signal<string | null>(null);
@@ -226,7 +235,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
         if (!res.success) return;
         this.toast.success('Đã chốt số điện nước.');
         this.closeModal();
-        this.loadData();
+        this.loadData(true);
       });
   }
 
@@ -261,15 +270,26 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   // ── Load data ─────────────────────────────────────────────────────────────
   ngOnInit(): void { this.loadData(); }
 
-  loadData(): void {
+  loadData(keepPage = false): void {
+    const savedPage15 = this.page15();
+    const savedPage30 = this.page30();
     this.loading.set(true);
     this.api.get<ApiResponse<RoomWithUtility[]>>('/utilities')
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
         this.rooms.set(res.data);
-        this.rooms15Ids.set(res.data.filter(r => r.billingDay === 15 && r.status === 'OCCUPIED').map(r => r.roomId));
-        this.rooms30Ids.set(res.data.filter(r => r.billingDay === 30 && r.status === 'OCCUPIED').map(r => r.roomId));
+        const toNum = (s: string) => parseInt(s.replace(/\D/g, ''), 10) || 0;
+        const sort = (a: RoomWithUtility, b: RoomWithUtility) => toNum(a.roomNumber) - toNum(b.roomNumber);
+        this.rooms15Ids.set(res.data.filter(r => r.billingDay === 15 && r.status === 'OCCUPIED').sort(sort).map(r => r.roomId));
+        this.rooms30Ids.set(res.data.filter(r => r.billingDay === 30 && r.status === 'OCCUPIED').sort(sort).map(r => r.roomId));
+        if (keepPage) {
+          this.page15.set(Math.min(savedPage15, this.totalPages15() || 1));
+          this.page30.set(Math.min(savedPage30, this.totalPages30() || 1));
+        } else {
+          this.page15.set(1);
+          this.page30.set(1);
+        }
         this.rebuildDonut();
       });
   }

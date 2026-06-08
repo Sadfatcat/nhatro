@@ -17,7 +17,7 @@
 
   <!-- Right: actions + user -->
   <div class="header-right">
-    <button
+    <!-- <button
       type="button"
       class="theme-switch"
       [class.dark]="theme.theme() === 'dark'"
@@ -35,7 +35,7 @@
       <span class="theme-thumb" aria-hidden="true">
         <nz-icon [nzType]="theme.theme() === 'dark' ? 'moon' : 'sun'" />
       </span>
-    </button>
+    </button> -->
 
     <a class="contact-link" [href]="contactHref">Liên hệ</a>
 
@@ -67,13 +67,6 @@
 
       <nz-dropdown-menu #userMenu="nzDropdownMenu">
         <ul nz-menu>
-          <li nz-menu-item routerLink="/profile">
-            <nz-icon nzType="user" /> Hồ sơ cá nhân
-          </li>
-          <li nz-menu-item routerLink="/settings">
-            <nz-icon nzType="setting" /> Cài đặt
-          </li>
-          <li nz-menu-divider></li>
           <li nz-menu-item (click)="onLogout()" class="logout-item">
             <nz-icon nzType="logout" /> Đăng xuất
           </li>

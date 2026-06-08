@@ -14,9 +14,10 @@ export class AccountsService {
         orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
         include: { tenant: { include: { user: true } } },
       }),
-      this.prisma.landlord.findMany({
+      this.prisma.user.findMany({
+        where:   { role: { in: ['LANDLORD', 'ADMIN'] } },
         orderBy: { createdAt: 'desc' },
-        include: { user: true, rooms: true },
+        include: { landlord: { include: { rooms: true } } },
       }),
     ]);
 
@@ -42,15 +43,16 @@ export class AccountsService {
             }
           : null,
       })),
-      landlords: landlords.map(l => ({
-        userId:     l.user.id,
-        landlordId: l.id,
-        username:   l.user.username,
-        fullName:   l.fullName,
-        phone:      l.phone,
-        isActive:   l.user.isActive,
-        createdAt:  l.user.createdAt,
-        roomCount:  l.rooms.length,
+      landlords: landlords.map(u => ({
+        userId:     u.id,
+        landlordId: u.landlord?.id ?? null,
+        username:   u.username,
+        fullName:   u.fullName,
+        phone:      u.phone,
+        isActive:   u.isActive,
+        createdAt:  u.createdAt,
+        roomCount:  u.landlord?.rooms.length ?? 0,
+        role:       u.role,
       })),
     };
   }
@@ -168,6 +170,14 @@ export class AccountsService {
     if (!user) throw new NotFoundException('Không tìm thấy tài khoản.');
     const passwordHash = await bcrypt.hash(password, 10);
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  }
+
+  async changeUserRole(userId: string, role: 'LANDLORD' | 'ADMIN'): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Không tìm thấy tài khoản.');
+    if (user.role !== 'LANDLORD' && user.role !== 'ADMIN')
+      throw new BadRequestException('Chỉ có thể đổi role giữa Landlord và Admin.');
+    await this.prisma.user.update({ where: { id: userId }, data: { role } });
   }
 
   async updateRoomPrice(roomId: string, price: number): Promise<void> {

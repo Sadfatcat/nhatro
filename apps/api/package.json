@@ -12,6 +12,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:restart:api": "docker compose restart api",
+    "deploy": "npm run build && docker compose restart api",
     "docker:logs": "docker compose logs -f api"
   },
   "dependencies": {
@@ -24,10 +25,15 @@
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "docxtemplater": "^3.68.7",
+    "pdfmake": "^0.3.9",
+    "pizzip": "^3.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "prisma": "^6.19.0"
   }

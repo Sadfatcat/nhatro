@@ -6,15 +6,24 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { Chart, registerables } from 'chart.js';
+import {
+  Chart, DoughnutController, ArcElement,
+  LineController, LineElement, PointElement,
+  BarController, BarElement,
+  CategoryScale, LinearScale, Filler, Tooltip, Legend,
+} from 'chart.js';
 import { finalize } from 'rxjs';
 
 import { ApiService } from '../../core/services/api.service';
 import { RoomWithUtility } from '@nhatro/shared-types';
 
-Chart.register(...registerables);
+Chart.register(
+  DoughnutController, ArcElement,
+  LineController, LineElement, PointElement,
+  BarController, BarElement,
+  CategoryScale, LinearScale, Filler, Tooltip, Legend,
+);
 
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 type ChartMode = 'month' | 'quarter' | 'year';
 
 @Component({
@@ -69,7 +78,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.loading.set(true);
-    this.api.get<ApiResponse<RoomWithUtility[]>>('/utilities')
+    this.api.get<{ success: boolean; data: RoomWithUtility[] | null; message: string }>('/utilities')
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
@@ -165,10 +174,5 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
       return `T${d.getMonth() + 1}`;
     });
-  }
-
-  private monthKey(monthsAgo: number): string {
-    const d = new Date(); d.setMonth(d.getMonth() - monthsAgo);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   }
 }

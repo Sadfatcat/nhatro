@@ -1,6 +1,6 @@
 import {
   AfterViewInit, ChangeDetectionStrategy, Component,
-  computed, ElementRef, inject, OnInit, signal, ViewChild,
+  computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
@@ -12,8 +12,6 @@ import { RoomWithUtility } from '@nhatro/shared-types';
 
 Chart.register(...registerables);
 
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-
 @Component({
   selector:        'app-tenant-home',
   standalone:      true,
@@ -22,7 +20,7 @@ interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:         [CommonModule, DatePipe],
 })
-export class TenantHomeComponent implements OnInit, AfterViewInit {
+export class TenantHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('elecChart')  elecChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('waterChart') waterChartRef!: ElementRef<HTMLCanvasElement>;
 
@@ -56,7 +54,7 @@ export class TenantHomeComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     if (!this.roomId) return;
     this.loading.set(true);
-    this.api.get<ApiResponse<RoomWithUtility>>(`/utilities/${this.roomId}`)
+    this.api.get<{ success: boolean; data: RoomWithUtility | null; message: string }>(`/utilities/${this.roomId}`)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => { if (res.success && res.data) this.roomData.set(res.data); });
   }
@@ -93,6 +91,11 @@ export class TenantHomeComponent implements OnInit, AfterViewInit {
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.elecChartInstance?.destroy();
+    this.waterChartInstance?.destroy();
   }
 
   private monthLabels(): string[] {

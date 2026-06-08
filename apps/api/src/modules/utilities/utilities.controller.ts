@@ -28,6 +28,13 @@ export class UtilitiesController {
     return ok(await this.svc.record(roomId, body), 'Đã chốt số điện nước thành công.');
   }
 
+  @Patch('bulk/billing-day')
+  async setBillingDayBulk(
+    @Body() body: { roomIds: string[]; billingDay: number },
+  ): Promise<ApiResponse<unknown>> {
+    return ok(await this.svc.setBillingDayBulk(body.roomIds, body.billingDay), 'Đã cập nhật ngày chốt.');
+  }
+
   @Patch(':roomId/billing-day')
   async setBillingDay(
     @Param('roomId') roomId: string,

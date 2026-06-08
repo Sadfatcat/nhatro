@@ -18,7 +18,9 @@ services:
       retries: 5
 
   api:
-    image: node:18-alpine
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
     container_name: nhatro-api
     restart: unless-stopped
     working_dir: /workspace/apps/api
@@ -26,6 +28,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://nhatro:nhatro@postgres:5432/nhatro?schema=public"
       PORT: "3000"
+      HOME: /tmp
     ports:
       - "3000:3000"
     volumes:
