@@ -13,7 +13,7 @@ export const routes: Routes = [
     children: [
       {
         path:          'login',
-        loadComponent: () => import('./modules/auth/login/login.component').then(m => m.LoginComponent),
+        loadComponent: () => import('./core/auth/login/login.component').then(m => m.LoginComponent),
       },
       { path: '', redirectTo: 'login', pathMatch: 'full' },
     ],
@@ -66,18 +66,6 @@ export const routes: Routes = [
             loadComponent: () => import('./modules/contracts/contract-detail/contract-detail.component').then(m => m.ContractDetailComponent),
           },
           {
-            path:          'tenants',
-            canActivate:   [permissionGuard],
-            data:          { permissions: ['tenants:view'] },
-            loadComponent: () => import('./modules/tenants/tenants.component').then(m => m.TenantsComponent),
-          },
-          {
-            path:          'landlords',
-            canActivate:   [permissionGuard],
-            data:          { permissions: ['landlords:view'] },
-            loadComponent: () => import('./modules/landlords/landlords.component').then(m => m.LandlordsComponent),
-          },
-          {
             path:          'accounts/rooms',
             canActivate:   [permissionGuard],
             data:          { permissions: ['accounts:rooms'] },
@@ -100,12 +88,12 @@ export const routes: Routes = [
   // Special pages
   {
     path:          'unauthorized',
-    loadComponent: () => import('./modules/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent),
+    loadComponent: () => import('./core/errors/unauthorized.component').then(m => m.UnauthorizedComponent),
   },
   { path: '403', redirectTo: '/unauthorized' },
   {
     path:          '404',
-    loadComponent: () => import('./modules/errors/page404.component').then(m => m.Page404Component),
+    loadComponent: () => import('./core/errors/page404.component').then(m => m.Page404Component),
   },
   { path: '**', redirectTo: '/404' },
 ];

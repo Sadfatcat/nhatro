@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '../../core/auth/services/auth.service';
+import { AuthService } from '../auth/services/auth.service';
 import { TopbarComponent } from '../../shared/components/layout/topbar/topbar.component';
 
 @Component({

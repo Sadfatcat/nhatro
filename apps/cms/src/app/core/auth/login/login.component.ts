@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { AuthService } from '../../../core/auth/services/auth.service';
+import { AuthService } from '../services/auth.service';
 import { FormBuilderComponent } from '../../../shared/components/form/form-builder/form-builder.component';
 import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
 

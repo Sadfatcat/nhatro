@@ -9,7 +9,7 @@ import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 
 const execFileAsync = promisify(execFile);
-const DOTS = '....................................................................';
+const DOTS = '.....................................................';
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const PizZip        = require('pizzip');
