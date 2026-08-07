@@ -98,8 +98,21 @@ export class ContractsService {
   }
 
   async findByRoom(roomId: string) {
-    const c = await this.prisma.contract.findFirst({ where: { roomId, status: 'ACTIVE' }, include: INCLUDE });
+    const c = await this.prisma.contract.findFirst({
+      where:   { roomId, status: 'ACTIVE' },
+      orderBy: { startDate: 'desc' },
+      include: INCLUDE,
+    });
     return c ? formatRow(c) : null;
+  }
+
+  async getCurrentRoomIdByTenant(tenantId: string): Promise<string | null> {
+    const c = await this.prisma.contract.findFirst({
+      where:   { tenantId, status: 'ACTIVE' },
+      orderBy: { startDate: 'desc' },
+      select:  { roomId: true },
+    });
+    return c?.roomId ?? null;
   }
 
   async findOne(id: string) {
@@ -188,33 +201,42 @@ export class ContractsService {
   }
 
   async preview(dto: CreateContractDto) {
-    const room = await this.prisma.room.findUnique({ where: { id: dto.roomId }, include: { tenant: true } });
-    if (!room)        throw new NotFoundException('Không tìm thấy phòng.');
-    if (!room.tenant) throw new NotFoundException('Phòng chưa có người thuê.');
+    const room   = await this.prisma.room.findUnique({ where: { id: dto.roomId } });
+    if (!room) throw new NotFoundException('Không tìm thấy phòng.');
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: dto.tenantId } });
+    if (!tenant) throw new NotFoundException('Không tìm thấy người thuê.');
     return {
       room:     { roomNumber: room.roomNumber, floor: room.floor, price: room.price },
-      tenant:   { fullName: room.tenant.fullName, phone: room.tenant.phone, nationalId: room.tenant.nationalId, hometown: room.tenant.hometown, dateOfBirth: room.tenant.dateOfBirth },
+      tenant:   { fullName: tenant.fullName, phone: tenant.phone, nationalId: tenant.nationalId, hometown: tenant.hometown, dateOfBirth: tenant.dateOfBirth },
       contract: { startDate: dto.startDate, deposit: dto.deposit ?? 0, notes: dto.notes ?? null },
     };
   }
 
   async create(dto: CreateContractDto) {
-    const room = await this.prisma.room.findUnique({ where: { id: dto.roomId }, include: { tenant: true } });
-    if (!room)        throw new NotFoundException('Không tìm thấy phòng.');
-    if (!room.tenant) throw new NotFoundException('Phòng chưa có người thuê.');
+    const room = await this.prisma.room.findUnique({ where: { id: dto.roomId } });
+    if (!room) throw new NotFoundException('Không tìm thấy phòng.');
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: dto.tenantId } });
+    if (!tenant) throw new NotFoundException('Không tìm thấy người thuê.');
 
-    const contract = await this.prisma.contract.create({
-      data: {
-        roomId:           dto.roomId,
-        tenantId:         room.tenant.id,
-        startDate:        new Date(dto.startDate),
-        endDate:          dto.endDate          ? new Date(dto.endDate) : undefined,
-        firstBillingDate: dto.firstBillingDate ?? undefined,
-        lastBillingDate:  dto.lastBillingDate  ?? undefined,
-        deposit:          dto.deposit ?? 0,
-        notes:            dto.notes,
-      },
-      include: INCLUDE,
+    const contract = await this.prisma.$transaction(async tx => {
+      const activeExisting = await tx.contract.findFirst({ where: { roomId: dto.roomId, status: 'ACTIVE' } });
+      if (activeExisting) throw new BadRequestException('Phòng này đang có hợp đồng hiệu lực khác.');
+
+      const created = await tx.contract.create({
+        data: {
+          roomId:           dto.roomId,
+          tenantId:         dto.tenantId,
+          startDate:        new Date(dto.startDate),
+          endDate:          dto.endDate          ? new Date(dto.endDate) : undefined,
+          firstBillingDate: dto.firstBillingDate ?? undefined,
+          lastBillingDate:  dto.lastBillingDate  ?? undefined,
+          deposit:          dto.deposit ?? 0,
+          notes:            dto.notes,
+        },
+        include: INCLUDE,
+      });
+      await tx.room.update({ where: { id: dto.roomId }, data: { status: 'OCCUPIED' } });
+      return created;
     });
 
     const data     = this.buildTemplateData(contract);
@@ -230,18 +252,25 @@ export class ContractsService {
   }
 
   async update(id: string, dto: UpdateContractDto) {
-    await this.findOne(id);
-    await this.prisma.contract.update({
-      where: { id },
-      data: {
-        startDate:        dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate:          dto.endDate   ? new Date(dto.endDate)   : undefined,
-        firstBillingDate: dto.firstBillingDate ?? undefined,
-        lastBillingDate:  dto.lastBillingDate  ?? undefined,
-        deposit:          dto.deposit,
-        status:           dto.status,
-        notes:            dto.notes,
-      },
+    const before = await this.findOne(id);
+    const isEnding = dto.status && dto.status !== 'ACTIVE' && before.status === 'ACTIVE';
+
+    await this.prisma.$transaction(async tx => {
+      await tx.contract.update({
+        where: { id },
+        data: {
+          startDate:        dto.startDate ? new Date(dto.startDate) : undefined,
+          endDate:          dto.endDate   ? new Date(dto.endDate)   : undefined,
+          firstBillingDate: dto.firstBillingDate ?? undefined,
+          lastBillingDate:  dto.lastBillingDate  ?? undefined,
+          deposit:          dto.deposit,
+          status:           dto.status,
+          notes:            dto.notes,
+        },
+      });
+      if (isEnding) {
+        await tx.room.update({ where: { id: before.room.roomId }, data: { status: 'AVAILABLE' } });
+      }
     });
 
     const contract = await this.prisma.contract.findUnique({ where: { id }, include: INCLUDE });

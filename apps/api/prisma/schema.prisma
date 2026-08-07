@@ -17,11 +17,11 @@ model User {
   phone        String?
   role         String
   isActive     Boolean   @default(true)
-  roomId       String?
+  roomId       String?   @unique
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   landlord     Landlord?
-  tenant       Tenant?
+  room         Room?     @relation(fields: [roomId], references: [id])
 }
 
 model Room {
@@ -37,8 +37,9 @@ model Room {
   updatedAt     DateTime       @updatedAt
   billingDay    Int            @default(15)
   contracts     Contract[]
+  invoices      Invoice[]
   landlord      Landlord?      @relation(fields: [landlordId], references: [id])
-  tenant        Tenant?
+  account       User?
   utilityRecord UtilityRecord?
 }
 
@@ -57,38 +58,36 @@ model UtilityRecord {
 }
 
 model Tenant {
-  id          String     @id @default(cuid())
-  userId      String     @unique
-  roomId      String     @unique
-  fullName    String
-  phone       String?
-  dateOfBirth DateTime?
-  hometown    String?
-  nationalId  String?
-  tenantIdDate String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  contracts   Contract[]
-  room        Room       @relation(fields: [roomId], references: [id])
-  user        User       @relation(fields: [userId], references: [id])
+  id                   String     @id @default(cuid())
+  fullName             String
+  phone                String?
+  dateOfBirth          DateTime?
+  hometown             String?
+  nationalId           String?
+  tenantIdDate         String?
+  nationalIdIssuePlace String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  contracts            Contract[]
 }
 
 model Contract {
-  id                String    @id @default(cuid())
-  roomId            String
-  tenantId          String
-  startDate         DateTime
-  endDate           DateTime?
-  firstBillingDate  Int?
-  lastBillingDate   Int?
-  deposit           Int       @default(0)
-  status            String    @default("ACTIVE")
-  notes             String?
-  filePath          String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  room              Room      @relation(fields: [roomId], references: [id])
-  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  id               String    @id @default(cuid())
+  roomId           String
+  tenantId         String
+  startDate        DateTime
+  endDate          DateTime?
+  firstBillingDate Int?
+  lastBillingDate  Int?
+  deposit          Int       @default(0)
+  status           String    @default("ACTIVE")
+  notes            String?
+  filePath         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  room             Room      @relation(fields: [roomId], references: [id])
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  invoices         Invoice[]
 }
 
 model Landlord {
@@ -100,4 +99,35 @@ model Landlord {
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id])
   rooms     Room[]
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  roomId            String
+  contractId        String
+  period            String
+  rentAmount        Int
+  electricityAmount Int
+  waterAmount       Int
+  otherFees         Int           @default(0)
+  totalAmount       Int
+  referenceCode     String        @unique
+  dueDate           DateTime
+  status            InvoiceStatus @default(SENT)
+  paidAt            DateTime?
+  markedBy          String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  room     Room     @relation(fields: [roomId], references: [id])
+  contract Contract @relation(fields: [contractId], references: [id])
+
+  @@index([status])
+  @@index([period])
+}
+
+enum InvoiceStatus {
+  SENT
+  PAID
+  OVERDUE
 }

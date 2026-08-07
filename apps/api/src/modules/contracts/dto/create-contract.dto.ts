@@ -4,6 +4,9 @@ export class CreateContractDto {
   @IsString()
   roomId: string;
 
+  @IsString()
+  tenantId: string;
+
   @IsDateString()
   startDate: string;
 

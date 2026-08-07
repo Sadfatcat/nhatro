@@ -1,8 +1,15 @@
 import 'reflect-metadata';
+import { webcrypto } from 'crypto';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+
+// Node 18 (container base image) không expose `crypto` global mặc định —
+// @nestjs/schedule dùng crypto.randomUUID() để đặt tên cron job.
+if (!globalThis.crypto) {
+  (globalThis as unknown as { crypto: typeof webcrypto }).crypto = webcrypto;
+}
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);

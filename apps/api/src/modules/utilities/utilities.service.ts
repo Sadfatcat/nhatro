@@ -17,9 +17,20 @@ export class UtilitiesService {
       orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
       include: {
         utilityRecord: true,
-        tenant: { select: { id: true, fullName: true, user: { select: { username: true } } } },
+        contracts: {
+          where:   { status: 'ACTIVE' },
+          orderBy: { startDate: 'desc' },
+          take:    1,
+          select:  { tenant: { select: { id: true, fullName: true } } },
+        },
       },
     });
+
+    const accounts = await this.prisma.user.findMany({
+      where:  { roomId: { in: rooms.map(r => r.id) } },
+      select: { roomId: true, username: true },
+    });
+    const usernameByRoomId = new Map(accounts.map(a => [a.roomId, a.username]));
 
     const missing = rooms.filter(r => !r.utilityRecord);
     if (missing.length > 0) {
@@ -40,7 +51,7 @@ export class UtilitiesService {
       rooms.forEach(r => { if (!r.utilityRecord) r.utilityRecord = seedMap.get(r.id) ?? null; });
     }
 
-    return rooms.map(r => this.mapRoom(r));
+    return rooms.map(r => this.mapRoom(r, usernameByRoomId.get(r.id) ?? null));
   }
 
   async findByRoom(roomId: string) {
@@ -108,7 +119,8 @@ export class UtilitiesService {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  private mapRoom(room: any) {
+  private mapRoom(room: any, username: string | null = null) {
+    const tenant = room.contracts?.[0]?.tenant ?? null;
     return {
       roomId:       room.id,
       roomNumber:   room.roomNumber,
@@ -116,10 +128,10 @@ export class UtilitiesService {
       price:        room.price,
       status:       room.status,
       billingDay:   room.billingDay,
-      tenant:       room.tenant ? {
-        tenantId: room.tenant.id,
-        fullName: room.tenant.fullName,
-        username: room.tenant.user?.username,
+      tenant:       tenant ? {
+        tenantId: tenant.id,
+        fullName: tenant.fullName,
+        username,
       } : null,
       utilityRecord: room.utilityRecord ? {
         id:           room.utilityRecord.id,
