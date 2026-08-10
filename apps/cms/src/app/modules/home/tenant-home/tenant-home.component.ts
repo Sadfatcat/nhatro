@@ -3,12 +3,18 @@ import {
   computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
 import { finalize } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { RoomWithUtility } from '@nhatro/shared-types';
+import { UserRole } from '../../../core/auth/auth.types';
+import { RoomWithUtility, Invoice } from '@nhatro/shared-types';
+import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
+import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
+
+interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 Chart.register(...registerables);
 
@@ -18,16 +24,22 @@ Chart.register(...registerables);
   templateUrl:     './tenant-home.component.html',
   styleUrls:       ['./tenant-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:         [CommonModule, DatePipe],
+  imports:         [CommonModule, DatePipe, StatusBadgeComponent, MoneyDisplayComponent],
 })
 export class TenantHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('elecChart')  elecChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('waterChart') waterChartRef!: ElementRef<HTMLCanvasElement>;
 
-  private api  = inject(ApiService);
-  private auth = inject(AuthService);
+  private api    = inject(ApiService);
+  private auth   = inject(AuthService);
+  private router = inject(Router);
 
-  readonly today = new Date();
+  readonly today   = new Date();
+  readonly isAdmin = computed(() => this.auth.hasRole(UserRole.ADMIN));
+
+  goToManagementHome(): void {
+    this.router.navigateByUrl('/app/management-home');
+  }
 
   loading  = signal(false);
   roomData = signal<RoomWithUtility | null>(null);
@@ -51,12 +63,28 @@ export class TenantHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.utilityRecord()?.recordedAt ? new Date(this.utilityRecord()!.recordedAt) : null
   );
 
+  // ── Invoices ──────────────────────────────────────────────────────────────
+  invoicesLoading = signal(false);
+  invoices        = signal<Invoice[]>([]);
+
+  goToInvoice(id: string): void {
+    this.router.navigateByUrl(`/app/invoices/${id}`);
+  }
+
+  private loadInvoices(): void {
+    this.invoicesLoading.set(true);
+    this.api.get<ApiResponse<Invoice[]>>('/invoices', { roomId: this.roomId })
+      .pipe(finalize(() => this.invoicesLoading.set(false)))
+      .subscribe(res => { if (res.success && res.data) this.invoices.set(res.data); });
+  }
+
   ngOnInit(): void {
     if (!this.roomId) return;
     this.loading.set(true);
-    this.api.get<{ success: boolean; data: RoomWithUtility | null; message: string }>(`/utilities/${this.roomId}`)
+    this.api.get<ApiResponse<RoomWithUtility>>(`/utilities/${this.roomId}`)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => { if (res.success && res.data) this.roomData.set(res.data); });
+    this.loadInvoices();
   }
 
   private elecChartInstance:  Chart | null = null;

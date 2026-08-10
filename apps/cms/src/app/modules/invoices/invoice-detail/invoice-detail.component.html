@@ -1,0 +1,147 @@
+<section class="detail-page">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <a class="crumb-link" (click)="goBack()">Hoá đơn</a>
+    <span class="crumb-sep">›</span>
+    <span class="crumb-active">
+      @if (invoice()) { {{ invoice()!.referenceCode }} } @else { Chi tiết }
+    </span>
+  </nav>
+
+  @if (loading()) {
+    <div class="detail-loading">
+      <nz-spin nzSimple [nzSize]="'large'" />
+    </div>
+  } @else if (invoice(); as inv) {
+
+    <!-- Page header -->
+    <div class="detail-header">
+      <div class="detail-header__left">
+        <button class="btn btn--ghost" (click)="goBack()">
+          <nz-icon nzType="left" /> Quay lại
+        </button>
+        <div>
+          <h1>Hoá đơn — Phòng {{ inv.room.roomNumber }}</h1>
+          <p>Kỳ <strong>{{ inv.period }}</strong> · Mã tham chiếu: <strong>{{ inv.referenceCode }}</strong></p>
+        </div>
+      </div>
+      <div class="detail-header__right">
+        <app-status-badge [status]="inv.status" />
+        <button
+          *appPermission="'invoices:notify'"
+          nz-button
+          [nzLoading]="saving()"
+          (click)="sendNotification()"
+        >
+          <nz-icon nzType="mail" /> Gửi thông báo
+        </button>
+        @if (inv.status !== 'PAID') {
+          <button
+            *appPermission="'invoices:mark-paid'"
+            nz-button nzType="primary"
+            [nzLoading]="saving()"
+            (click)="markPaid()"
+          >
+            <nz-icon nzType="check-circle" /> Đánh dấu đã thanh toán
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- 2-column layout -->
+    <div class="detail-body">
+
+      <!-- LEFT: breakdown -->
+      <div class="detail-col">
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="file-text" />
+            <span>Chi tiết hoá đơn</span>
+          </div>
+          <div class="col-card__body">
+            <div class="info-grid">
+              <div class="info-row">
+                <span class="info-label">Tiền phòng</span>
+                <app-money-display [value]="inv.rentAmount" />
+              </div>
+              <div class="info-row">
+                <span class="info-label">Tiền điện</span>
+                <app-money-display [value]="inv.electricityAmount" />
+              </div>
+              <div class="info-row">
+                <span class="info-label">Tiền nước</span>
+                <app-money-display [value]="inv.waterAmount" />
+              </div>
+              @if (inv.otherFees > 0) {
+                <div class="info-row">
+                  <span class="info-label">Phí khác</span>
+                  <app-money-display [value]="inv.otherFees" />
+                </div>
+              }
+              <div class="info-row info-row--total">
+                <span class="info-label">Tổng cộng</span>
+                <app-money-display [value]="inv.totalAmount" />
+              </div>
+              <div class="info-row">
+                <span class="info-label">Hạn đóng</span>
+                <span>{{ inv.dueDate | date:'dd/MM/yyyy' }}</span>
+              </div>
+              @if (inv.paidAt) {
+                <div class="info-row">
+                  <span class="info-label">Đã đóng lúc</span>
+                  <span>{{ inv.paidAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              }
+              @if (inv.markedBy) {
+                <div class="info-row">
+                  <span class="info-label">Xác nhận bởi</span>
+                  <span>{{ inv.markedBy }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: bank info -->
+      <div class="detail-col">
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="bank" />
+            <span>Thông tin chuyển khoản</span>
+          </div>
+          <div class="col-card__body">
+            @if (inv.bankInfo?.bankAccountNumber) {
+              <div class="info-grid">
+                <div class="info-row">
+                  <span class="info-label">Ngân hàng</span>
+                  <span>{{ inv.bankInfo?.bankName }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Số TK</span>
+                  <span>{{ inv.bankInfo?.bankAccountNumber }}</span>
+                  <button nz-button nzType="text" nzSize="small" (click)="copyAccountNumber()">
+                    <nz-icon nzType="copy" />
+                  </button>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Chủ TK</span>
+                  <span>{{ inv.bankInfo?.bankAccountName }}</span>
+                </div>
+                <div class="info-row info-row--full">
+                  <span class="info-label">Nội dung CK</span>
+                  <span>{{ inv.referenceCode }}</span>
+                </div>
+              </div>
+            } @else {
+              <p class="bank-empty">Chưa cấu hình thông tin chuyển khoản.</p>
+            }
+          </div>
+        </div>
+      </div>
+
+    </div>
+  }
+
+</section>

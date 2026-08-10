@@ -48,6 +48,10 @@ import {
   ShopOutline,
 
   EnvironmentOutline,
+  CopyOutline,
+  LockOutline,
+  MailOutline,
+  CalendarOutline,
 } from '@ant-design/icons-angular/icons';
 
 export const APP_ICONS = [
@@ -89,6 +93,10 @@ export const APP_ICONS = [
   FundViewOutline,
   EnvironmentOutline,
   ReloadOutline,
+  CopyOutline,
+  LockOutline,
+  MailOutline,
+  CalendarOutline,
 ];
 
 export const provideAppIcons = () => provideNzIcons(APP_ICONS);

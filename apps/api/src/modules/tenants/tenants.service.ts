@@ -1,10 +1,26 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 
 @Injectable()
 export class TenantsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async create(dto: CreateTenantDto) {
+    return this.prisma.tenant.create({
+      data: {
+        fullName:             dto.fullName,
+        phone:                dto.phone,
+        email:                dto.email,
+        dateOfBirth:          dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
+        hometown:             dto.hometown,
+        nationalId:           dto.nationalId,
+        tenantIdDate:         dto.tenantIdDate,
+        nationalIdIssuePlace: dto.nationalIdIssuePlace,
+      },
+    });
+  }
 
   async findAll() {
     const tenants = await this.prisma.tenant.findMany({ orderBy: { fullName: 'asc' } });
@@ -40,6 +56,7 @@ export class TenantsService {
       data: {
         fullName:             dto.fullName,
         phone:                dto.phone,
+        email:                dto.email,
         dateOfBirth:          dto.dateOfBirth !== undefined ? (dto.dateOfBirth ? new Date(dto.dateOfBirth) : null) : undefined,
         hometown:             dto.hometown,
         nationalId:           dto.nationalId,

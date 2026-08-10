@@ -40,9 +40,7 @@
             <nz-option nzValue="TERMINATED" nzLabel="Đã kết thúc" />
           </nz-select>
 
-          <button class="btn btn--secondary" (click)="resetFilters()">
-            <nz-icon nzType="reload" /> Đặt lại
-          </button>
+          <button type="button" class="add-link" (click)="resetFilters()">↻ Đặt lại</button>
         </div>
         <div class="filter-bar__right">
           <span class="toolbar-title">{{ filteredContracts().length }} hợp đồng</span>
@@ -62,8 +60,8 @@
           </tr>
         </thead>
         <tbody>
-          @for (row of pagedRows(); track row.id) {
-            <tr>
+          @for (row of pagedRows(); track row.id; let i = $index) {
+            <tr class="stagger-item" [style.--stagger-i]="i">
               <td><strong>Phòng {{ row.room.roomNumber }}</strong></td>
               <td>{{ row.tenant.fullName }}</td>
               <td>{{ fmtDate(row.startDate) }}</td>
@@ -97,11 +95,13 @@
         </tbody>
       </nz-table>
 
-      <app-paginator
-        [total]="filteredContracts().length"
-        [page]="page()"
-        [pageSize]="10"
-        (pageChange)="page.set($event)" />
+      <div class="table-footer">
+        <app-paginator
+          [total]="filteredContracts().length"
+          [page]="page()"
+          [pageSize]="10"
+          (pageChange)="page.set($event)" />
+      </div>
 
     </div>
 
@@ -177,7 +177,8 @@
 
 
 <!-- ══ Modal: Xem chi tiết hợp đồng (management) ═══════════════════════════ -->
-<nz-modal [nzVisible]="viewModal()" nzTitle="Chi tiết hợp đồng"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="viewModal()" nzTitle="Chi tiết hợp đồng"
   [nzWidth]="760" [nzFooter]="null"
   (nzOnCancel)="closeViewModal()">
   <ng-template nzModalContent>
@@ -289,7 +290,8 @@
 
 
 <!-- ══ Modal: Tạo hợp đồng ══════════════════════════════════════════════════ -->
-<nz-modal [nzVisible]="createModal()"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="createModal()"
   [nzTitle]="previewMode() ? 'Xem trước hợp đồng' : 'Tạo hợp đồng mới'"
   [nzFooter]="null"
   (nzOnCancel)="closeCreateModal()">
@@ -369,7 +371,8 @@
 
 
 <!-- ══ Modal: Chỉnh sửa hợp đồng ════════════════════════════════════════════ -->
-<nz-modal [nzVisible]="editModal()" nzTitle="Chỉnh sửa hợp đồng"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="editModal()" nzTitle="Chỉnh sửa hợp đồng"
   nzOkText="Lưu" [nzOkLoading]="saving()"
   (nzOnOk)="submitEdit()" (nzOnCancel)="closeEditModal()">
   <ng-template nzModalContent>
@@ -386,7 +389,8 @@
 
 
 <!-- ══ Modal: Kết thúc / Hết hạn ═══════════════════════════════════════════ -->
-<nz-modal [nzVisible]="terminateModal()" nzTitle="Cập nhật trạng thái hợp đồng"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="terminateModal()" nzTitle="Cập nhật trạng thái hợp đồng"
   nzOkText="Xác nhận" [nzOkLoading]="saving()"
   (nzOnOk)="submitTerminate()" (nzOnCancel)="closeTerminateModal()">
   <ng-template nzModalContent>

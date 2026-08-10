@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
+import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
@@ -23,6 +24,15 @@ function requireManagement(auth: string | undefined): void {
 @Controller('tenants')
 export class TenantsController {
   constructor(private readonly tenants: TenantsService) {}
+
+  @Post()
+  async create(
+    @Body() dto: CreateTenantDto,
+    @Headers('authorization') auth: string,
+  ): Promise<ApiResponse<unknown>> {
+    requireManagement(auth);
+    return ok(await this.tenants.create(dto), 'Đã thêm người thuê mới.');
+  }
 
   @Get()
   async findAll(@Headers('authorization') auth: string): Promise<ApiResponse<unknown>> {

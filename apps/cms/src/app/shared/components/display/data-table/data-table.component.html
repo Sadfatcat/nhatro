@@ -47,8 +47,8 @@
   </thead>
 
   <tbody>
-    @for (row of nzTable.data; track row[config.rowKey]) {
-      <tr (click)="rowClick.emit(row)" class="table-row">
+    @for (row of nzTable.data; track row[config.rowKey]; let i = $index) {
+      <tr (click)="rowClick.emit(row)" class="table-row stagger-item" [style.--stagger-i]="i">
 
         @if (config.selectable) {
           <td [nzChecked]="isSelected(row)" (nzCheckedChange)="toggleRow(row)" (click)="$event.stopPropagation()"></td>

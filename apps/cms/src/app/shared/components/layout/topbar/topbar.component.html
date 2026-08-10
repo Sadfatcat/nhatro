@@ -2,7 +2,11 @@
 
   <div class="header-left">
     <a class="brand-link" routerLink="/app/home" aria-label="NhaTro home">
-      <img class="brand-logo" src="/brand-logo.svg" alt="NhaTro" />
+      <img class="brand-mark" src="/brand-mark.svg" alt="" />
+      <span class="brand-text">
+        <span class="brand-name">NhaTro</span>
+        <span class="brand-tagline">Rental management</span>
+      </span>
     </a>
 
     <ng-content select="[topbar-nav]" />
@@ -46,10 +50,6 @@
             <nz-icon nzType="bell" />
           </nz-badge>
         </button>
-
-        <button class="action-btn">
-          <nz-icon nzType="question-circle" />
-        </button>
       </div>
     }
 
@@ -61,8 +61,8 @@
         </div>
         <nz-avatar
           [nzText]="userInitial"
-          [nzSize]="40"
-          style="background-color: var(--color-primary); cursor: pointer; flex-shrink: 0" />
+          [nzSize]="32"
+          style="background-color: var(--teal-600); cursor: pointer; flex-shrink: 0" />
       </div>
 
       <nz-dropdown-menu #userMenu="nzDropdownMenu">

@@ -3,8 +3,8 @@ import { Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { AuthState, LoginDto, USER_ROLE_LABELS, UserRole } from '../auth.types';
 import { AuthStorageService } from './auth-storage.service';
-import { ROLE_PERMISSIONS } from '../permission/policies/role-permissions';
-import { Permission } from '../permission/policies/role-permissions';
+import { ROLE_PERMISSIONS } from '../../permission/policies/role-permissions';
+import { Permission } from '../../permission/policies/role-permissions';
 import { ApiService } from '../../services/api.service';
 
 @Injectable({ providedIn: 'root' })

@@ -4,12 +4,10 @@ import {
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import {
   Chart, DoughnutController, ArcElement,
   LineController, LineElement, PointElement,
-  BarController, BarElement,
   CategoryScale, LinearScale, Filler, Tooltip, Legend,
 } from 'chart.js';
 import { finalize } from 'rxjs';
@@ -20,7 +18,6 @@ import { RoomWithUtility } from '@nhatro/shared-types';
 Chart.register(
   DoughnutController, ArcElement,
   LineController, LineElement, PointElement,
-  BarController, BarElement,
   CategoryScale, LinearScale, Filler, Tooltip, Legend,
 );
 
@@ -32,12 +29,11 @@ type ChartMode = 'month' | 'quarter' | 'year';
   templateUrl:     './dashboard.component.html',
   styleUrls:       ['./dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, DatePipe, RouterModule, NzIconModule, NzTagModule],
+  imports: [CommonModule, DatePipe, RouterModule, NzTagModule],
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
   @ViewChild('incomeChart')     incomeChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('roomStatusChart') donutRef!:       ElementRef<HTMLCanvasElement>;
-  @ViewChild('sparkline')       sparklineRef!:   ElementRef<HTMLCanvasElement>;
 
   private api = inject(ApiService);
 
@@ -58,10 +54,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   // ── Invoice stats — placeholder until invoice API is ready ────────────────
   currentMonthIncome = signal(0);
   prevMonthIncome    = signal(0);
-  incomeTrend        = signal<number | null>(null);
   unpaidCount        = signal(0);
   pendingAmount      = signal(0);
-  sparklineData      = signal<number[]>(Array(6).fill(0));
   recentInvoices     = signal<unknown[]>([]);
 
   // ── Charts ─────────────────────────────────────────────────────────────────
@@ -72,9 +66,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     { value: 'year'    as ChartMode, label: 'Theo năm' },
   ];
 
-  private sparklineChart: Chart | null = null;
-  private incomeChart:    Chart | null = null;
-  private donutChart:     Chart | null = null;
+  private incomeChart: Chart | null = null;
+  private donutChart:  Chart | null = null;
 
   ngOnInit(): void {
     this.loading.set(true);
@@ -91,33 +84,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.buildSparkline();
     this.buildIncomeChart();
     this.buildDonutChart();
   }
 
   onChartModeChange(): void { this.buildIncomeChart(); }
-
-  private buildSparkline(): void {
-    this.sparklineChart?.destroy();
-    const data = this.sparklineData();
-    this.sparklineChart = new Chart(this.sparklineRef.nativeElement, {
-      type: 'bar',
-      data: {
-        labels: data.map(() => ''),
-        datasets: [{
-          data,
-          backgroundColor: data.map((_, i) => i === data.length - 1 ? '#16898F' : 'rgba(22,137,143,0.22)'),
-          borderRadius: 3, borderSkipped: false,
-        }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales:  { x: { display: false }, y: { display: false, beginAtZero: true } },
-      },
-    });
-  }
 
   buildIncomeChart(): void {
     this.incomeChart?.destroy();

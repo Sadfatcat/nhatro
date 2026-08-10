@@ -6,6 +6,7 @@ import { AccountsModule } from './modules/accounts/accounts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
@@ -21,6 +22,7 @@ import { UtilitiesModule } from './modules/utilities/utilities.module';
     AccountsModule,
     ContractsModule,
     InvoicesModule,
+    NotificationsModule,
     RoomsModule,
     TenantsModule,
     UtilitiesModule,

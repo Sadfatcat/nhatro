@@ -9,5 +9,6 @@ import { UtilitiesModule } from '../utilities/utilities.module';
   imports:     [RoomsModule, ContractsModule, UtilitiesModule],
   controllers: [InvoicesController],
   providers:   [InvoicesService],
+  exports:     [InvoicesService],
 })
 export class InvoicesModule {}

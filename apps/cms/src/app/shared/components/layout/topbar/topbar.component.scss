@@ -11,7 +11,7 @@
   box-sizing: border-box;
   background: var(--color-header-bg);
   border-bottom: 1px solid var(--color-header-border);
-  padding: 0 40px;
+  padding: 0 28px;
   height: $header-height;
   gap: 24px;
   transition: background $transition-base, border-color $transition-base;
@@ -28,14 +28,35 @@
 .brand-link {
   display: inline-flex;
   align-items: center;
+  gap: 10px;
   flex-shrink: 0;
   text-decoration: none;
 }
 
-.brand-logo {
+.brand-mark {
   display: block;
-  width: 176px;
-  height: 50px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand-name {
+  font-family: $font-family-headline;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.brand-tagline {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
 }
 
 .header-search {
@@ -169,23 +190,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
-  padding: 0 18px;
-  border-radius: 8px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: $radius-md;
+  background: var(--color-accent-primary);
+  color: var(--color-text-inverse);
+  font-size: 13px;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: background $transition-fast, transform 80ms ease;
+  transition: background $transition-fast, transform $transition-fast;
 
   &:hover {
-    background: var(--color-primary-hover);
-    color: #fff;
+    background: var(--color-accent-primary-hover);
+    color: var(--color-text-inverse);
   }
 
-  &:active { transform: scale(0.98); }
+  &:active { transform: scale(0.97); }
 }
 
 .header-actions {
@@ -196,8 +216,8 @@
 
 .action-btn {
   @include flex-center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: transparent;
   border: none;
@@ -225,17 +245,15 @@
   text-align: right;
 
   .user-name {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--color-text-primary);
     margin: 0;
     line-height: 1.3;
   }
 
   .user-role {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
+    font-size: 11px;
     color: var(--color-text-muted);
     margin: 0;
     line-height: 1.3;
@@ -265,9 +283,8 @@
     gap: 12px;
   }
 
-  .brand-logo {
-    width: 132px;
-    height: 40px;
+  .brand-tagline {
+    display: none;
   }
 
   .header-right {

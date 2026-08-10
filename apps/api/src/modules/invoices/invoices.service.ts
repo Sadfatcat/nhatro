@@ -21,7 +21,7 @@ const INCLUDE_ROOM = { room: { select: { roomNumber: true, floor: true } } };
 
 const ELECTRICITY_PRICE_PER_KWH = 4000;
 const WATER_PRICE_PER_M3        = 15000;
-const DEFAULT_DUE_DAYS          = 10;
+const DEFAULT_DUE_DAYS          = 5;
 
 @Injectable()
 export class InvoicesService {
@@ -122,6 +122,20 @@ export class InvoicesService {
     return { created, skipped };
   }
 
+  async findDueSoon(daysAhead: number): Promise<{ id: string }[]> {
+    const target = new Date();
+    target.setDate(target.getDate() + daysAhead);
+    const startOfDay = new Date(target);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(target);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return this.prisma.invoice.findMany({
+      where:  { status: InvoiceStatus.SENT, dueDate: { gte: startOfDay, lte: endOfDay } },
+      select: { id: true },
+    });
+  }
+
   async findAll(filter: InvoiceFilter) {
     return this.prisma.invoice.findMany({
       where:   { status: filter.status, period: filter.period, roomId: filter.roomId },
@@ -149,17 +163,26 @@ export class InvoicesService {
     if (invoice.status === InvoiceStatus.PAID) {
       throw new BadRequestException('Hoá đơn này đã được đánh dấu thanh toán.');
     }
-    return this.prisma.invoice.update({
+    const updated = await this.prisma.invoice.update({
       where: { id },
       data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy: dto.markedBy ?? null },
     });
+    this.events.emit('invoice.paid', { invoiceId: updated.id });
+    return updated;
   }
 
   async bulkMarkPaid(dto: BulkMarkPaidDto) {
+    const toUpdate = await this.prisma.invoice.findMany({
+      where:  { id: { in: dto.ids }, status: { not: InvoiceStatus.PAID } },
+      select: { id: true },
+    });
     const result = await this.prisma.invoice.updateMany({
-      where: { id: { in: dto.ids }, status: { not: InvoiceStatus.PAID } },
+      where: { id: { in: toUpdate.map(i => i.id) } },
       data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy: dto.markedBy ?? null },
     });
+    for (const invoice of toUpdate) {
+      this.events.emit('invoice.paid', { invoiceId: invoice.id });
+    }
     return { updated: result.count };
   }
 

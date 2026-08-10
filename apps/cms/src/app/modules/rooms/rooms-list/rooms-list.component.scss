@@ -1,3 +1,5 @@
+@use '../../../../styles/variables' as *;
+
 .rooms {
   display: flex;
   flex-direction: column;
@@ -6,13 +8,6 @@
   max-width: 1500px;
   margin: 0 auto;
 
-  &__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
   &__header-actions {
     display: flex;
     align-items: center;
@@ -20,10 +15,19 @@
     padding-top: 4px;
   }
 
+  &__card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: $radius-lg;
+    overflow: hidden;
+  }
+
   &__filters {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--color-border);
   }
 
   &__search {
@@ -34,11 +38,9 @@
     width: 180px;
   }
 
-  &__table {
-    background: var(--color-bg-card);
-    border-radius: 8px;
-    border: 1px solid var(--color-border);
-    overflow: hidden;
+  &__footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--color-border);
   }
 
   &__actions {

@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
@@ -15,7 +17,7 @@ import { StatusBadgeComponent } from '../../../shared/components/display/status-
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { EmptyStateComponent } from '../../../shared/components/feedback/empty-state/empty-state.component';
 import { FormBuilderComponent } from '../../../shared/components/form/form-builder/form-builder.component';
-import { PermissionDirective } from '../../../core/auth/permission/directives/permission.directive';
+import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
 import { RoomStatus } from '@nhatro/shared-types';
 
@@ -38,6 +40,12 @@ interface RoomRow {
   tenant:     TenantInfo | null;
 }
 
+interface TenantOption {
+  tenantId:   string;
+  fullName:   string;
+  roomNumber: string | null;
+}
+
 @Component({
   selector:        'app-rooms-list',
   standalone:      true,
@@ -46,7 +54,7 @@ interface RoomRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, FormsModule,
-    NzTableModule, NzSelectModule, NzInputModule, NzButtonModule, NzIconModule, NzModalModule,
+    NzTableModule, NzSelectModule, NzInputModule, NzButtonModule, NzIconModule, NzModalModule, NzTooltipModule,
     PaginatorComponent, StatusBadgeComponent,
     MoneyDisplayComponent, EmptyStateComponent, FormBuilderComponent, PermissionDirective,
   ],
@@ -54,6 +62,8 @@ interface RoomRow {
 export class RoomsListComponent implements OnInit {
   private api   = inject(ApiService);
   private toast = inject(ToastService);
+  private route  = inject(ActivatedRoute);
+  private router = inject(Router);
 
   readonly PAGE_SIZE = PAGE_SIZE;
 
@@ -78,10 +88,18 @@ export class RoomsListComponent implements OnInit {
   page = signal(1);
 
   // Modals
-  showCreateModal = signal(false);
-  showEditModal   = signal(false);
-  showDeleteModal = signal(false);
-  selectedItem    = signal<RoomRow | null>(null);
+  showCreateModal   = signal(false);
+  showEditModal     = signal(false);
+  showPasswordModal = signal(false);
+  showAssignModal   = signal(false);
+  selectedItem      = signal<RoomRow | null>(null);
+  newPassword       = '';
+
+  // Cung cấp phòng
+  assignRoomId   = signal<string | null>(null);
+  assignTenantId = signal<string | null>(null);
+  tenantOptions  = signal<TenantOption[]>([]);
+  vacantRooms    = computed(() => this.items().filter(r => r.status === 'AVAILABLE'));
 
   // Edit schema — chỉ cho sửa status và price
   editSchema: FormSchema = {
@@ -149,7 +167,15 @@ export class RoomsListComponent implements OnInit {
     ],
   };
 
-  ngOnInit(): void { this.loadData(); }
+  ngOnInit(): void {
+    this.loadData();
+    this.route.queryParamMap.subscribe(params => {
+      if (params.has('assign')) {
+        this.openAssignModal();
+        this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+      }
+    });
+  }
 
   loadData(): void {
     this.loading.set(true);
@@ -208,20 +234,72 @@ export class RoomsListComponent implements OnInit {
       });
   }
 
-  onDelete(item: RoomRow): void {
+  openPasswordModal(item: RoomRow): void {
     this.selectedItem.set(item);
-    this.showDeleteModal.set(true);
+    this.newPassword = '';
+    this.showPasswordModal.set(true);
   }
 
-  confirmDelete(): void {
+  closePasswordModal(): void {
+    this.showPasswordModal.set(false);
+    this.newPassword = '';
+  }
+
+  confirmChangePassword(): void {
     const id = this.selectedItem()?.roomId;
+    if (!id || this.newPassword.length < 6) {
+      this.toast.error('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
     this.saving.set(true);
-    this.api.delete<ApiResponse<null>>(`/rooms/${id}`).pipe(finalize(() => this.saving.set(false)))
+    this.api.patch<ApiResponse<null>>(`/rooms/${id}/password`, { password: this.newPassword })
+      .pipe(finalize(() => this.saving.set(false)))
       .subscribe(res => {
         if (!res.success) return;
-        this.toast.success('Xoá phòng thành công');
-        this.showDeleteModal.set(false);
-        this.loadData();
+        this.toast.success('Đã đổi mật khẩu phòng.');
+        this.closePasswordModal();
+      });
+  }
+
+  // ── Cung cấp phòng ─────────────────────────────────────────────────────────
+  openAssignModal(): void {
+    this.assignRoomId.set(null);
+    this.assignTenantId.set(null);
+    this.showAssignModal.set(true);
+    this.api.get<ApiResponse<{ tenantId: string; fullName: string; room: { roomNumber: string } | null }[]>>('/tenants')
+      .subscribe(res => {
+        if (!res.success || !res.data) return;
+        this.tenantOptions.set(res.data.map(t => ({
+          tenantId:   t.tenantId,
+          fullName:   t.fullName,
+          roomNumber: t.room?.roomNumber ?? null,
+        })));
+      });
+  }
+
+  closeAssignModal(): void {
+    this.showAssignModal.set(false);
+  }
+
+  confirmAssignRoom(): void {
+    const roomId   = this.assignRoomId();
+    const tenantId = this.assignTenantId();
+    if (!roomId || !tenantId) return;
+    this.saving.set(true);
+    this.api.post<ApiResponse<unknown>>('/contracts', {
+      roomId,
+      tenantId,
+      startDate: new Date().toISOString().slice(0, 10),
+    })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next:  res => {
+          if (!res.success) return;
+          this.toast.success('Đã cung cấp phòng thành công.');
+          this.closeAssignModal();
+          this.loadData();
+        },
+        error: err => this.toast.error(err?.error?.message ?? 'Không cung cấp được phòng.'),
       });
   }
 }

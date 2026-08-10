@@ -1,0 +1,77 @@
+<div class="billing-day">
+
+  <p class="billing-day__hint">Kỳ hiện tại: <strong>{{ period }}</strong> — phòng chia theo ngày chốt điện nước (đồng bộ với Trang chủ Quản lý).</p>
+
+  <!-- Column: Ngày 15 -->
+  <div class="billing-day__card">
+    <div class="billing-day__card-header">
+      <h2>Ngày chốt 15</h2>
+      @if (selected15().length > 0) {
+        <button
+          *appPermission="'invoices:notify'"
+          nz-button nzType="primary" nzSize="small"
+          [nzLoading]="saving()"
+          (click)="bulkSend(15)"
+        >
+          <span nz-icon nzType="mail"></span>
+          Gửi thông báo ({{ selected15().length }})
+        </button>
+      }
+    </div>
+    <app-data-table
+      [config]="tableConfig(rows15())"
+      [cellTemplates]="cellTemplates"
+      (selectChange)="onSelectChange15($event)"
+      (rowClick)="onRowClick($event)"
+    />
+  </div>
+
+  <!-- Column: Ngày 30 -->
+  <div class="billing-day__card">
+    <div class="billing-day__card-header">
+      <h2>Ngày chốt 30</h2>
+      @if (selected30().length > 0) {
+        <button
+          *appPermission="'invoices:notify'"
+          nz-button nzType="primary" nzSize="small"
+          [nzLoading]="saving()"
+          (click)="bulkSend(30)"
+        >
+          <span nz-icon nzType="mail"></span>
+          Gửi thông báo ({{ selected30().length }})
+        </button>
+      }
+    </div>
+    <app-data-table
+      [config]="tableConfig(rows30())"
+      [cellTemplates]="cellTemplates"
+      (selectChange)="onSelectChange30($event)"
+      (rowClick)="onRowClick($event)"
+    />
+  </div>
+
+</div>
+
+<ng-template #statusTpl let-value>
+  @if (value) {
+    <app-status-badge [status]="value" />
+  } @else {
+    <span class="billing-day__no-invoice">Chưa sinh hoá đơn</span>
+  }
+</ng-template>
+
+<ng-template #amountTpl let-value>
+  @if (value !== null) {
+    <app-money-display [value]="value" />
+  } @else {
+    <span class="billing-day__no-invoice">—</span>
+  }
+</ng-template>
+
+<ng-template #dueDateTpl let-value>
+  @if (value) {
+    {{ value | date:'dd/MM/yyyy' }}
+  } @else {
+    <span class="billing-day__no-invoice">—</span>
+  }
+</ng-template>

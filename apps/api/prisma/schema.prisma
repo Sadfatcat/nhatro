@@ -61,6 +61,7 @@ model Tenant {
   id                   String     @id @default(cuid())
   fullName             String
   phone                String?
+  email                String?
   dateOfBirth          DateTime?
   hometown             String?
   nationalId           String?

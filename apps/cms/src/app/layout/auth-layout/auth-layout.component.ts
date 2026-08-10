@@ -10,7 +10,15 @@ import { TopbarComponent } from '../../shared/components/layout/topbar/topbar.co
     <div class="auth-page">
       <app-topbar [showUtilityActions]="false" [showUserMenu]="false" />
       <div class="auth-layout">
+        <div class="auth-glow"></div>
         <div class="auth-card">
+          <div class="auth-brand">
+            <img class="auth-brand-mark" src="/brand-mark.svg" alt="" />
+            <div>
+              <div class="auth-brand-name">NhaTro</div>
+              <div class="auth-brand-tagline">Rental management</div>
+            </div>
+          </div>
           <router-outlet />
         </div>
       </div>

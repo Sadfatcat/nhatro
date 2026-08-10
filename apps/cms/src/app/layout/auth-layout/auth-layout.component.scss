@@ -9,19 +9,54 @@
 
 .auth-layout {
   @include flex-center;
+  position: relative;
+  overflow: hidden;
   min-height: calc(100vh - #{$header-height});
-  background: var(--color-bg-base);
-  background-image:
-    linear-gradient(135deg, var(--color-secondary-container) 0%, transparent 45%),
-    linear-gradient(315deg, var(--color-bg-container) 0%, transparent 40%);
+  background: radial-gradient(circle at 28% 18%, var(--teal-700), var(--deep-1) 62%);
+}
+
+.auth-glow {
+  position: absolute;
+  top: -120px;
+  right: -80px;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gold-400), transparent 70%);
+  opacity: .18;
 }
 
 .auth-card {
+  position: relative;
   width: 100%;
-  max-width: 420px;
-  padding: 40px 36px;
+  max-width: 400px;
+  padding: 40px;
+  box-sizing: border-box;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
   border-radius: 16px;
   box-shadow: var(--shadow-lg);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+
+.auth-brand-mark {
+  width: 38px;
+  height: 38px;
+}
+
+.auth-brand-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-accent-primary);
+  line-height: 1.1;
+}
+
+.auth-brand-tagline {
+  font-size: 10px;
+  color: var(--color-text-muted);
 }

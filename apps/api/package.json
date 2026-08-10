@@ -31,6 +31,7 @@
     "pdfmake": "^0.3.9",
     "pizzip": "^3.2.0",
     "reflect-metadata": "^0.2.2",
+    "resend": "^6.18.1",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {

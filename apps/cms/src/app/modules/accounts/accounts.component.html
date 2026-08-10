@@ -1,318 +1,84 @@
 <section class="accounts-page">
 
-  <!-- ── Header + Tabs ── -->
+  <!-- ── Header ── -->
   <div class="page-header-container">
     <nav class="breadcrumb">
-      <span class="crumb-active">Tài khoản</span>
-      <span>/</span>
-      <span>{{ activeTab() === 0 ? 'Tài khoản phòng' : 'Chủ nhà' }}</span>
+      <span class="crumb-active">Tài khoản chủ nhà</span>
     </nav>
     <div class="page-header">
       <div>
-        <h1>Quản lý tài khoản</h1>
-        <p>Cấp và quản lý tài khoản cho phòng và chủ nhà.</p>
+        <h1>Tài khoản chủ nhà</h1>
+        <p>Quản lý tài khoản đăng nhập của chủ nhà và quản trị viên.</p>
       </div>
     </div>
-    <nz-tabs [nzSelectedIndex]="activeTab()" (nzSelectedIndexChange)="onTabChange($event)">
-      <nz-tab nzTitle="Tài khoản phòng" />
-      <ng-container *appPermission="'accounts:landlords'">
-        <nz-tab nzTitle="Chủ nhà" />
-      </ng-container>
-    </nz-tabs>
   </div>
 
-  <!-- ── Rooms tab ── -->
-  @if (activeTab() === 0) {
-    <div class="table-container">
-
-      <!-- Filter bar -->
-      <div class="filter-bar">
-        <div class="filter-bar__left">
-          <nz-input-group [nzPrefix]="searchIcon" style="width:200px">
-            <input nz-input placeholder="Tìm phòng, người thuê..."
-              [(ngModel)]="filterSearchValue"
-              (ngModelChange)="filterSearch.set($event); roomPage.set(1)" />
-          </nz-input-group>
-          <ng-template #searchIcon><nz-icon nzType="search" /></ng-template>
-
-          <nz-select [(ngModel)]="filterFloorValue" (ngModelChange)="filterFloor.set($event); roomPage.set(1)"
-            nzPlaceHolder="Tất cả tầng" nzAllowClear style="width:130px">
-            @for (opt of floorOptions(); track opt.value) {
-              <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
-            }
-          </nz-select>
-
-          <nz-select [(ngModel)]="filterStatusValue" (ngModelChange)="filterStatus.set($event); roomPage.set(1)"
-            nzPlaceHolder="Tất cả trạng thái" nzAllowClear style="width:170px">
-            <nz-option nzValue="AVAILABLE" nzLabel="Trống" />
-            <nz-option nzValue="OCCUPIED"  nzLabel="Đã thuê" />
-            <nz-option nzValue="MAINTENANCE" nzLabel="Bảo trì" />
-          </nz-select>
-
-          <nz-select [(ngModel)]="filterSortValue" (ngModelChange)="filterSort.set($event); roomPage.set(1)"
-            style="width:160px">
-            <nz-option nzValue="asc"  nzLabel="Số phòng A → Z" />
-            <nz-option nzValue="desc" nzLabel="Số phòng Z → A" />
-          </nz-select>
-
-          <button class="btn btn--secondary" (click)="resetFilters()">
-            <nz-icon nzType="reload" /> Đặt lại
-          </button>
-        </div>
-
-        <div class="filter-bar__right">
-          <span class="toolbar-title">{{ filteredRooms().length }} phòng</span>
-          <button class="btn btn--primary" (click)="openAssignRoomModal()">
-            <nz-icon nzType="home" /> Cho thuê
-          </button>
-        </div>
+  <div class="table-container">
+    <div class="filter-bar">
+      <div class="filter-bar__left">
+        <span class="toolbar-title">{{ landlords().length }} chủ nhà</span>
       </div>
-
-      <!-- Table -->
-      <nz-table [nzData]="pagedRooms()" [nzLoading]="loading()" [nzShowPagination]="false" nzSize="middle">
-        <thead>
-          <tr>
-            <th>Phòng</th>
-            <th>Tầng</th>
-            <th>Giá</th>
-            <th>Trạng thái</th>
-            <th>Người thuê</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of pagedRooms(); track row.roomId) {
-            <tr>
-              <td><strong>{{ row.roomNumber }}</strong></td>
-              <td>{{ row.floor }}</td>
-              <td>
-                <span class="cell-link" (click)="openPriceModal(row)">
-                  <app-money-display [value]="row.price" />
-                </span>
-              </td>
-              <td>
-                <span class="cell-link" (click)="openStatusModal(row)">
-                  <nz-tag [nzColor]="row.status === 'OCCUPIED' ? 'volcano' : row.status === 'MAINTENANCE' ? 'orange' : 'green'">
-                    {{ row.status === 'OCCUPIED' ? 'Đã thuê' : row.status === 'MAINTENANCE' ? 'Bảo trì' : 'Trống' }}
-                  </nz-tag>
-                </span>
-              </td>
-              <td>
-                @if (row.tenant) {
-                  <span class="cell-link" (click)="openTenantInfoModal(row)">{{ row.tenant.fullName }}</span>
-                } @else {
-                  <span class="cell-muted">—</span>
-                }
-              </td>
-              <td>
-                @if (row.tenant) {
-                  <div style="display:flex;gap:4px">
-                    <button nz-button nzType="text" nzSize="small" nz-tooltip nzTooltipTitle="Đổi mật khẩu" (click)="openChangePasswordModal(row)">
-                      <span nz-icon nzType="setting"></span>
-                    </button>
-                    <button nz-button nzType="text" nzSize="small" nzDanger nz-tooltip nzTooltipTitle="Xoá tài khoản" (click)="openDeleteModal(row)">
-                      <span nz-icon nzType="delete"></span>
-                    </button>
-                  </div>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </nz-table>
-
-      <!-- Paginator -->
-      <app-paginator
-        [total]="filteredRooms().length"
-        [page]="roomPage()"
-        [pageSize]="10"
-        (pageChange)="roomPage.set($event)" />
-
-    </div>
-  }
-
-  <!-- ── Landlords tab ── -->
-  @if (activeTab() === 1) {
-    <div class="table-container">
-      <div class="filter-bar">
-        <div class="filter-bar__left">
-          <span class="toolbar-title">{{ landlords().length }} chủ nhà</span>
-        </div>
-        <div class="filter-bar__right">
-          <button class="btn btn--primary" (click)="openLandlordModal()">
-            <nz-icon nzType="plus" /> Tạo tài khoản chủ nhà
-          </button>
-        </div>
+      <div class="filter-bar__right">
+        <button class="btn btn--primary" (click)="openLandlordModal()">
+          <nz-icon nzType="plus" /> Tạo tài khoản chủ nhà
+        </button>
       </div>
-
-      <nz-table [nzData]="landlords()" [nzLoading]="loading()" [nzShowPagination]="false" nzSize="middle">
-        <thead>
-          <tr>
-            <th>Họ tên</th>
-            <th>Tên đăng nhập</th>
-            <th>SĐT</th>
-            <th>Số phòng</th>
-            <th>Vai trò</th>
-            <th>Trạng thái</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of landlords(); track row.landlordId) {
-            <tr>
-              <td><strong>{{ row.fullName }}</strong></td>
-              <td>{{ row.username }}</td>
-              <td>{{ row.phone ?? '-' }}</td>
-              <td>{{ row.roomCount }}</td>
-              <td>
-                <nz-tag [nzColor]="row.role === 'ADMIN' ? 'purple' : 'blue'">
-                  {{ row.role === 'ADMIN' ? 'Admin' : 'Chủ nhà' }}
-                </nz-tag>
-              </td>
-              <td>
-                <nz-tag [nzColor]="row.isActive ? 'green' : 'red'">
-                  {{ row.isActive ? 'Hoạt động' : 'Khóa' }}
-                </nz-tag>
-              </td>
-              <td>
-                <div style="display:flex;gap:4px">
-                  <button nz-button nzType="text" nzSize="small"
-                    nz-tooltip [nzTooltipTitle]="row.role === 'ADMIN' ? 'Hạ xuống Chủ nhà' : 'Nâng lên Admin'"
-                    (click)="openChangeRoleModal(row)">
-                    <span nz-icon nzType="swap"></span>
-                  </button>
-                  <button nz-button nzType="text" nzSize="small"
-                    nz-tooltip nzTooltipTitle="Đổi mật khẩu"
-                    (click)="openChangePasswordForUser(row.userId)">
-                    <span nz-icon nzType="setting"></span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </nz-table>
     </div>
-  }
+
+    <nz-table [nzData]="landlords()" [nzLoading]="loading()" [nzShowPagination]="false" nzSize="middle">
+      <thead>
+        <tr>
+          <th>Họ tên</th>
+          <th>Tên đăng nhập</th>
+          <th>SĐT</th>
+          <th>Số phòng</th>
+          <th>Vai trò</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of landlords(); track row.landlordId; let i = $index) {
+          <tr class="stagger-item" [style.--stagger-i]="i">
+            <td><strong>{{ row.fullName }}</strong></td>
+            <td>{{ row.username }}</td>
+            <td>{{ row.phone ?? '-' }}</td>
+            <td>{{ row.roomCount }}</td>
+            <td>
+              <span class="badge" [class]="row.role === 'ADMIN' ? 'badge--gold' : 'badge--teal'">
+                {{ row.role === 'ADMIN' ? 'Admin' : 'Chủ nhà' }}
+              </span>
+            </td>
+            <td>
+              <span class="badge" [class]="row.isActive ? 'badge--success' : 'badge--gray'">
+                {{ row.isActive ? 'Hoạt động' : 'Khóa' }}
+              </span>
+            </td>
+            <td>
+              <div style="display:flex;gap:4px">
+                <button nz-button nzType="text" nzSize="small"
+                  nz-tooltip [nzTooltipTitle]="row.role === 'ADMIN' ? 'Hạ xuống Chủ nhà' : 'Nâng lên Admin'"
+                  (click)="openChangeRoleModal(row)">
+                  <span nz-icon nzType="swap"></span>
+                </button>
+                <button nz-button nzType="text" nzSize="small"
+                  nz-tooltip nzTooltipTitle="Đổi mật khẩu"
+                  (click)="openChangePasswordForUser(row.userId)">
+                  <span nz-icon nzType="setting"></span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </div>
 
 </section>
 
-<!-- ── Modal: Tạo tài khoản phòng (username + password + chọn phòng) ── -->
-<nz-modal [nzVisible]="createAccountModal()" nzTitle="Tạo tài khoản phòng"
-  (nzOnCancel)="closeCreateAccountModal()" (nzOnOk)="submitCreateAccount()" [nzOkLoading]="saving()">
-  <ng-template nzModalContent>
-    <div class="form-grid">
-      <label>Phòng <span class="req">*</span></label>
-      <nz-select [(ngModel)]="createAccountForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng trống" nzShowSearch>
-        @for (r of availableRooms(); track r.roomId) {
-          <nz-option [nzValue]="r.roomId" [nzLabel]="'Phòng ' + r.roomNumber + ' — Tầng ' + r.floor" />
-        }
-      </nz-select>
-      <label>Username <span class="req">*</span></label>
-      <input nz-input [(ngModel)]="createAccountForm.username" placeholder="VD: room101" />
-      <label>Mật khẩu <span class="req">*</span></label>
-      <input nz-input type="password" [(ngModel)]="createAccountForm.password" placeholder="Tối thiểu 6 ký tự" />
-    </div>
-  </ng-template>
-</nz-modal>
-
-<!-- ── Modal: Cấp phòng (tenant đầy đủ thông tin + gán phòng) ── -->
-<nz-modal [nzVisible]="assignRoomModal()" nzTitle="Cấp phòng cho người thuê"
-  [nzWidth]="560"
-  (nzOnCancel)="closeAssignRoomModal()" (nzOnOk)="submitAssignRoom()" [nzOkLoading]="saving()">
-  <ng-template nzModalContent>
-    <div class="form-grid">
-      <label>Phòng <span class="req">*</span></label>
-      <nz-select [(ngModel)]="assignRoomForm.roomId" style="width:100%" nzPlaceHolder="Chọn phòng trống" nzShowSearch>
-        @for (r of availableRooms(); track r.roomId) {
-          <nz-option [nzValue]="r.roomId" [nzLabel]="'Phòng ' + r.roomNumber + ' — Tầng ' + r.floor + ' — ' + r.price.toLocaleString('vi-VN') + 'đ'" />
-        }
-      </nz-select>
-      <label>Username <span class="req">*</span></label>
-      <input nz-input [(ngModel)]="assignRoomForm.username" placeholder="VD: phong101" />
-      <label>Mật khẩu <span class="req">*</span></label>
-      <input nz-input type="password" [(ngModel)]="assignRoomForm.password" placeholder="Tối thiểu 6 ký tự" />
-      <label>Họ tên <span class="req">*</span></label>
-      <input nz-input [(ngModel)]="assignRoomForm.fullName" placeholder="Nguyễn Văn A" />
-      <label>SĐT</label>
-      <input nz-input [(ngModel)]="assignRoomForm.phone" placeholder="0901234567" />
-      <label>Ngày sinh</label>
-      <input nz-input type="date" [(ngModel)]="assignRoomForm.dateOfBirth" />
-      <label>Quê quán</label>
-      <input nz-input [(ngModel)]="assignRoomForm.hometown" placeholder="Hà Nội" />
-      <label>CCCD</label>
-      <input nz-input [(ngModel)]="assignRoomForm.nationalId" placeholder="012345678901" />
-      <label>Ngày cấp CCCD</label>
-      <input nz-input [(ngModel)]="assignRoomForm.tenantIdDate" placeholder="07/05/2021" />
-    </div>
-  </ng-template>
-</nz-modal>
-
-<!-- ── Modal: Thông tin người thuê ── -->
-<nz-modal [nzVisible]="tenantInfoModal()" nzTitle="Thông tin người thuê"
-  (nzOnCancel)="closeTenantInfoModal()" (nzOnOk)="saveTenantInfo()" nzOkText="Lưu" [nzOkLoading]="saving()">
-  <ng-template nzModalContent>
-    @if (selectedRoom()?.tenant) {
-      <div class="credentials-block">
-        <div class="cred-row">
-          Username: <strong>{{ selectedRoom()!.tenant!.username ?? '—' }}</strong>
-        </div>
-        <div class="cred-row">
-          Phòng: <strong>{{ selectedRoom()!.roomNumber }}</strong>
-        </div>
-      </div>
-      <hr class="divider" />
-    }
-    <div class="form-grid">
-      <label>Họ tên</label>
-      <input nz-input [(ngModel)]="tenantForm.fullName" />
-      <label>SĐT</label>
-      <input nz-input [(ngModel)]="tenantForm.phone" />
-      <label>Ngày sinh</label>
-      <input nz-input type="date" [(ngModel)]="tenantForm.dateOfBirth" />
-      <label>Quê quán</label>
-      <input nz-input [(ngModel)]="tenantForm.hometown" />
-      <label>CCCD</label>
-      <input nz-input [(ngModel)]="tenantForm.nationalId" />
-      <label>Ngày cấp CCCD</label>
-      <input nz-input [(ngModel)]="tenantForm.tenantIdDate" placeholder="07/05/2021" />
-    </div>
-  </ng-template>
-</nz-modal>
-
-<!-- ── Modal: Đổi giá ── -->
-<nz-modal [nzVisible]="priceModal()" nzTitle="Cập nhật giá phòng"
-  (nzOnCancel)="closePriceModal()" (nzOnOk)="updatePrice()" [nzOkLoading]="saving()">
-  <ng-template nzModalContent>
-    <div class="form-grid">
-      <label>Phòng</label>
-      <input nz-input [ngModel]="selectedRoom()?.roomNumber" disabled />
-      <label>Giá mới (đ)</label>
-      <nz-input-number [(ngModel)]="newPrice" [nzMin]="0" [nzStep]="100000"
-        [nzFormatter]="priceFormatter" [nzParser]="priceParser" style="width:100%" />
-    </div>
-  </ng-template>
-</nz-modal>
-
-<!-- ── Modal: Đổi trạng thái ── -->
-<nz-modal [nzVisible]="statusModal()" nzTitle="Cập nhật trạng thái"
-  (nzOnCancel)="closeStatusModal()" (nzOnOk)="updateStatus()" [nzOkLoading]="saving()">
-  <ng-template nzModalContent>
-    <div class="form-grid">
-      <label>Phòng</label>
-      <input nz-input [ngModel]="selectedRoom()?.roomNumber" disabled />
-      <label>Trạng thái</label>
-      <nz-select [(ngModel)]="newStatus" style="width:100%">
-        <nz-option nzValue="AVAILABLE"   nzLabel="Trống" />
-        <nz-option nzValue="OCCUPIED"    nzLabel="Đã thuê" />
-        <nz-option nzValue="MAINTENANCE" nzLabel="Bảo trì" />
-      </nz-select>
-    </div>
-  </ng-template>
-</nz-modal>
-
 <!-- ── Modal: Tạo tài khoản chủ nhà ── -->
-<nz-modal [nzVisible]="landlordModal()" nzTitle="Tạo tài khoản chủ nhà"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="landlordModal()" nzTitle="Tạo tài khoản chủ nhà"
   nzOkText="Tạo tài khoản"
   nzCancelText="Huỷ"
   (nzOnCancel)="closeLandlordModal()"
@@ -332,20 +98,9 @@
   </ng-template>
 </nz-modal>
 
-<!-- ── Modal: Xoá tài khoản người thuê ── -->
-<nz-modal [nzVisible]="deleteModal()" nzTitle="Xác nhận xoá tài khoản"
-  nzOkText="Xoá" nzCancelText="Huỷ" nzOkDanger
-  [nzOkLoading]="saving()"
-  (nzOnOk)="confirmDeleteTenant()"
-  (nzOnCancel)="closeDeleteModal()">
-  <ng-template nzModalContent>
-    <p>Bạn có chắc muốn xoá tài khoản của <strong>{{ selectedRoom()?.tenant?.fullName }}</strong> khỏi hệ thống?</p>
-    <p style="color: var(--color-text-muted); font-size: 13px;">Phòng <strong>{{ selectedRoom()?.roomNumber }}</strong> sẽ được trả về trạng thái trống.</p>
-  </ng-template>
-</nz-modal>
-
 <!-- ── Modal: Đổi vai trò ── -->
-<nz-modal [nzVisible]="changeRoleModal()" nzTitle="Đổi vai trò"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="changeRoleModal()" nzTitle="Đổi vai trò"
   nzOkText="Xác nhận" nzCancelText="Huỷ"
   [nzOkLoading]="saving()"
   (nzOnOk)="submitChangeRole()"
@@ -353,9 +108,9 @@
   <ng-template nzModalContent>
     <p>
       Đổi vai trò của <strong>{{ selectedLandlord()?.fullName }}</strong> từ
-      <nz-tag [nzColor]="selectedLandlord()?.role === 'ADMIN' ? 'purple' : 'blue'">
+      <span class="badge" [class]="selectedLandlord()?.role === 'ADMIN' ? 'badge--gold' : 'badge--teal'">
         {{ selectedLandlord()?.role === 'ADMIN' ? 'Admin' : 'Chủ nhà' }}
-      </nz-tag>
+      </span>
       thành
     </p>
     <div class="form-grid" style="margin-top:12px">
@@ -369,7 +124,8 @@
 </nz-modal>
 
 <!-- ── Modal: Đổi mật khẩu ── -->
-<nz-modal [nzVisible]="changePasswordModal()" nzTitle="Đổi mật khẩu"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="changePasswordModal()" nzTitle="Đổi mật khẩu"
   nzOkText="Lưu" nzCancelText="Huỷ"
   [nzOkLoading]="saving()"
   (nzOnOk)="submitChangePassword()"

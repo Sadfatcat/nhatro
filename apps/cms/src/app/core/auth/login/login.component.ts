@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 import { AuthService } from '../services/auth.service';
-import { FormBuilderComponent } from '../../../shared/components/form/form-builder/form-builder.component';
-import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
 
 @Component({
   selector:        'app-login',
@@ -11,7 +12,7 @@ import { FormSchema } from '../../../shared/components/form/form-builder/form-sc
   templateUrl:     './login.component.html',
   styleUrls:       ['./login.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormBuilderComponent],
+  imports: [FormsModule, NzInputModule, NzButtonModule],
 })
 export class LoginComponent {
   private auth   = inject(AuthService);
@@ -19,40 +20,14 @@ export class LoginComponent {
   private route  = inject(ActivatedRoute);
   private msg    = inject(NzMessageService);
 
-  loading = signal(false);
+  loading    = signal(false);
+  identifier = signal('');
+  password   = signal('');
 
-  schema: FormSchema = {
-    submitLabel: 'Đăng nhập',
-    cancelLabel: undefined,
-    fields: [
-      {
-        key:         'identifier',
-        type:        'text',
-        label:       'Tên đăng nhập / Email',
-        placeholder: 'username hoặc email',
-        validation: {
-          required: true,
-          messages: { required: 'Vui lòng nhập tên đăng nhập' },
-        },
-      },
-      {
-        key:         'password',
-        type:        'password',
-        label:       'Mật khẩu',
-        placeholder: '••••••••',
-        validation: {
-          required:  true,
-          minLength: 6,
-          messages:  { required: 'Vui lòng nhập mật khẩu', minLength: 'Mật khẩu tối thiểu 6 ký tự' },
-        },
-      },
-    ],
-  };
-
-  onSubmit(value: Record<string, unknown>): void {
+  onSubmit(): void {
     this.loading.set(true);
     this.auth
-      .login({ identifier: value['identifier'] as string, password: value['password'] as string })
+      .login({ identifier: this.identifier(), password: this.password() })
       .subscribe({
         next: () => {
           this.msg.success('Đăng nhập thành công!');
@@ -60,5 +35,10 @@ export class LoginComponent {
         },
         error: () => this.loading.set(false),
       });
+  }
+
+  onCancel(): void {
+    this.identifier.set('');
+    this.password.set('');
   }
 }

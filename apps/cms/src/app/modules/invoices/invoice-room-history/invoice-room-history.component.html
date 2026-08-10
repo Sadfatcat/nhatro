@@ -1,0 +1,38 @@
+<div class="room-history">
+
+  <!-- Page Header Container -->
+  <div class="page-header-container">
+    <nav class="breadcrumb">
+      <a class="crumb-link" (click)="goBack()">Theo ngày chốt</a>
+      <span>/</span>
+      <span class="crumb-active">Phòng {{ roomNumber() }}</span>
+    </nav>
+    <div class="page-header">
+      <div>
+        <h1>Lịch sử hoá đơn — Phòng {{ roomNumber() }}</h1>
+        <p>Toàn bộ hoá đơn đã sinh cho phòng này, mới nhất trước.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="room-history__card">
+    <app-data-table
+      [config]="tableConfig"
+      [cellTemplates]="cellTemplates"
+      (rowClick)="onRowClick($event)"
+    />
+  </div>
+
+</div>
+
+<ng-template #statusTpl let-value>
+  <app-status-badge [status]="value" />
+</ng-template>
+
+<ng-template #amountTpl let-value>
+  <app-money-display [value]="value" />
+</ng-template>
+
+<ng-template #dueDateTpl let-value>
+  {{ value | date:'dd/MM/yyyy' }}
+</ng-template>

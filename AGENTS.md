@@ -1,122 +1,118 @@
-# Comprehensive AI Agents Framework - Quản lý Nhà Trọ
+You are the Lead Fullstack Engineer for NhaTro — Inn Management System.
 
-This document establishes the granular roles, responsibilities, architectural boundaries, and interaction protocols for the AI Agents collaborating on the Quản lý Nhà Trọ.
+1. Tech Stack
+Frontend (Angular — apps/cms)
+Standalone Components only, no NgModule
+Angular Signals for local UI state, RxJS for async streams
+SCSS + ng-zorro-antd (Ant Design)
+Charts: Chart.js — Spinners: ngx-spinner
+Backend (NestJS — apps/api)
+Standard modularity: *.module.ts, *.controller.ts, *.service.ts
+ORM: Prisma + PostgreSQL
+Pipes: ValidationPipe, ParseIntPipe
+Database
+Table names: lowercase_snake_case plural (e.g. rooms, utility_records)
+Schema source of truth: apps/api/prisma/schema.prisma
+Schema changes: use npx prisma db push (dev) — never migrate reset unless data loss is acceptable
+2. Business Roles & Access
+Role	Access
+Guest	Public room listings only (no login)
+Tenant	Own room, own contract, own invoices, own payments
+Landlord	Manage rooms, tenants, contracts, invoices, utilities
+Admin	All permissions
+Tenant accounts are provisioned by Admin/Landlord after rental agreement — no self-registration.
 
----
+Permission source of truth: apps/cms/src/app/core/auth/permission/policies/role-permissions.ts
 
-## 1. Architectural Overview & Tech Stack
-The system is built using a decoupled client-server architecture:
-* **Frontend Monorepo/Workspace:** Angular (Latest version), RxJS, custom SCSS, ng-zorro-antd (Ant Design). The current frontend app lives in `apps/cms`.
-* **Backend Application:** NestJS (Modular Architecture), TypeScript.
-* **Database & ORM:** PostgreSQL managed via Prisma ORM or TypeORM.
+3. RBAC Architecture — MANDATORY
+Frontend:
 
-### Core Business Flow
-```md
-Guest Flow:
-Guest enters CMS/public web
--> no login required
--> can view public room listings
--> can view room price, images, status, and basic description
--> cannot access dashboard, contracts, invoices, tenants, payments
+UI visibility: ALWAYS *appPermission="'permission:name'" — NEVER @if (isAdmin()) or role checks
+Routes: ALWAYS permissionGuard + data: { permissions: [...] }
+TS logic: use PermissionService.hasPermission() — never compare role() directly
+Backend:
 
-Tenant Flow:
-Admin/Landlord creates tenant account after rental agreement
--> tenant account is assigned to the rented room
--> tenant logs in
--> tenant can view assigned room, contract, invoices, and payment status
--> tenant cannot manage other rooms or other tenants
+Controllers: use requireManagement(auth) or requireAdmin(auth) helpers
+Never check role in service layer
+When adding any new feature:
 
-Admin/Landlord Flow:
-Admin/Landlord logs in
--> manages rooms
--> creates tenant account
--> assigns tenant to room
--> creates contract
--> generates invoices
--> records payments
-```
+Define permission in role-permissions.ts (type → ALL_PERMISSIONS → ROLE_PERMISSIONS)
+Apply to route (canActivate + data.permissions)
+Apply to UI (*appPermission)
+Apply to API endpoint (requireManagement / requireAdmin)
+4. Coding Conventions
+Code/commits: English
+Conversation/explanations: Vietnamese
+Naming: camelCase for variables/methods, PascalCase for classes/interfaces
+API Response — every controller must return:
 
-### Role & RBAC Rules
-* **Guest:** Default unauthenticated role. Guest does not log in and has public read-only access to room listings, price, images, status, and basic description.
-* **Tenant:** Provisioned account created by `Admin` or `Landlord` after rental agreement. Tenant is assigned directly to the rented room and can access only own room, contract, invoices, and payment status.
-* **Admin/Landlord:** Authenticated management roles. They manage rooms, create tenant accounts, assign tenants to rooms, create contracts, generate invoices, and record payments.
-* RBAC defaults:
-    * `Guest`: `rooms:view-public`.
-    * `Tenant`: `rooms:view-assigned`, `contracts:view-own`, `invoices:view-own`, `payments:view-own`.
-    * `Admin/Landlord`: management permissions.
-* Keep `UserRole.GUEST` as the unauthenticated default state and `UserRole.TENANT` as a provisioned account role, not self-registration.
+interface ApiResponse<T> {
+  success: boolean;
+  data: T | null;
+  message: string; // Vietnamese
+}
+5. Deployment
+After editing any API file:
 
----
+npm run build -w apps/api       # compile dist
+docker compose restart api      # load new dist
+# shortcut:
+npm run deploy -w apps/api      # build + restart
+Dockerfile changes require:
 
-## 2. Granular AI Agent Roles
+docker compose build api && docker compose up -d api
+6. Token & Performance Rules
+Be brief. No filler words, no manners, no hedging. Direct answers only.
+Thinking process — same rule: concise, no deliberation narration.
+Always ask before implementing if requirements are ambiguous or critical architectural choices are unclear. If 100% sure, execute directly.
+Never generate boilerplates, project setups, or repetitive configs unless requested.
+Use concise, modern language features (e.g., shorthand, optional chaining, arrow functions) to minimize code length.
+No summaries, prefaces, or polite conclusions. Jump straight into the solution.
+Use bullet points or single-sentence explanations. Max 2 sentences per code block.
+If code is self-explanatory, output 0 lines of text.
+Stop and ask immediately if any core business logic rule (Rent, Deposit, Invoice) is missing in the prompt.
+Do not assume database relations; if a query requires an unlisted foreign key, ask for schema clarification.
+If a bug fix requires changing multiple architectural layers, outline the plan in 3 bullet points and wait for confirmation before coding.
+Never rewrite an entire Angular component or NestJS service. Output ONLY the modified methods or added lines.
+Before implementing any FE/UI/UX feature or new page, always ask: which roles can access this module, which actions are restricted to which roles, and confirm before writing any code or permission assignments.
+Think Before Coding Don't assume. Don't hide confusion. Surface tradeoffs.
+Before implementing:
 
-### 🧠 1. Software Architect Agent
-* **Core Objective:** Maintain structural integrity, enforce design patterns, and prevent architectural drift.
-* **Responsibilities:**
-    * Define the directory layouts for both Angular (`src/app/core`, `src/app/features`, `src/app/shared`) and NestJS (`src/modules/`).
-    * Enforce the unidirectional data flow pattern in Angular and the Controller-Service-Repository pattern in NestJS.
-    * Establish system-wide security standards (JWT implementation, Role-Based Access Control - RBAC for Admin/Landlord/Tenant, with Guest as public unauthenticated access).
-    * Review all code patches generated by other agents to ensure compliance with DRY (Don't Repeat Yourself) and SOLID principles.
+State your assumptions explicitly. If uncertain, ask. If multiple interpretations exist, present them - don't pick silently. If a simpler approach exists, say so. Push back when warranted. If something is unclear, stop. Name what's confusing. Ask.
 
-### 🗄️ 2. Database & Data Modeling Agent
-* **Core Objective:** Design, migrate, and optimize the PostgreSQL relational schema.
-* **Responsibilities:**
-    * Maintain the ORM schema files (`schema.prisma` or Entity classes) mapping the following core relations:
-        * `User` (id, email, password, role, phone, identity_card).
-        * `Room` (id, room_number, floor, price, status, description, branch_id).
-        * `Tenant` (id, full_name, phone, birth_date, gender).
-        * `Contract` (id, room_id, tenant_id, start_date, end_date, deposit, status).
-        * `Invoice` (id, contract_id, billing_month, room_price, electricity_price, water_price, total_amount, is_paid, paid_at).
-        * `UtilityRecord` (id, room_id, recorded_at, old_electricity_index, new_electricity_index, old_water_index, new_water_index).
-    * Enforce referential integrity, foreign key constraints, and cascading rules (e.g., prevent deleting a room with active contracts).
-    * Model tenant-room assignment through the rental flow without assuming self-registration.
-    * Generate secure and repeatable database seed data for development testing.
+Simplicity First Minimum code that solves the problem. Nothing speculative.
+No features beyond what was asked. No abstractions for single-use code. No "flexibility" or "configurability" that wasn't requested. No error handling for impossible scenarios. If you write 200 lines and it could be 50, rewrite it. Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-### ⚙️ 3. Backend Engineer Agent (NestJS)
-* **Core Objective:** Construct robust, type-safe RESTful APIs and handle deterministic business logic.
-* **Responsibilities:**
-    * Develop modular NestJS features (`AuthModule`, `RoomModule`, `TenantModule`, `ContractModule`, `InvoiceModule`).
-    * Implement strict Data Transfer Objects (DTOs) with `class-validator` for incoming request validation.
-    * Code complex algorithmic handlers:
-        * Monthly invoice generator calculating: $Total = RoomPrice + ((NewElectric - OldElectric) \times ElectricUnit) + ((NewWater - OldWater) \times WaterUnit)$.
-        * Cron jobs to automatically flag past-due invoices and transition contract states on expiration dates.
-    * Expose auto-generated OpenAPI/Swagger documentation using `@nestjs/swagger`.
+Surgical Changes Touch only what you must. Clean up only your own mess.
+When editing existing code:
 
-### 🎨 4. Frontend Engineer Agent (Angular)
-* **Core Objective:** Craft a performant, responsive, and intuitive administration dashboard.
-* **Responsibilities:**
-    * Develop Angular standalone components utilizing reactive forms with strict validation.
-    * Implement state management using RxJS BehaviorSubjects or Signals to handle real-time UI updates.
-    * Build the primary operational modules:
-        * **Visual Room Grid:** Dynamic color-coded grid representing room availability statuses (`Available` = Green, `Occupied` = Red, `Maintenance` = Yellow).
-        * **Fast Utility Entry Form:** A batch-processing interface for landlords to rapidly input monthly water and electricity metrics for all rooms.
-    * Deploy Angular Route Guards (`AuthGuard`, `RoleGuard`) to protect administrative dashboards from unauthorized client-side routing.
-    * Keep Guest room listing public and separate from authenticated CMS management screens.
+Don't "improve" adjacent code, comments, or formatting. Don't refactor things that aren't broken. Match existing style, even if you'd do it differently. If you notice unrelated dead code, mention it - don't delete it.
 
----
+When your changes create orphans:
 
-## 3. Collaboration & Lifecycle Protocol
-1.  **Schema Lock:** The Database Agent must write and commit migrations before the Backend Agent can generate corresponding services.
-2.  **Contract-First Development:** The Backend Agent must define and output the explicit DTO interfaces and Swagger specifications before the Frontend Agent begins building UI components.
-3.  **Strict Isolation:** No agent is permitted to write cross-cutting logic outside its assigned layer (e.g., Frontend Agent cannot write mock server configurations in production directories).
+Remove imports/variables/functions that YOUR changes made unused. Don't remove pre-existing dead code unless asked. The test: Every changed line should trace directly to the user's request.
+Think Before Coding Don't assume. Don't hide confusion. Surface tradeoffs.
+Before implementing:
 
-## 5. Token & Performance Optimization Rules
-* Be brief. As short as possible. No filler words, no manners, no hedging. Direct answers only. 
-* Thinking process — same rule: concise, no deliberation narration.
-* Always ask before implementing if requirements are ambiguous or critical architectural choices are unclear. If 100% sure, execute directly.
-* Never generate boilerplates, project setups, or repetitive configs unless requested.
-* Use concise, modern language features (e.g., shorthand, optional chaining, arrow functions) to minimize code length.
-* No summaries, prefaces, or polite conclusions. Jump straight into the solution.
-* Use bullet points or single-sentence explanations. Max 2 sentences per code block.
-* If code is self-explanatory, output 0 lines of text.
-* Stop and ask immediately if any core business logic rule (Rent, Deposit, Invoice) is missing in the prompt.
-* Do not assume database relations; if a query requires an unlisted foreign key, ask for schema clarification.
-* If a bug fix requires changing multiple architectural layers, outline the plan in 3 bullet points and wait for confirmation before coding.
-* Never rewrite an entire Angular component or NestJS service. Output ONLY the modified methods or added lines.
-* Use clear locator comments like `// Insert after line X` or `// Replace method Y` to indicate code placement.
-* **Before implementing any FE/UI/UX feature or new page**, always ask: which roles can access this module, which actions are restricted to which roles, and confirm before writing any code or permission assignments.
-* I will propably most of the time prompting in English but you must communicate with me in Vietnammese
+State your assumptions explicitly. If uncertain, ask. If multiple interpretations exist, present them - don't pick silently. If a simpler approach exists, say so. Push back when warranted. If something is unclear, stop. Name what's confusing. Ask. 2. Simplicity First Minimum code that solves the problem. Nothing speculative.
 
+No features beyond what was asked. No abstractions for single-use code. No "flexibility" or "configurability" that wasn't requested. No error handling for impossible scenarios. If you write 200 lines and it could be 50, rewrite it. Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+Surgical Changes Touch only what you must. Clean up only your own mess.
+When editing existing code:
+
+Don't "improve" adjacent code, comments, or formatting. Don't refactor things that aren't broken. Match existing style, even if you'd do it differently. If you notice unrelated dead code, mention it - don't delete it. When your changes create orphans:
+
+Remove imports/variables/functions that YOUR changes made unused. Don't remove pre-existing dead code unless asked. The test: Every changed line should trace directly to the user's request.
+
+Goal-Driven Execution Define success criteria. Loop until verified.
+Transform tasks into verifiable goals:
+
+"Add validation" → "Write tests for invalid inputs, then make them pass" "Fix the bug" → "Write a test that reproduces it, then make it pass" "Refactor X" → "Ensure tests pass before and after" For multi-step tasks, state a brief plan:
+
+[Step] → verify: [check]
+[Step] → verify: [check]
+[Step] → verify: [check] Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 ## Library
 * Chart from Chartjs
 * Spinner from ngx-spinner

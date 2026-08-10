@@ -1,7 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ContractsService } from '../contracts/contracts.service';
 
 interface CreateRoomDto { roomNumber: string; floor: number; price: number; status?: string; }
 interface UpdateRoomDto { roomNumber?: string; floor?: number; price?: number; status?: string; }
@@ -9,8 +8,7 @@ interface UpdateRoomDto { roomNumber?: string; floor?: number; price?: number; s
 @Injectable()
 export class RoomsService {
   constructor(
-    private readonly prisma:    PrismaService,
-    private readonly contracts: ContractsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async findAll() {
@@ -80,14 +78,6 @@ export class RoomsService {
       });
       return tx.room.update({ where: { id }, data: dto });
     });
-  }
-
-  async remove(id: string) {
-    const room = await this.prisma.room.findUnique({ where: { id } });
-    if (!room) throw new NotFoundException('Không tìm thấy phòng.');
-    const activeContract = await this.contracts.findByRoom(id);
-    if (activeContract) throw new NotFoundException('Không thể xoá phòng đang có người thuê.');
-    await this.prisma.room.delete({ where: { id } });
   }
 
   async getAccount(roomId: string): Promise<{ username: string | null; email: string } | null> {

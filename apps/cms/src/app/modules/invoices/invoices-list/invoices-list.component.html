@@ -1,0 +1,27 @@
+<div class="invoices">
+
+  <!-- Page Header Container -->
+  <div class="page-header-container">
+    <nav class="breadcrumb">
+      <span>Trang chủ</span>
+      <span>/</span>
+      <span class="crumb-active">Hoá đơn</span>
+    </nav>
+    <div class="page-header">
+      <div>
+        <h1>Hoá đơn</h1>
+        <p>Theo dõi chốt điện nước và hoá đơn theo ngày chốt.</p>
+      </div>
+    </div>
+  </div>
+
+  <nz-tabs>
+    <nz-tab nzTitle="Lịch sử chốt điện nước">
+      <app-utility-reading-log />
+    </nz-tab>
+    <nz-tab nzTitle="Xem chốt theo ngày">
+      <app-invoices-by-billing-day />
+    </nz-tab>
+  </nz-tabs>
+
+</div>

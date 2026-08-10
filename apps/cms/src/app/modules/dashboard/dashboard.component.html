@@ -12,12 +12,10 @@
       </div>
       <div class="page-header__right">
         <div class="summary-pill summary-pill--success">
-          <span class="dot"></span>
           {{ occupiedCount() }} phòng đang hoạt động
         </div>
         @if (unpaidCount() > 0) {
           <div class="summary-pill summary-pill--error">
-            <span class="dot"></span>
             {{ unpaidCount() }} hóa đơn chờ thu
           </div>
         }
@@ -28,84 +26,43 @@
   <!-- ── Stat cards ── -->
   <section class="stat-grid">
 
-    <!-- 1. Dự kiến thu tháng này + sparkline -->
+    <!-- 1. Tổng thu nhập -->
     <div class="stat-card">
-      <div class="stat-card__top">
-        <div class="stat-card__icon-wrap stat-card__icon-wrap--primary">
-          <nz-icon nzType="dollar" />
-        </div>
-        <div class="stat-card__meta-right">
-          @if (incomeTrend() !== null) {
-            <span class="trend-badge"
-              [class.trend-badge--up]="incomeTrend()! >= 0"
-              [class.trend-badge--down]="incomeTrend()! < 0">
-              <nz-icon [nzType]="incomeTrend()! >= 0 ? 'rise' : 'fall'" />
-              {{ incomeTrend()! >= 0 ? '+' : '' }}{{ incomeTrend() }}%
-            </span>
-          }
-          <span class="stat-card__period">so với tháng trước</span>
-        </div>
-      </div>
       <p class="stat-card__label">Tổng thu nhập</p>
-      <h3 class="stat-card__value">{{ currentMonthIncome() | number:'1.0-0' }}₫</h3>
+      <h3 class="stat-card__value">{{ currentMonthIncome() | number:'1.0-0' }}đ</h3>
       <p class="stat-card__sub">Dữ liệu hóa đơn sẽ có sau khi module Invoice hoàn thiện.</p>
-      <div class="sparkline-wrap">
-        <canvas #sparkline></canvas>
-      </div>
     </div>
 
     <!-- 2. Tỉ lệ lấp đầy -->
     <div class="stat-card">
-      <div class="stat-card__top">
-        <div class="stat-card__icon-wrap stat-card__icon-wrap--teal-light">
-          <nz-icon nzType="home" />
-        </div>
-        <span class="occupancy-rate">{{ occupancyRate() }}%</span>
-      </div>
       <p class="stat-card__label">Tỉ lệ lấp đầy</p>
-      <h3 class="stat-card__value">{{ occupiedCount() }}<span class="stat-card__value-total"> / {{ totalRooms() }} phòng</span></h3>
-      <p class="stat-card__sub">{{ availableCount() }} phòng trống · {{ maintenanceCount() }} bảo trì</p>
+      <h3 class="stat-card__value">{{ occupancyRate() }}% <span class="stat-card__value-total">{{ occupiedCount() }}/{{ totalRooms() }} phòng</span></h3>
       <div class="occupancy-bar-track">
         <div class="occupancy-bar-fill" [style.width.%]="occupancyRate()"></div>
       </div>
     </div>
 
     <!-- 3. Công nợ chưa thu -->
-    <div class="stat-card stat-card--alert">
-      <div class="stat-card__top">
-        <div class="stat-card__icon-wrap stat-card__icon-wrap--error">
-          <nz-icon nzType="exclamation-circle" />
-        </div>
-        <span class="alert-badge">{{ unpaidCount() }} phiếu</span>
-      </div>
+    <div class="stat-card">
       <p class="stat-card__label">Công nợ chưa thu</p>
-      <h3 class="stat-card__value stat-card__value--error">{{ pendingAmount() | number:'1.0-0' }}₫</h3>
-      <p class="stat-card__sub">Tháng {{ today | date:'M/yyyy' }}</p>
-      <div class="alert-rooms"></div>
+      <h3 class="stat-card__value stat-card__value--error">{{ pendingAmount() | number:'1.0-0' }}đ</h3>
+      <p class="stat-card__sub">Tháng {{ today | date:'M/yyyy' }} · {{ availableCount() }} phòng trống · {{ maintenanceCount() }} bảo trì</p>
     </div>
 
     <!-- 4. Trạng thái phòng nhanh -->
     <div class="stat-card">
-      <div class="stat-card__top">
-        <div class="stat-card__icon-wrap stat-card__icon-wrap--blue">
-          <nz-icon nzType="apartment" />
-        </div>
-      </div>
       <p class="stat-card__label">Trạng thái phòng</p>
       <h3 class="stat-card__value">{{ totalRooms() }} phòng</h3>
       <div class="room-status-list">
         <div class="room-status-row">
-          <span class="status-dot status-dot--occupied"></span>
           <span>Đang thuê</span>
           <strong>{{ occupiedCount() }}</strong>
         </div>
         <div class="room-status-row">
-          <span class="status-dot status-dot--available"></span>
           <span>Phòng trống</span>
           <strong>{{ availableCount() }}</strong>
         </div>
         <div class="room-status-row">
-          <span class="status-dot status-dot--maintenance"></span>
           <span>Bảo trì</span>
           <strong>{{ maintenanceCount() }}</strong>
         </div>
@@ -157,26 +114,17 @@
         <div class="donut-legend">
           <div class="legend-row">
             <span class="legend-swatch" style="background:#16898F"></span>
-            <div class="legend-info">
-              <span>Đang thuê</span>
-              <strong>{{ occupiedCount() }} phòng</strong>
-            </div>
+            <span class="legend-label">Đang thuê · {{ occupiedCount() }} phòng</span>
             <span class="legend-pct">{{ occupancyRate() }}%</span>
           </div>
           <div class="legend-row">
             <span class="legend-swatch" style="background:#A2BFD5"></span>
-            <div class="legend-info">
-              <span>Phòng trống</span>
-              <strong>{{ availableCount() }} phòng</strong>
-            </div>
+            <span class="legend-label">Phòng trống · {{ availableCount() }} phòng</span>
             <span class="legend-pct">{{ availableRate() }}%</span>
           </div>
           <div class="legend-row">
             <span class="legend-swatch" style="background:#ba1a1a"></span>
-            <div class="legend-info">
-              <span>Bảo trì</span>
-              <strong>{{ maintenanceCount() }} phòng</strong>
-            </div>
+            <span class="legend-label">Bảo trì · {{ maintenanceCount() }} phòng</span>
             <span class="legend-pct">{{ maintenanceRate() }}%</span>
           </div>
         </div>

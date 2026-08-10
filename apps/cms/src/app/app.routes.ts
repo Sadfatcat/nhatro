@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, defaultAppRouteGuard, noAuthGuard } from './core/auth/guards/auth.guard';
-import { permissionGuard } from './core/auth/permission/guards/permission.guard';
+import { permissionGuard } from './core/permission/guards/permission.guard';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { AuthLayoutComponent } from './layout/auth-layout/auth-layout.component';
 
@@ -28,6 +28,12 @@ export const routes: Routes = [
         path:          'rooms',
         canActivate:   [authGuard],
         loadComponent: () => import('./modules/rooms/rooms-list/rooms-list.component').then(m => m.RoomsListComponent),
+      },
+      {
+        path:          'tenants',
+        canActivate:   [authGuard, permissionGuard],
+        data:          { permissions: ['tenants:view'] },
+        loadComponent: () => import('./modules/tenants/tenants-list/tenants-list.component').then(m => m.TenantsListComponent),
       },
 
       // Protected routes — require authentication
@@ -66,10 +72,22 @@ export const routes: Routes = [
             loadComponent: () => import('./modules/contracts/contract-detail/contract-detail.component').then(m => m.ContractDetailComponent),
           },
           {
-            path:          'accounts/rooms',
+            path:          'invoices',
             canActivate:   [permissionGuard],
-            data:          { permissions: ['accounts:rooms'] },
-            loadComponent: () => import('./modules/accounts/accounts.component').then(m => m.AccountsComponent),
+            data:          { permissions: ['invoices:view'] },
+            loadComponent: () => import('./modules/invoices/invoices-list/invoices-list.component').then(m => m.InvoicesListComponent),
+          },
+          {
+            path:          'invoices/room/:roomId',
+            canActivate:   [permissionGuard],
+            data:          { permissions: ['invoices:view'] },
+            loadComponent: () => import('./modules/invoices/invoice-room-history/invoice-room-history.component').then(m => m.InvoiceRoomHistoryComponent),
+          },
+          {
+            path:          'invoices/:id',
+            canActivate:   [permissionGuard],
+            data:          { permissions: ['invoices:view'] },
+            loadComponent: () => import('./modules/invoices/invoice-detail/invoice-detail.component').then(m => m.InvoiceDetailComponent),
           },
           {
             path:          'accounts/landlords',
@@ -77,8 +95,9 @@ export const routes: Routes = [
             data:          { permissions: ['accounts:landlords'] },
             loadComponent: () => import('./modules/accounts/accounts.component').then(m => m.AccountsComponent),
           },
-          { path: 'accounts', redirectTo: 'accounts/rooms', pathMatch: 'full' },
-          { path: 'account',  redirectTo: 'accounts/rooms', pathMatch: 'full' },
+          { path: 'accounts',       redirectTo: 'accounts/landlords', pathMatch: 'full' },
+          { path: 'accounts/rooms', redirectTo: 'accounts/landlords', pathMatch: 'full' },
+          { path: 'account',        redirectTo: 'accounts/landlords', pathMatch: 'full' },
           { path: '', canActivate: [defaultAppRouteGuard], children: [] },
         ],
       },

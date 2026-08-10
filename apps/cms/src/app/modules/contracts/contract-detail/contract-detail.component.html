@@ -184,7 +184,8 @@
 
 
 <!-- Modal: Cập nhật hợp đồng (Admin) -->
-<nz-modal [nzVisible]="editModal()" nzTitle="Cập nhật hợp đồng"
+<nz-modal
+  [nzMaskClosable]="false" [nzVisible]="editModal()" nzTitle="Cập nhật hợp đồng"
   nzOkText="Lưu & Tạo lại PDF" [nzOkLoading]="saving()"
   (nzOnOk)="submitEdit()" (nzOnCancel)="editModal.set(false)">
   <ng-template nzModalContent>

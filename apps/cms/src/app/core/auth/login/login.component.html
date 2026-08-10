@@ -3,7 +3,16 @@
   <p class="login-sub">Hệ thống quản lý nhà trọ</p>
 </div>
 
-<app-form-builder
-  [schema]="schema"
-  [loading]="loading()"
-  (submitted)="onSubmit($event)" />
+<form class="login-form" (ngSubmit)="onSubmit()">
+  <div class="login-field">
+    <label class="login-label">Tên đăng nhập / Email</label>
+    <input nz-input placeholder="username hoặc email" name="identifier" [(ngModel)]="identifier" [disabled]="loading()" />
+  </div>
+  <div class="login-field">
+    <label class="login-label">Mật khẩu</label>
+    <input nz-input type="password" placeholder="••••••••" name="password" [(ngModel)]="password" [disabled]="loading()" />
+  </div>
+  <div class="login-actions">
+    <button nz-button nzType="primary" class="login-submit" type="submit" [nzLoading]="loading()">Đăng nhập</button>
+  </div>
+</form>

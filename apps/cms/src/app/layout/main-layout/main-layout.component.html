@@ -11,17 +11,17 @@
     </div>
 
     <nav class="sidebar-nav">
-      @for (item of menuItems; track item.key) {
+      @for (item of menuItems; track item.key; let i = $index) {
         @if (canShow(item)) {
           @if (item.divider) {
             <div class="nav-divider"></div>
           } @else if (!item.children?.length && item.route) {
-            <a class="nav-item" [class.active]="isActive(item.route)" [href]="item.route" (click)="navigate(item.route); $event.preventDefault()">
+            <a class="nav-item stagger-item" [style.--stagger-i]="i" [class.active]="isActive(item.route)" [href]="item.route" (click)="navigate(item.route); $event.preventDefault()">
               @if (item.icon) { <nz-icon [nzType]="item.icon" class="nav-icon" /> }
               @if (!collapsed()) { <span class="nav-label">{{ item.label }}</span> }
             </a>
           } @else if (item.children?.length) {
-            <div class="nav-group" [class.open]="isSubmenuOpen(item)">
+            <div class="nav-group stagger-item" [style.--stagger-i]="i" [class.open]="isSubmenuOpen(item)">
               <div class="nav-item nav-group-header">
                 @if (item.icon) { <nz-icon [nzType]="item.icon" class="nav-icon" /> }
                 @if (!collapsed()) {
@@ -49,11 +49,11 @@
 
     @if (!collapsed()) {
       <div class="sidebar-bottom">
-        <button class="btn-add-room" (click)="navigate('/app/rooms/new')">
+        <button class="btn-add-room" (click)="navigate('/app/rooms?assign=1')">
           <nz-icon nzType="plus" />
           Cung cấp phòng
         </button>
-        <a class="nav-item nav-item--bottom" (click)="navigate('/app/settings')">
+        <a class="nav-item" (click)="navigate('/app/settings')">
           <nz-icon nzType="setting" class="nav-icon" />
           <span class="nav-label">Cài đặt</span>
         </a>

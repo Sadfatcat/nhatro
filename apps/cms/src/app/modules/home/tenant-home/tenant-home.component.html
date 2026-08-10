@@ -13,6 +13,20 @@
         </h2>
         <p class="welcome-sub">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
       </div>
+      @if (isAdmin()) {
+        <div class="role-toggle role-toggle--pos-1" role="tablist">
+          <div class="role-toggle__glow"></div>
+          <div class="role-toggle__thumb"></div>
+          <button type="button" class="role-toggle__tab" role="tab" aria-selected="false" (click)="goToManagementHome()">
+            <span class="role-toggle__dot"></span>
+            <span class="role-toggle__label">Quản trị</span>
+          </button>
+          <button type="button" class="role-toggle__tab active" role="tab" aria-selected="true">
+            <span class="role-toggle__dot"></span>
+            <span class="role-toggle__label">Người thuê</span>
+          </button>
+        </div>
+      }
     </div>
   </div>
 
@@ -20,71 +34,92 @@
   <div class="util-grid">
 
     <!-- Điện -->
-    <div class="glass-card">
-      <div class="glass-card__blob glass-card__blob--primary"></div>
-      <div class="glass-card__header">
-        <div class="util-icon util-icon--primary">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-            <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
+    <div class="util-card">
+      <div class="util-card__header">
+        <div class="util-icon util-icon--gold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M13 2 5 13h5l-1 9 8-11h-5l1-9z"/>
           </svg>
         </div>
-        <span class="util-tag util-tag--primary">ĐIỆN NĂNG</span>
+        <span class="badge badge--gold">Điện năng</span>
       </div>
       <div class="util-stats">
         <div class="util-stat">
           <p class="util-stat__label">Tháng trước</p>
-          <p class="util-stat__value">{{ elecPrev() | number }}<span class="util-unit">kWh</span></p>
+          <p class="util-stat__value">{{ elecPrev() | number }} <span class="util-unit">kWh</span></p>
         </div>
         <div class="util-stat">
           <p class="util-stat__label">Tháng này</p>
-          <p class="util-stat__value">{{ elecCurr() | number }}<span class="util-unit">kWh</span></p>
+          <p class="util-stat__value">{{ elecCurr() | number }} <span class="util-unit">kWh</span></p>
         </div>
-        <div class="util-stat util-stat--highlight util-stat--primary">
-          <p class="util-stat__label">Tổng tiêu thụ</p>
-          <p class="util-stat__value">{{ elecUsed() | number }}<span class="util-unit">kWh</span></p>
-          <p class="util-stat__amount">≈ {{ elecAmount() | number:'1.0-0' }}₫</p>
+        <div class="util-highlight util-highlight--gold">
+          <p class="util-highlight__label">Tổng tiêu thụ</p>
+          <p class="util-highlight__value">{{ elecUsed() | number }} kWh</p>
+          <p class="util-highlight__amount">≈ {{ elecAmount() | number:'1.0-0' }}đ</p>
         </div>
       </div>
       @if (lastUpdated()) {
-        <p class="glass-card__note">
-          Cập nhật lần cuối: {{ lastUpdated() | date:'dd/MM/yyyy' }}
-        </p>
+        <p class="util-card__note">Cập nhật lần cuối: {{ lastUpdated() | date:'dd/MM/yyyy' }}</p>
       }
     </div>
 
     <!-- Nước -->
-    <div class="glass-card">
-      <div class="glass-card__blob glass-card__blob--tertiary"></div>
-      <div class="glass-card__header">
-        <div class="util-icon util-icon--tertiary">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/>
+    <div class="util-card">
+      <div class="util-card__header">
+        <div class="util-icon util-icon--teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <path d="M12 3s6 6.5 6 10.5A6 6 0 0 1 6 13.5C6 9.5 12 3 12 3z"/>
           </svg>
         </div>
-        <span class="util-tag util-tag--tertiary">NƯỚC SẠCH</span>
+        <span class="badge badge--teal">Nước sạch</span>
       </div>
       <div class="util-stats">
         <div class="util-stat">
           <p class="util-stat__label">Tháng trước</p>
-          <p class="util-stat__value">{{ waterPrev() | number }}<span class="util-unit">m³</span></p>
+          <p class="util-stat__value">{{ waterPrev() | number }} <span class="util-unit">m³</span></p>
         </div>
         <div class="util-stat">
           <p class="util-stat__label">Tháng này</p>
-          <p class="util-stat__value">{{ waterCurr() | number }}<span class="util-unit">m³</span></p>
+          <p class="util-stat__value">{{ waterCurr() | number }} <span class="util-unit">m³</span></p>
         </div>
-        <div class="util-stat util-stat--highlight util-stat--tertiary">
-          <p class="util-stat__label">Tổng tiêu thụ</p>
-          <p class="util-stat__value">{{ waterUsed() | number }}<span class="util-unit">m³</span></p>
-          <p class="util-stat__amount">≈ {{ waterAmount() | number:'1.0-0' }}₫</p>
+        <div class="util-highlight util-highlight--teal">
+          <p class="util-highlight__label">Tổng tiêu thụ</p>
+          <p class="util-highlight__value">{{ waterUsed() | number }} m³</p>
+          <p class="util-highlight__amount">≈ {{ waterAmount() | number:'1.0-0' }}đ</p>
         </div>
       </div>
       @if (lastUpdated()) {
-        <p class="glass-card__note">
-          Cập nhật lần cuối: {{ lastUpdated() | date:'dd/MM/yyyy' }}
-        </p>
+        <p class="util-card__note">Cập nhật lần cuối: {{ lastUpdated() | date:'dd/MM/yyyy' }}</p>
       }
     </div>
 
+  </div>
+
+  <!-- ── Hoá đơn của tôi ── -->
+  <div class="invoices-card">
+    <div class="invoices-card__header">
+      <div>
+        <h3 class="invoices-card__title">Hoá đơn của tôi</h3>
+        <p class="invoices-card__sub">Tiền phòng, điện, nước hàng kỳ</p>
+      </div>
+    </div>
+
+    @if (invoicesLoading()) {
+      <p class="invoices-empty">Đang tải...</p>
+    } @else if (invoices().length === 0) {
+      <p class="invoices-empty">Chưa có hoá đơn nào.</p>
+    } @else {
+      <div class="invoices-list">
+        @for (inv of invoices(); track inv.id) {
+          <button type="button" class="invoice-row" (click)="goToInvoice(inv.id)">
+            <span class="invoice-row__period">Kỳ {{ inv.period }}</span>
+            <app-money-display class="invoice-row__amount" [value]="inv.totalAmount" />
+            <span class="invoice-row__due">Hạn {{ inv.dueDate | date:'dd/MM/yyyy' }}</span>
+            <app-status-badge [status]="inv.status" />
+          </button>
+        }
+      </div>
+    }
   </div>
 
   <!-- ── Charts ── -->
@@ -116,10 +151,10 @@
 
   </div>
 
-  <!-- ── Room photo placeholder ── -->
+  <!-- ── Room photo ── -->
   <div class="room-banner">
     <div class="room-banner__overlay">
-      <span class="room-banner__label">Căn hộ của bạn</span>
+      <span class="room-banner__label">Căn nhà của bạn</span>
       <h4 class="room-banner__title">Phòng {{ room()?.roomNumber ?? '—' }}</h4>
     </div>
   </div>

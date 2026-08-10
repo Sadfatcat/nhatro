@@ -4,17 +4,20 @@ import {
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
 import { finalize } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { UserRole } from '../../../core/auth/auth.types';
 import { RoomWithUtility } from '@nhatro/shared-types';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
@@ -28,14 +31,21 @@ type ReadingInput = { prevElec: number; currElec: number; prevWater: number; cur
   standalone:  true,
   templateUrl: './management-home.component.html',
   styleUrls:   ['./management-home.component.scss'],
-  imports:     [CommonModule, DatePipe, FormsModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzDividerModule],
+  imports:     [CommonModule, DatePipe, FormsModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzDividerModule, NzButtonModule],
 })
 export class ManagementHomeComponent implements OnInit, AfterViewInit {
   @ViewChild('donutChart') donutRef!: ElementRef<HTMLCanvasElement>;
 
-  private api   = inject(ApiService);
-  private toast = inject(ToastService);
-  readonly auth = inject(AuthService);
+  private api    = inject(ApiService);
+  private toast  = inject(ToastService);
+  private router = inject(Router);
+  readonly auth  = inject(AuthService);
+
+  readonly isAdmin = computed(() => this.auth.hasRole(UserRole.ADMIN));
+
+  goToTenantHome(): void {
+    this.router.navigateByUrl('/app/home');
+  }
 
   readonly today        = new Date();
   readonly billingDays: BillingDay[] = [15, 30];

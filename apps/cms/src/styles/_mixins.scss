@@ -40,28 +40,29 @@
   }
 }
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
-@mixin card($elevated: false) {
-  background: var(--color-bg-card);
-  border-radius: $radius-md;
-  box-shadow: var(--shadow-card);
+// ─── Card (matches design-system Card.jsx: radius-lg, shadow-sm, 1px border) ──
+@mixin card($deep: false) {
+  border-radius: $radius-lg;
 
-  @if $elevated {
-    border: 0;
-    box-shadow: var(--shadow-elevated);
+  @if $deep {
+    background: var(--color-bg-deep-raised);
+    border: 1px solid var(--color-border-deep);
+    box-shadow: none;
   } @else {
-    border: 1px solid var(--color-border-light);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
   }
 }
 
-// ─── Badge ────────────────────────────────────────────────────────────────────
+// ─── Badge (matches design-system Badge.jsx: pill, 12px/600, 3px 10px) ───────
 @mixin badge-base {
   display: inline-flex;
   align-items: center;
-  padding: 2px $space-s;
-  border-radius: 10px;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-medium;
+  padding: 3px 10px;
+  border-radius: $radius-full;
+  font-size: 12px;
+  font-weight: $font-weight-semibold;
   line-height: 1.5;
 }
 

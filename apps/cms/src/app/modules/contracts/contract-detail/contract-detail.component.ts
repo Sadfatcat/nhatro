@@ -20,7 +20,7 @@ import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
-import { PermissionDirective } from '../../../core/auth/permission/directives/permission.directive';
+import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
@@ -70,7 +70,7 @@ private api       = inject(ApiService);
   editForm  = { startDate: '', endDate: '', firstBillingDate: 0, lastBillingDate: 0, deposit: 0 };
 
   // Delete countdown
-  deleteCountdown = signal(30);
+  deleteCountdown = signal(10);
   deleteArmed     = signal(false);
   deleteCounting  = signal(false);
   private _countdownId: ReturnType<typeof setInterval> | null = null;
@@ -164,7 +164,7 @@ private api       = inject(ApiService);
   // ── Delete countdown ────────────────────────────────────────────────────────
   startDeleteCountdown(): void {
     this.clearCountdown();
-    this.deleteCountdown.set(30);
+    this.deleteCountdown.set(10);
     this.deleteArmed.set(false);
     this.deleteCounting.set(true);
     this._countdownId = setInterval(() => {

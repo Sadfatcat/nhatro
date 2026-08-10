@@ -1,6 +1,9 @@
+@use '../../../../../styles/variables' as *;
+
 .money {
+  font-family: $font-family-mono;
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 400;
 
   &.negative { color: var(--color-error); }
   &.zero     { color: var(--color-text-muted); }

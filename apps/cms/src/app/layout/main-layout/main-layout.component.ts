@@ -8,8 +8,10 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { TopbarComponent } from '../../shared/components/layout/topbar/topbar.component';
 import { FooterComponent } from '../../shared/components/layout/footer/footer.component';
 import { StorageService } from '../../core/services/storage.service';
-import { PermissionService } from '../../core/auth/permission/services/permission.service';
-import { MenuItem, NAV_ITEMS } from '../../core/layout/navigation/side-items';
+import { PermissionService } from '../../core/permission/services/permission.service';
+import { AuthService } from '../../core/auth/services/auth.service';
+import { UserRole } from '../../core/auth/auth.types';
+import { MenuItem, NAV_ITEMS } from '../../layout/sidebar/side-items';
 
 @Component({
   selector:        'app-main-layout',
@@ -30,6 +32,7 @@ export class MainLayoutComponent {
   private storage     = inject(StorageService);
   private router      = inject(Router);
   private permissions = inject(PermissionService);
+  private auth        = inject(AuthService);
 
   collapsed = signal<boolean>(this.storage.get<boolean>('sidebar_collapsed') ?? false);
   menuItems: MenuItem[] = NAV_ITEMS;
@@ -66,6 +69,10 @@ export class MainLayoutComponent {
       const idx = this.menuItems.indexOf(item);
       return this.menuItems.slice(idx + 1).some(next => !next.divider && this.canShow(next));
     }
+    // Admin holds both home:view and management-home:view via ALL_PERMISSIONS.
+    // The tenant-home entry point for Admin is the in-page toggle on
+    // ManagementHomeComponent, not a second sidebar item.
+    if (item.key === 'home' && this.auth.hasRole(UserRole.ADMIN)) return false;
     if (!item.permission) return true;
     const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
     return perms.every(p => this.permissions.hasPermission(p));

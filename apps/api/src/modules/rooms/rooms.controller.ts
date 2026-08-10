@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { RoomsService } from './rooms.service';
 
@@ -39,12 +39,6 @@ export class RoomsController {
   @Patch(':id')
   async update(@Param('id') id: string, @Body() body: { roomNumber?: string; floor?: number; price?: number; status?: string }): Promise<ApiResponse<unknown>> {
     return ok(await this.rooms.update(id, body), 'Cập nhật phòng thành công');
-  }
-
-  @Delete(':id')
-  async remove(@Param('id') id: string): Promise<ApiResponse<null>> {
-    await this.rooms.remove(id);
-    return ok(null, 'Xoá phòng thành công');
   }
 
   @Get(':id/account')

@@ -1,3 +1,4 @@
+@use 'styles/fonts';
 @use 'styles/variables' as *;
 @use 'styles/themes';
 @use 'styles/mixins' as *;
@@ -44,44 +45,58 @@ p  { font-size: $font-size-md;  font-weight: $font-weight-normal;   line-height:
 // UI controls use the label font (Inter)
 button, input, select, textarea, .btn, label { font-family: $font-family-label; }
 
-// ─── Button utilities ─────────────────────────────────────────────────────────
+// ─── Button utilities (matches design-system Button.jsx variants exactly) ────
+// primary / secondary(gold) / outline / ghost / deep — radius-md, NOT pill.
 .btn {
   @include btn-base;
+  border-radius: $radius-md;
+  font-weight: $font-weight-semibold;
+  border: 1px solid transparent;
+  padding: 11px 20px;
+  font-size: $font-size-base;
+  transition: background $transition-fast, transform $transition-fast, border-color $transition-fast;
+
+  &:active:not(:disabled) { transform: scale(0.97); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  &--sm { padding: 8px 14px;  font-size: $font-size-sm; }
+  &--lg { padding: 14px 26px; font-size: 16px; }
 
   &--primary {
-    background: var(--color-bg-card);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border);
-    border-radius: $radius-full;
-    padding: 4px $space-m;
-    min-height: 36px;
-    box-shadow: var(--shadow-raised);
+    background: var(--color-accent-primary);
+    color: var(--color-text-inverse);
 
-    &:hover:not(:disabled) {
-      background: var(--color-bg-hover);
-      box-shadow: rgba(0, 0, 0, 0.12) 0px 2px 6px 0px;
-    }
-    &:active:not(:disabled) {
-      background: var(--color-bg-container-high);
-      border-color: var(--color-border-hover);
-    }
-    &:disabled {
-      background: var(--color-bg-subtle);
-      color: var(--color-text-secondary);
-      box-shadow: none;
-    }
+    &:hover:not(:disabled) { background: var(--color-accent-primary-hover); }
   }
 
   &--secondary {
-    background: transparent;
-    color: var(--color-text-primary);
-    border-radius: $radius-pill;
-    padding: $space-s 10px;
-    height: 37px;
+    background: var(--gold-500);
+    color: var(--neutral-900);
 
-    &:hover:not(:disabled) { background: rgba(2, 8, 23, 0.08); }
-    &:active:not(:disabled) { background: rgba(2, 8, 23, 0.12); }
-    &:disabled { color: var(--color-text-disabled); }
+    &:hover:not(:disabled) { background: var(--gold-600); }
+  }
+
+  &--outline {
+    background: transparent;
+    color: var(--color-accent-primary);
+    border-color: var(--color-border-strong);
+
+    &:hover:not(:disabled) { background: var(--color-bg-surface-muted); }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--color-text-secondary);
+
+    &:hover:not(:disabled) { background: var(--color-bg-surface-muted); color: var(--color-text-primary); }
+  }
+
+  &--deep {
+    background: var(--deep-3);
+    color: var(--teal-50);
+    border-color: var(--deep-4);
+
+    &:hover:not(:disabled) { background: var(--deep-4); }
   }
 
   &--icon {
@@ -95,82 +110,58 @@ button, input, select, textarea, .btn, label { font-family: $font-family-label; 
     &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
     &:active:not(:disabled) { background: rgba(255, 255, 255, 0.25); }
   }
-
-  &--pill {
-    background: oklab(0 0 0 / 0.03);
-    color: var(--color-text-secondary);
-    border-radius: 9999px;
-    padding: 6px $space-m;
-    height: 32px;
-    font-weight: $font-weight-medium;
-
-    &:hover:not(:disabled) {
-      background: rgba(2, 8, 23, 0.06);
-      color: var(--color-text-primary);
-    }
-    &.active,
-    &:active:not(:disabled) {
-      background: var(--color-primary);
-      color: var(--color-text-inverse);
-    }
-    &:disabled {
-      background: var(--color-bg-subtle);
-      color: var(--color-text-disabled);
-    }
-  }
 }
 
-// ─── NG-ZORRO button overrides ────────────────────────────────────────────────
+// ─── NG-ZORRO button overrides (mapped onto the same variants) ──────────────
 .ant-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: $space-xs;
   min-height: 36px;
-  padding: 4px $space-m;
-  border-radius: $radius-full;
+  padding: 11px 20px;
+  border-radius: $radius-md;
   font-family: $font-family-label;
   font-size: $font-size-base;
-  font-weight: $font-weight-normal;
+  font-weight: $font-weight-semibold;
   line-height: 21px;
-  box-shadow: var(--shadow-raised);
-  transition: background $transition-fast, box-shadow $transition-fast, color $transition-fast, border-color $transition-fast;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition: background $transition-fast, transform $transition-fast, color $transition-fast, border-color $transition-fast;
+
+  &:active:not([disabled]) { transform: scale(0.97); }
 }
 
+// "default" ng-zorro variant → outline
 .ant-btn-default {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
-  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-accent-primary);
+  border-color: var(--color-border-strong);
 
   &:hover,
   &:focus {
-    background: var(--color-bg-hover);
-    color: var(--color-text-primary);
-    border-color: var(--color-border-hover);
-    box-shadow: rgba(0, 0, 0, 0.12) 0px 2px 6px 0px;
+    background: var(--color-bg-surface-muted);
+    color: var(--color-accent-primary);
+    border-color: var(--color-border-strong);
   }
 
-  &:active {
-    background: var(--color-bg-container-high);
-    border-color: var(--color-border-hover);
-  }
+  &:active { background: var(--color-bg-surface-muted); }
 }
 
+// "text"/"link" ng-zorro variant → ghost
 .ant-btn-text,
 .ant-btn-link {
   background: transparent;
   border-color: transparent;
-  box-shadow: none;
   color: var(--color-text-secondary);
 
   .anticon { color: var(--color-text-secondary); }
 
   &:hover,
   &:focus {
-    background: var(--color-bg-hover);
+    background: var(--color-bg-surface-muted);
     color: var(--color-text-primary);
     border-color: transparent;
-    box-shadow: none;
 
     .anticon { color: var(--color-text-primary); }
   }
@@ -181,12 +172,13 @@ button, input, select, textarea, .btn, label { font-family: $font-family-label; 
 .ant-btn.ant-btn-sm {
   background: transparent;
   border-color: transparent;
+  padding: 8px 14px;
+  font-size: $font-size-sm;
   color: var(--color-text-secondary);
-  box-shadow: none;
 
   .anticon { color: var(--color-text-secondary); }
 
-  &:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
+  &:hover { background: var(--color-bg-surface-muted); color: var(--color-text-primary); }
   &.ant-btn-dangerous .anticon { color: var(--color-error); }
 }
 
@@ -196,32 +188,28 @@ button, input, select, textarea, .btn, label { font-family: $font-family-label; 
 }
 
 .ant-btn-primary {
-  background: var(--color-primary);
+  background: var(--color-accent-primary);
   color: var(--color-text-inverse);
-  border-color: var(--color-primary);
+  border-color: transparent;
 
   &:hover,
   &:focus {
-    background: var(--color-primary-hover);
+    background: var(--color-accent-primary-hover);
     color: var(--color-text-inverse);
-    border-color: var(--color-primary-hover);
-    box-shadow: rgba(0, 0, 0, 0.12) 0px 2px 6px 0px;
+    border-color: transparent;
   }
 
-  &:active {
-    background: var(--color-primary-active);
-    border-color: var(--color-primary-active);
-  }
+  &:active { background: var(--color-primary-active); }
 }
 
 .ant-btn[disabled],
 .ant-btn[disabled]:hover,
 .ant-btn[disabled]:focus,
 .ant-btn[disabled]:active {
-  background: var(--color-bg-subtle);
+  background: var(--color-bg-surface-muted);
   color: var(--color-text-disabled);
   border-color: var(--color-border);
-  box-shadow: none;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -241,16 +229,16 @@ button, input, select, textarea, .btn, label { font-family: $font-family-label; 
   }
 
   .ant-table-thead > tr > th {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.02em;
-    padding: 14px 16px;
+    color: var(--color-text-muted);
+    padding: 12px 18px;
   }
 
   .ant-table-tbody > tr > td {
-    font-size: 15px;
-    padding: 14px 16px;
-    line-height: 1.6;
+    font-size: 14px;
+    padding: 14px 18px;
+    line-height: 1.5;
   }
 
   .ant-table-tbody > tr:hover > td {
@@ -267,8 +255,9 @@ button, input, select, textarea, .btn, label { font-family: $font-family-label; 
 .ant-select:not(.ant-select-customize-input) .ant-select-selector,
 .ant-input,
 .ant-input-affix-wrapper {
-  background: var(--color-bg-card);
-  border-color: var(--color-border);
+  background: var(--color-bg-surface);
+  border-color: var(--color-border-strong);
+  border-radius: $radius-md;
   color: var(--color-text-primary);
 }
 
@@ -372,19 +361,31 @@ input[type="checkbox"] {
 .ant-input-number:focus,
 .ant-input-number-focused {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(93, 119, 76, 0.15);
+  box-shadow: 0 0 0 2px rgba(22, 137, 143, 0.15);
 }
 
-// ─── NG-ZORRO tag / status badge overrides ───────────────────────────────────
+// ─── NG-ZORRO tag / status badge overrides (matches Badge.jsx exactly) ──────
 .ant-tag {
-  border-radius: 9999px;
+  border-radius: $radius-full;
   font-family: $font-family-label;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px 10px;
+  padding: 3px 10px;
   border: none;
   line-height: 18px;
+}
+
+// ─── Text-link action (filter reset, "+ Thêm", etc.) ─────────────────────────
+.add-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent-primary);
+  cursor: pointer;
+
+  &:hover { color: var(--color-accent-primary-hover); }
 }
 
 // ─── Badge utilities ──────────────────────────────────────────────────────────
@@ -397,12 +398,14 @@ input[type="checkbox"] {
   &--info    { background: var(--color-info-bg);     color: var(--color-info);    }
   &--gray    { background: var(--color-bg-subtle);   color: var(--color-text-secondary); }
   &--accent  { background: var(--color-warning-bg);  color: var(--color-accent);  }
+  &--teal    { background: var(--teal-100);          color: var(--teal-700);      }
+  &--gold    { background: var(--gold-100);           color: var(--gold-600);      }
 }
 
 // ─── Card utilities ───────────────────────────────────────────────────────────
 .card {
   @include card;
-  &--elevated { @include card(true); }
+  &--deep { @include card($deep: true); }
 }
 
 // ─── Input utilities ──────────────────────────────────────────────────────────
@@ -434,6 +437,25 @@ input[type="checkbox"] {
   }
 }
 
+// ─── Stagger reveal (bảng + sidebar) ──────────────────────────────────────────
+@keyframes staggerFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: staggerFadeUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: min(calc(var(--stagger-i, 0) * 35ms), 600ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-item {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 // ─── Scrollbar global ─────────────────────────────────────────────────────────
 * { @include custom-scrollbar; }
 
@@ -453,19 +475,17 @@ input[type="checkbox"] {
 }
 
 .page-header-container {
-  @include card;
-  padding: 20px 24px 0;
+  margin-bottom: 20px;
 }
 
 .page-header {
   @include flex-between;
   gap: 16px;
-  margin-bottom: 16px;
 
   h1 {
-    margin: 0 0 4px;
-    font-size: 22px;
-    font-weight: 800;
+    margin: 0 0 6px;
+    font-size: 24px;
+    font-weight: 700;
     color: var(--color-text-primary);
   }
 
@@ -480,17 +500,15 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-muted);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 
-  span { color: var(--color-text-disabled); }
-  a, .crumb-active { color: var(--color-text-secondary); cursor: default; }
-  .crumb-active { color: var(--color-primary); font-weight: 500; }
+  span, a, .crumb-active { color: var(--color-text-muted); cursor: default; }
 }
 
 .table-container {
   @include card;
-  padding: 20px 24px 64px;
+  padding: 0;
   position: relative;
 }

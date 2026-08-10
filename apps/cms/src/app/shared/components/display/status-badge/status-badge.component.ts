@@ -1,35 +1,35 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { NzTagModule } from 'ng-zorro-antd/tag';
+import { CommonModule } from '@angular/common';
 import { RoomStatus, ContractStatus, InvoiceStatus } from '@nhatro/shared-types';
 
 type AnyStatus = RoomStatus | ContractStatus | InvoiceStatus;
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  // Room status — Whispering Pines palette
-  AVAILABLE:   { label: 'Còn trống',      color: '#345f56' },  // tertiary green
-  OCCUPIED:    { label: 'Đang thuê',      color: '#1d6fa4' },  // strong blue
-  MAINTENANCE: { label: 'Bảo trì',        color: '#b07b3e' },  // warning amber
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  // Room status
+  AVAILABLE:   { label: 'Còn trống',       cls: 'badge--gray'   },
+  OCCUPIED:    { label: 'Đang thuê',       cls: 'badge--teal'   },
+  MAINTENANCE: { label: 'Bảo trì',         cls: 'badge--danger' },
   // Contract status
-  ACTIVE:      { label: 'Hiệu lực',       color: '#345f56' },
-  EXPIRED:     { label: 'Hết hạn',        color: '#74796e' },
-  TERMINATED:  { label: 'Đã kết thúc',   color: '#ba1a1a' },
+  ACTIVE:      { label: 'Hiệu lực',        cls: 'badge--success' },
+  EXPIRED:     { label: 'Hết hạn',         cls: 'badge--gray'    },
+  TERMINATED:  { label: 'Đã kết thúc',    cls: 'badge--danger'  },
   // Invoice status
-  UNPAID:      { label: 'Chưa thanh toán', color: '#b07b3e' },
-  PAID:        { label: 'Đã thanh toán',   color: '#345f56' },
-  OVERDUE:     { label: 'Quá hạn',         color: '#ba1a1a' },
+  SENT:        { label: 'Chưa thanh toán', cls: 'badge--danger'  },
+  PAID:        { label: 'Đã thanh toán',   cls: 'badge--success' },
+  OVERDUE:     { label: 'Quá hạn',         cls: 'badge--danger'  },
 };
 
 @Component({
   selector:        'app-status-badge',
   standalone:      true,
-  template:        `<nz-tag [nzColor]="config.color">{{ config.label }}</nz-tag>`,
+  template:        `<span class="badge" [class]="config.cls">{{ config.label }}</span>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:         [NzTagModule],
+  imports:         [CommonModule],
 })
 export class StatusBadgeComponent {
   @Input({ required: true }) status!: AnyStatus;
 
-  get config(): { label: string; color: string } {
-    return STATUS_MAP[this.status] ?? { label: this.status, color: 'default' };
+  get config(): { label: string; cls: string } {
+    return STATUS_MAP[this.status] ?? { label: this.status, cls: 'badge--gray' };
   }
 }

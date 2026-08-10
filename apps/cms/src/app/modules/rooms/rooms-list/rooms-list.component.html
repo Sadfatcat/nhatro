@@ -25,115 +25,118 @@
     </div>
   </div>
 
-  <!-- Filter Bar -->
-  <div class="rooms__filters">
-    <nz-input-group [nzPrefix]="searchIcon" class="rooms__search">
-      <input
-        nz-input
-        placeholder="Tìm số phòng..."
-        [(ngModel)]="filterSearchValue"
-        (ngModelChange)="onSearchChange($event)"
-      />
-    </nz-input-group>
-    <ng-template #searchIcon><span nz-icon nzType="search"></span></ng-template>
+  <!-- Card: filters + table + pagination -->
+  <div class="rooms__card">
+    <div class="rooms__filters">
+      <nz-input-group [nzPrefix]="searchIcon" class="rooms__search">
+        <input
+          nz-input
+          placeholder="Tìm số phòng..."
+          [(ngModel)]="filterSearchValue"
+          (ngModelChange)="onSearchChange($event)"
+        />
+      </nz-input-group>
+      <ng-template #searchIcon><span nz-icon nzType="search"></span></ng-template>
 
-    <nz-select
-      class="rooms__select"
-      nzPlaceHolder="Tất cả tầng"
-      nzAllowClear
-      [(ngModel)]="filterFloorValue"
-      (ngModelChange)="onFloorChange($event)"
-    >
-      @for (opt of floorOptions(); track opt.value) {
-        <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
-      }
-    </nz-select>
-
-    <nz-select
-      class="rooms__select"
-      nzPlaceHolder="Tất cả trạng thái"
-      nzAllowClear
-      [(ngModel)]="filterStatusValue"
-      (ngModelChange)="onStatusChange($event)"
-    >
-      <nz-option nzValue="AVAILABLE"   nzLabel="Còn trống" />
-      <nz-option nzValue="OCCUPIED"    nzLabel="Đang thuê" />
-      <nz-option nzValue="MAINTENANCE" nzLabel="Bảo trì" />
-    </nz-select>
-
-    <nz-select
-      class="rooms__select"
-      [(ngModel)]="filterSortValue"
-      (ngModelChange)="filterSort.set($event); page.set(1)"
-    >
-      <nz-option nzValue="room-desc"  nzLabel="Số phòng: lớn → bé" />
-      <nz-option nzValue="room-asc"   nzLabel="Số phòng: bé → lớn" />
-      <nz-option nzValue="price-asc"  nzLabel="Giá: thấp → cao" />
-      <nz-option nzValue="price-desc" nzLabel="Giá: cao → thấp" />
-    </nz-select>
-  </div>
-
-  <!-- Table -->
-  <div class="rooms__table">
-    <nz-table
-      #table
-      [nzData]="pagedItems()"
-      [nzShowPagination]="false"
-      [nzLoading]="loading()"
-      nzSize="middle"
-    >
-      <thead>
-        <tr>
-          <th>Số phòng</th>
-          <th>Tầng</th>
-          <th>Giá thuê</th>
-          <th>Trạng thái</th>
-          <th>Người thuê</th>
-          <th *appPermission="'rooms:update'">Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (row of table.data; track row.roomId) {
-          <tr>
-            <td><strong>{{ row.roomNumber }}</strong></td>
-            <td>Tầng {{ row.floor }}</td>
-            <td><app-money-display [value]="row.price" /></td>
-            <td><app-status-badge [status]="row.status" /></td>
-            <td>{{ row.tenant?.fullName ?? '—' }}</td>
-            <td *appPermission="'rooms:update'">
-              <div class="rooms__actions">
-                <button nz-button nzType="text" nzSize="small" (click)="openEdit(row)">
-                  <span nz-icon nzType="edit"></span>
-                </button>
-                <button nz-button nzType="text" nzSize="small" nzDanger (click)="onDelete(row)">
-                  <span nz-icon nzType="delete"></span>
-                </button>
-              </div>
-            </td>
-          </tr>
+      <nz-select
+        class="rooms__select"
+        nzPlaceHolder="Tất cả tầng"
+        nzAllowClear
+        [(ngModel)]="filterFloorValue"
+        (ngModelChange)="onFloorChange($event)"
+      >
+        @for (opt of floorOptions(); track opt.value) {
+          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
         }
-      </tbody>
-    </nz-table>
+      </nz-select>
 
-    @if (!loading() && filteredItems().length === 0) {
-      <app-empty-state title="Không có phòng nào" description="Thử thay đổi bộ lọc hoặc thêm phòng mới." />
+      <nz-select
+        class="rooms__select"
+        nzPlaceHolder="Tất cả trạng thái"
+        nzAllowClear
+        [(ngModel)]="filterStatusValue"
+        (ngModelChange)="onStatusChange($event)"
+      >
+        <nz-option nzValue="AVAILABLE"   nzLabel="Còn trống" />
+        <nz-option nzValue="OCCUPIED"    nzLabel="Đang thuê" />
+        <nz-option nzValue="MAINTENANCE" nzLabel="Bảo trì" />
+      </nz-select>
+
+      <nz-select
+        class="rooms__select"
+        [(ngModel)]="filterSortValue"
+        (ngModelChange)="filterSort.set($event); page.set(1)"
+      >
+        <nz-option nzValue="room-desc"  nzLabel="Số phòng: lớn → bé" />
+        <nz-option nzValue="room-asc"   nzLabel="Số phòng: bé → lớn" />
+        <nz-option nzValue="price-asc"  nzLabel="Giá: thấp → cao" />
+        <nz-option nzValue="price-desc" nzLabel="Giá: cao → thấp" />
+      </nz-select>
+    </div>
+
+    <div class="rooms__table">
+      <nz-table
+        #table
+        [nzData]="pagedItems()"
+        [nzShowPagination]="false"
+        [nzLoading]="loading()"
+        nzSize="middle"
+      >
+        <thead>
+          <tr>
+            <th>Số phòng</th>
+            <th>Tầng</th>
+            <th>Giá thuê</th>
+            <th>Trạng thái</th>
+            <th>Người thuê</th>
+            <th *appPermission="'rooms:update'">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of table.data; track row.roomId; let i = $index) {
+            <tr class="stagger-item" [style.--stagger-i]="i">
+              <td><strong>{{ row.roomNumber }}</strong></td>
+              <td>Tầng {{ row.floor }}</td>
+              <td><app-money-display [value]="row.price" /></td>
+              <td><app-status-badge [status]="row.status" /></td>
+              <td>{{ row.tenant?.fullName ?? '—' }}</td>
+              <td *appPermission="'rooms:update'">
+                <div class="rooms__actions">
+                  <button nz-button nzType="text" nzSize="small" (click)="openEdit(row)">
+                    <span nz-icon nzType="edit"></span>
+                  </button>
+                  <button nz-button nzType="text" nzSize="small" (click)="openPasswordModal(row)" nz-tooltip nzTooltipTitle="Đổi mật khẩu phòng">
+                    <span nz-icon nzType="lock"></span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      @if (!loading() && filteredItems().length === 0) {
+        <app-empty-state title="Không có phòng nào" description="Thử thay đổi bộ lọc hoặc thêm phòng mới." />
+      }
+    </div>
+
+    @if (filteredItems().length > 0) {
+      <div class="rooms__footer">
+        <app-paginator
+          [total]="filteredItems().length"
+          [page]="page()"
+          [pageSize]="PAGE_SIZE"
+          (pageChange)="page.set($event)"
+        />
+      </div>
     }
   </div>
-
-  <!-- Paginator -->
-  @if (filteredItems().length > 0) {
-    <app-paginator
-      [total]="filteredItems().length"
-      [page]="page()"
-      [pageSize]="PAGE_SIZE"
-      (pageChange)="page.set($event)"
-    />
-  }
 
 </div>
 
 <!-- Create Modal -->
 <nz-modal
+  [nzMaskClosable]="false"
   [nzVisible]="showCreateModal()"
   nzTitle="Thêm phòng mới"
   [nzFooter]="null"
@@ -151,6 +154,7 @@
 
 <!-- Edit Modal -->
 <nz-modal
+  [nzMaskClosable]="false"
   [nzVisible]="showEditModal()"
   nzTitle="Chỉnh sửa phòng {{ selectedItem()?.roomNumber }}"
   [nzFooter]="null"
@@ -167,17 +171,68 @@
   </ng-container>
 </nz-modal>
 
-<!-- Confirm Delete -->
+<!-- Change Password -->
 <nz-modal
-  [nzVisible]="showDeleteModal()"
-  nzTitle="Xác nhận xoá"
-  nzOkText="Xoá"
-  nzOkDanger
+  [nzMaskClosable]="false"
+  [nzVisible]="showPasswordModal()"
+  nzTitle="Đổi mật khẩu phòng {{ selectedItem()?.roomNumber }}"
+  nzOkText="Đổi mật khẩu"
   [nzOkLoading]="saving()"
-  (nzOnOk)="confirmDelete()"
-  (nzOnCancel)="showDeleteModal.set(false)"
+  (nzOnOk)="confirmChangePassword()"
+  (nzOnCancel)="closePasswordModal()"
 >
   <ng-container *nzModalContent>
-    <p>Bạn có chắc muốn xoá phòng <strong>{{ selectedItem()?.roomNumber }}</strong>?</p>
+    <p style="margin-bottom: 12px; color: var(--color-text-secondary); font-size: 13px;">
+      Đổi mật khẩu tài khoản đăng nhập của phòng này. Không ảnh hưởng đến thông tin người thuê hay lịch sử dữ liệu.
+    </p>
+    <input nz-input type="password" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" [(ngModel)]="newPassword" />
+  </ng-container>
+</nz-modal>
+
+<!-- Cung cấp phòng -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showAssignModal()"
+  nzTitle="Cung cấp phòng"
+  nzOkText="Cung cấp phòng"
+  [nzOkDisabled]="!assignRoomId() || !assignTenantId()"
+  [nzOkLoading]="saving()"
+  (nzOnOk)="confirmAssignRoom()"
+  (nzOnCancel)="closeAssignModal()"
+>
+  <ng-container *nzModalContent>
+    <p style="margin-bottom: 16px; color: var(--color-text-secondary); font-size: 13px;">
+      Gán một phòng trống hiện có cho một người thuê đã có trong hệ thống.
+    </p>
+
+    <div style="margin-bottom: 16px;">
+      <label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600;">Phòng trống</label>
+      <nz-select
+        style="width:100%"
+        nzPlaceHolder="Chọn phòng trống..."
+        nzShowSearch
+        [ngModel]="assignRoomId()"
+        (ngModelChange)="assignRoomId.set($event)"
+      >
+        @for (r of vacantRooms(); track r.roomId) {
+          <nz-option [nzValue]="r.roomId" [nzLabel]="'Phòng ' + r.roomNumber + ' — Tầng ' + r.floor" />
+        }
+      </nz-select>
+    </div>
+
+    <div>
+      <label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600;">Người thuê</label>
+      <nz-select
+        style="width:100%"
+        nzPlaceHolder="Chọn người thuê..."
+        nzShowSearch
+        [ngModel]="assignTenantId()"
+        (ngModelChange)="assignTenantId.set($event)"
+      >
+        @for (t of tenantOptions(); track t.tenantId) {
+          <nz-option [nzValue]="t.tenantId" [nzLabel]="t.fullName + (t.roomNumber ? ' (đang thuê phòng ' + t.roomNumber + ')' : '')" />
+        }
+      </nz-select>
+    </div>
   </ng-container>
 </nz-modal>

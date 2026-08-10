@@ -1,6 +1,6 @@
 export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE';
 export type ContractStatus = 'ACTIVE' | 'EXPIRED' | 'TERMINATED';
-export type InvoiceStatus = 'UNPAID' | 'PAID' | 'OVERDUE';
+export type InvoiceStatus = 'SENT' | 'PAID' | 'OVERDUE';
 
 export interface Room {
   id: string;
@@ -42,16 +42,31 @@ export interface Contract {
   filePath?: string;
 }
 
+export interface InvoiceBankInfo {
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+}
+
 export interface Invoice {
   id: string;
+  roomId: string;
   contractId: string;
-  billingMonth: string;
-  roomPrice: number;
-  electricityPrice: number;
-  waterPrice: number;
+  period: string;
+  rentAmount: number;
+  electricityAmount: number;
+  waterAmount: number;
+  otherFees: number;
   totalAmount: number;
+  referenceCode: string;
+  dueDate: string;
   status: InvoiceStatus;
-  paidAt?: string;
+  paidAt: string | null;
+  markedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  room: { roomNumber: string; floor: number };
+  bankInfo?: InvoiceBankInfo;
 }
 
 export interface UtilityReading {

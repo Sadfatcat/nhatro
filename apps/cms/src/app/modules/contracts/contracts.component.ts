@@ -17,13 +17,13 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize } from 'rxjs';
 import { ContractStatus, RoomStatus } from '@nhatro/shared-types';
 import { AuthService } from '../../core/auth/services/auth.service';
-import { PermissionService } from '../../core/auth/permission/services/permission.service';
+import { PermissionService } from '../../core/permission/services/permission.service';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../shared/components/feedback/toast/toast.service';
 import { MoneyDisplayComponent } from '../../shared/components/display/money-display/money-display.component';
 import { StatusBadgeComponent } from '../../shared/components/display/status-badge/status-badge.component';
 import { PaginatorComponent } from '../../shared/components/navigation/paginator/paginator.component';
-import { PermissionDirective } from '../../core/auth/permission/directives/permission.directive';
+import { PermissionDirective } from '../../core/permission/directives/permission.directive';
 
 const PAGE_SIZE = 10;
 
@@ -46,7 +46,7 @@ interface PreviewData {
   contract: { startDate: string; deposit: number; notes: string | null };
 }
 
-interface RoomOption { roomId: string; roomNumber: string; floor: number; price: number; }
+interface RoomOption { roomId: string; roomNumber: string; floor: number; price: number; tenantId: string; }
 
 @Component({
   selector:        'app-contracts',
@@ -187,13 +187,20 @@ export class ContractsComponent implements OnInit, OnDestroy {
   }
 
   loadOccupiedRooms(): void {
-    this.api.get<{ rooms: Array<{ roomId: string; roomNumber: string; floor: number; price: number; status: RoomStatus; tenant: unknown }> }>('/accounts')
+    this.api.get<ApiResponse<Array<{ roomId: string; roomNumber: string; floor: number; price: number; status: RoomStatus; tenant: { tenantId: string } | null }>>>('/rooms')
       .subscribe({
-        next: r => this.occupiedRooms.set(
-          r.rooms.filter(rm => rm.status === 'OCCUPIED' && rm.tenant)
-            .map(rm => ({ roomId: rm.roomId, roomNumber: rm.roomNumber, floor: rm.floor, price: rm.price }))
-        ),
+        next: res => {
+          if (!res.success || !res.data) return;
+          this.occupiedRooms.set(
+            res.data.filter(rm => rm.status === 'OCCUPIED' && rm.tenant)
+              .map(rm => ({ roomId: rm.roomId, roomNumber: rm.roomNumber, floor: rm.floor, price: rm.price, tenantId: rm.tenant!.tenantId }))
+          );
+        },
       });
+  }
+
+  private tenantIdForRoom(roomId: string): string | undefined {
+    return this.occupiedRooms().find(r => r.roomId === roomId)?.tenantId;
   }
 
   resetFilters(): void {
@@ -227,6 +234,7 @@ export class ContractsComponent implements OnInit, OnDestroy {
     this.previewing.set(true);
     this.api.post<ApiResponse<PreviewData>>('/contracts/preview', {
       roomId:           this.createForm.roomId,
+      tenantId:         this.tenantIdForRoom(this.createForm.roomId),
       startDate:        this.createForm.startDate,
       endDate:          this.createForm.endDate          || undefined,
       firstBillingDate: this.createForm.firstBillingDate || undefined,
@@ -247,6 +255,7 @@ export class ContractsComponent implements OnInit, OnDestroy {
     this.saving.set(true);
     this.api.post<ApiResponse<unknown>>('/contracts', {
       roomId:           this.createForm.roomId,
+      tenantId:         this.tenantIdForRoom(this.createForm.roomId),
       startDate:        this.createForm.startDate,
       endDate:          this.createForm.endDate          || undefined,
       firstBillingDate: this.createForm.firstBillingDate || undefined,

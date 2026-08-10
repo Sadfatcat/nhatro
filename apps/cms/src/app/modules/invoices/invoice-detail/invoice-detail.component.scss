@@ -1,0 +1,122 @@
+@use '../../../../styles/variables' as *;
+
+:host { display: block; }
+
+.detail-page {
+  padding: 24px 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────────
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.crumb-link {
+  color: var(--color-primary);
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
+}
+.crumb-sep { color: var(--color-text-muted); }
+.crumb-active { color: var(--color-text-primary); font-weight: 600; }
+
+// ── Page header ───────────────────────────────────────────────────────────────
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    h1 { font-size: 20px; font-weight: 700; margin: 0; }
+    p  { font-size: 13px; color: var(--color-text-secondary); margin: 2px 0 0; }
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+.detail-loading {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+// ── 2-column layout ───────────────────────────────────────────────────────────
+.detail-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.detail-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ── Card ──────────────────────────────────────────────────────────────────────
+.col-card {
+  background: #fff;
+  border: 1px solid var(--color-border-light);
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: var(--color-bg-subtle);
+    border-bottom: 1px solid var(--color-border-light);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+
+  &__body { padding: 16px 18px; }
+}
+
+// ── Info grid ─────────────────────────────────────────────────────────────────
+.info-grid      { display: flex; flex-direction: column; gap: 8px; }
+.info-row       { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.info-label     { min-width: 90px; color: var(--color-text-secondary); font-weight: 600; font-size: 12px; flex-shrink: 0; }
+.info-row--full { flex-direction: column; align-items: flex-start; gap: 2px; }
+.info-row--total {
+  border-top: 1px solid var(--color-border-light);
+  padding-top: 8px;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.bank-empty { font-size: 13px; color: var(--color-text-muted); }
+
+// ── Ghost button ──────────────────────────────────────────────────────────────
+.btn--ghost {
+  background: transparent;
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  font-size: 13px;
+  &:hover { border-color: var(--color-primary); color: var(--color-primary); }
+}

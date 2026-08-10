@@ -1,0 +1,120 @@
+<div class="tenants">
+
+  <!-- Page Header Container -->
+  <div class="page-header-container">
+    <nav class="breadcrumb">
+      <span>Trang chủ</span>
+      <span>/</span>
+      <span class="crumb-active">Người thuê</span>
+    </nav>
+    <div class="page-header">
+      <div>
+        <h1>Người thuê</h1>
+        <p>Thông tin cá nhân người thuê, tách riêng khỏi tài khoản phòng.</p>
+      </div>
+      <div class="tenants__header-actions">
+        <button
+          *appPermission="'tenants:create'"
+          nz-button nzType="primary"
+          (click)="showCreateModal.set(true)"
+        >
+          <span nz-icon nzType="plus"></span>
+          Thêm người thuê
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card: filters + table -->
+  <div class="tenants__card">
+    <div class="tenants__filters">
+      <nz-input-group [nzPrefix]="searchIcon" class="tenants__search">
+        <input
+          nz-input
+          placeholder="Tìm tên, SĐT hoặc số phòng..."
+          [(ngModel)]="filterSearchValue"
+          (ngModelChange)="filterSearch.set($event)"
+        />
+      </nz-input-group>
+      <ng-template #searchIcon><span nz-icon nzType="search"></span></ng-template>
+    </div>
+
+    <div class="tenants__table">
+      <app-data-table
+        [config]="tableConfig"
+        [cellTemplates]="cellTemplates"
+      />
+    </div>
+  </div>
+
+</div>
+
+<ng-template #roomTpl let-value>
+  @if (value === 'Không thuê phòng') {
+    <span class="tenants__no-room">{{ value }}</span>
+  } @else {
+    {{ value }}
+  }
+</ng-template>
+
+<ng-template #priceTpl let-value>
+  @if (value !== null) {
+    <app-money-display [value]="value" />
+  } @else {
+    <span class="tenants__no-room">—</span>
+  }
+</ng-template>
+
+<!-- Create Modal -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showCreateModal()"
+  nzTitle="Thêm người thuê mới"
+  [nzFooter]="null"
+  (nzOnCancel)="showCreateModal.set(false)"
+>
+  <ng-container *nzModalContent>
+    <app-form-builder
+      [schema]="createSchema"
+      [loading]="saving()"
+      (submitted)="onCreate($event)"
+      (cancelled)="showCreateModal.set(false)"
+    />
+  </ng-container>
+</nz-modal>
+
+<!-- Edit Modal -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showEditModal()"
+  nzTitle="Cập nhật thông tin người thuê — {{ selected()?.fullName }}"
+  [nzFooter]="null"
+  (nzOnCancel)="showEditModal.set(false)"
+>
+  <ng-container *nzModalContent>
+    <app-form-builder
+      [schema]="editSchema"
+      [initialValues]="editInitialValues()"
+      [loading]="saving()"
+      (submitted)="onEdit($event)"
+      (cancelled)="showEditModal.set(false)"
+    />
+  </ng-container>
+</nz-modal>
+
+<!-- Confirm Delete -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showDeleteModal()"
+  nzTitle="Xác nhận xoá"
+  nzOkText="Xoá"
+  nzOkDanger
+  [nzOkLoading]="saving()"
+  (nzOnOk)="confirmDelete()"
+  (nzOnCancel)="showDeleteModal.set(false)"
+>
+  <ng-container *nzModalContent>
+    <p>Bạn có chắc muốn xoá người thuê <strong>{{ selected()?.fullName }}</strong>?</p>
+    <p style="color: var(--color-text-muted); font-size: 13px;">Nếu người này còn hợp đồng liên kết, hệ thống sẽ từ chối xoá.</p>
+  </ng-container>
+</nz-modal>

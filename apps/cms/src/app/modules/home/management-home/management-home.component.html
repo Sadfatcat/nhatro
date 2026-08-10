@@ -11,9 +11,23 @@
         <p class="page-header__date">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
       </div>
       <div class="header-badges">
+        @if (isAdmin()) {
+          <div class="role-toggle" role="tablist">
+            <div class="role-toggle__glow"></div>
+            <div class="role-toggle__thumb"></div>
+            <button type="button" class="role-toggle__tab active" role="tab" aria-selected="true">
+              <span class="role-toggle__dot"></span>
+              <span class="role-toggle__label">Quản trị</span>
+            </button>
+            <button type="button" class="role-toggle__tab" role="tab" aria-selected="false" (click)="goToTenantHome()">
+              <span class="role-toggle__dot"></span>
+              <span class="role-toggle__label">Người thuê</span>
+            </button>
+          </div>
+        }
         <span class="stat-badge stat-badge--primary">{{ occupiedCount() }} / {{ totalRooms() }} phòng đang thuê</span>
         @if (pendingAmount() > 0) {
-          <span class="stat-badge stat-badge--error">Công nợ: {{ pendingAmount() | number:'1.0-0' }}₫</span>
+          <span class="stat-badge stat-badge--error">Công nợ: {{ pendingAmount() | number:'1.0-0' }}đ</span>
         }
       </div>
     </div>
@@ -24,27 +38,22 @@
     <div class="qstat-card">
       <div class="qstat-card__value">{{ totalRooms() }}</div>
       <div class="qstat-card__label">Tổng số phòng</div>
-      <div class="qstat-card__bar" style="--pct: 100%; --color: var(--color-accent);"></div>
     </div>
     <div class="qstat-card">
-      <div class="qstat-card__value" style="color:var(--color-accent)">{{ occupiedCount() }}</div>
+      <div class="qstat-card__value">{{ occupiedCount() }}</div>
       <div class="qstat-card__label">Đang cho thuê</div>
-      <div class="qstat-card__bar" [style]="'--pct:' + occupancyRate() + '%;--color:var(--color-accent)'"></div>
     </div>
     <div class="qstat-card">
-      <div class="qstat-card__value" style="color:var(--color-info)">{{ availableCount() }}</div>
+      <div class="qstat-card__value">{{ availableCount() }}</div>
       <div class="qstat-card__label">Phòng trống</div>
-      <div class="qstat-card__bar" [style]="'--pct:' + (availableCount()/totalRooms()*100) + '%;--color:var(--color-info)'"></div>
     </div>
     <div class="qstat-card">
-      <div class="qstat-card__value" style="color:var(--color-error)">{{ maintenanceCount() }}</div>
+      <div class="qstat-card__value qstat-card__value--danger">{{ maintenanceCount() }}</div>
       <div class="qstat-card__label">Đang bảo trì</div>
-      <div class="qstat-card__bar" [style]="'--pct:' + (maintenanceCount()/totalRooms()*100) + '%;--color:var(--color-error)'"></div>
     </div>
     <div class="qstat-card">
-      <div class="qstat-card__value" style="color:var(--color-error); font-size:18px">{{ pendingAmount() | number:'1.0-0' }}₫</div>
+      <div class="qstat-card__value qstat-card__value--danger">{{ pendingAmount() | number:'1.0-0' }}đ</div>
       <div class="qstat-card__label">Công nợ chưa thu</div>
-      <div class="qstat-card__bar" style="--pct: 100%; --color: var(--color-error);"></div>
     </div>
   </section>
 
@@ -72,7 +81,7 @@
       <div class="price-card__header">
         <h3 class="panel-title">Đơn giá điện / nước</h3>
         @if (!editPrices()) {
-          <button class="btn-outline btn-outline--teal" (click)="openPriceEdit()">
+          <button nz-button nzType="default" (click)="openPriceEdit()">
             <nz-icon nzType="setting" /> Chỉnh sửa
           </button>
         }
@@ -90,21 +99,19 @@
               [nzMin]="500" [nzStep]="500" style="width:100%" />
           </div>
           <div class="price-form__actions">
-            <button class="btn-primary" (click)="savePrices()">Lưu</button>
-            <button class="btn-ghost" (click)="editPrices.set(false)">Hủy</button>
+            <button nz-button nzType="primary" (click)="savePrices()">Lưu</button>
+            <button nz-button nzType="default" (click)="editPrices.set(false)">Hủy</button>
           </div>
         </div>
       } @else {
         <div class="price-display">
-          <div class="price-item price-item--elec">
-            <span class="price-item__icon">⚡</span>
-            <span class="price-item__label">Điện</span>
-            <strong class="price-item__value">{{ prices().electricityPerKwh | number }}₫<span>/kWh</span></strong>
+          <div class="price-item">
+            <span class="price-item__head"><span class="price-item__icon price-item__icon--elec">⚡</span>ĐIỆN</span>
+            <strong class="price-item__value">{{ prices().electricityPerKwh | number }}đ <span>/kWh</span></strong>
           </div>
-          <div class="price-item price-item--water">
-            <span class="price-item__icon">💧</span>
-            <span class="price-item__label">Nước</span>
-            <strong class="price-item__value">{{ prices().waterPerM3 | number }}₫<span>/m³</span></strong>
+          <div class="price-item">
+            <span class="price-item__head"><span class="price-item__icon price-item__icon--water">💧</span>NƯỚC</span>
+            <strong class="price-item__value">{{ prices().waterPerM3 | number }}đ <span>/m³</span></strong>
           </div>
         </div>
       }
@@ -121,30 +128,20 @@
           <span class="kanban-day-badge" [class.kanban-day-badge--30]="day === 30">Ngày {{ day }}</span>
           <span class="kanban-col__count">{{ (day === 15 ? rooms15() : rooms30()).length }} phòng</span>
         </div>
-        <button class="btn-add-room" (click)="openAddModal(day)">
-          <nz-icon nzType="plus" /> Thêm
-        </button>
+        <button type="button" class="add-link" (click)="openAddModal(day)">+ Thêm</button>
       </div>
 
       <div class="kanban-col__body">
         <div class="kanban-list">
           @for (room of roomsForDay(day); track room.roomId) {
-            <div class="kcard" [class.kcard--chot]="isChot(room.roomId)">
-              <span class="kcard__number">P.{{ room.roomNumber }}</span>
+            <div class="kcard">
+              <span class="kcard__number">{{ room.roomNumber }}</span>
               <div class="kcard__readings">
-                <span class="kcard__reading kcard__reading--elec">
-                  <span class="kcard__reading-icon kcard__reading-icon--elec">⚡</span>
-                  <span class="kcard__reading-meta">
-                    <span class="kcard__reading-label">ĐIỆN</span>
-                    <span class="kcard__reading-val">{{ (chotReadingOf(room.roomId)?.currElec ?? latestReadings().get(room.roomId)?.utilityRecord?.currElec ?? 0) | number }}</span>
-                  </span>
+                <span class="kcard__reading">
+                  <span class="kcard__reading-icon kcard__reading-icon--elec">⚡</span>ĐIỆN {{ (chotReadingOf(room.roomId)?.currElec ?? latestReadings().get(room.roomId)?.utilityRecord?.currElec ?? 0) | number }}
                 </span>
-                <span class="kcard__reading kcard__reading--water">
-                  <span class="kcard__reading-icon kcard__reading-icon--water">💧</span>
-                  <span class="kcard__reading-meta">
-                    <span class="kcard__reading-label">NƯỚC</span>
-                    <span class="kcard__reading-val">{{ (chotReadingOf(room.roomId)?.currWater ?? latestReadings().get(room.roomId)?.utilityRecord?.currWater ?? 0) | number }}</span>
-                  </span>
+                <span class="kcard__reading">
+                  <span class="kcard__reading-icon kcard__reading-icon--water">💧</span>NƯỚC {{ (chotReadingOf(room.roomId)?.currWater ?? latestReadings().get(room.roomId)?.utilityRecord?.currWater ?? 0) | number }}
                 </span>
               </div>
               <div class="kcard__actions">
@@ -153,8 +150,8 @@
                 } @else {
                   <span class="status-badge status-badge--wait">CHỜ</span>
                 }
-                <button class="btn-icon-ghost btn-icon-ghost--danger" (click)="removeFromDay(room.roomId)">✕</button>
-                <button class="btn-update" [class.btn-update--active]="!isChot(room.roomId)" (click)="openModal(room.roomId)">Cập nhật</button>
+                <button type="button" class="kcard__remove" (click)="removeFromDay(room.roomId)">✕</button>
+                <button type="button" class="kcard__update-link" (click)="openModal(room.roomId)">Cập nhật</button>
               </div>
             </div>
           }
@@ -164,11 +161,11 @@
         </div>
         @if ((day === 15 ? totalPages15() : totalPages30()) > 1) {
           <div class="kanban-pagination">
-            <button class="kanban-page-btn" [disabled]="(day === 15 ? page15() : page30()) === 1" (click)="prevPage(day)">
+            <button nz-button nzType="default" nzSize="small" [disabled]="(day === 15 ? page15() : page30()) === 1" (click)="prevPage(day)">
               <nz-icon nzType="left" />
             </button>
             <span>{{ day === 15 ? page15() : page30() }} / {{ day === 15 ? totalPages15() : totalPages30() }}</span>
-            <button class="kanban-page-btn" [disabled]="(day === 15 ? page15() : page30()) === (day === 15 ? totalPages15() : totalPages30())" (click)="nextPage(day)">
+            <button nz-button nzType="default" nzSize="small" [disabled]="(day === 15 ? page15() : page30()) === (day === 15 ? totalPages15() : totalPages30())" (click)="nextPage(day)">
               <nz-icon nzType="right" />
             </button>
           </div>
@@ -184,6 +181,7 @@
 <!-- ── Reading modal ── -->
 @if (activeModalRoomId(); as roomId) {
 <nz-modal
+  [nzMaskClosable]="false"
   [nzVisible]="true"
   [nzTitle]="'Cập nhật chỉ số — Phòng ' + (activeModalRoom()?.roomNumber ?? '')"
   [nzFooter]="modalFooter"
@@ -255,6 +253,7 @@
 
 <!-- ── Add rooms modal ── -->
 <nz-modal
+  [nzMaskClosable]="false"
   [nzVisible]="!!showAddModal()"
   [nzTitle]="'Thêm phòng vào Ngày ' + showAddModal()"
   nzOkText="Thêm"

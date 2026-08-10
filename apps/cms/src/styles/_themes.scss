@@ -1,137 +1,154 @@
-// ─── Light Theme (Whispering Pines) ──────────────────────────────────────────
+// ─── NhaTro Design System (single theme — dark/light toggle retired) ─────────
+// Source: design_handoff_nhatro_redesign/_ds/.../tokens/{colors,shadows,spacing}.css
+// (the real design-system CSS, not the README description — exact hex/rgba).
+// Semantic --color-*/--shadow-* names are kept so existing component SCSS
+// doesn't need per-file edits; the raw scale + real semantic alias names
+// (--color-bg-page, --color-accent-primary, etc.) are added verbatim so new
+// component code can reference the spec's own token names directly.
+//
+// [data-theme='dark'] / body.theme-dark are aliased to the same values (not a
+// real dark theme): ThemeService still exists and may have 'dark' persisted
+// in a user's localStorage from before this redesign — this avoids undefined
+// variables for that user rather than reintroducing a second palette.
 :root,
-[data-theme='light'] {
-  // Brand (Primary Forest Green #5D774C, Secondary Sky Blue #356574)
-  --color-primary:        #5d774c;
-  --color-primary-hover:  #455e36;
-  --color-primary-active: #354d27;
-  --color-accent:         #356574;
-  --color-accent-text:    #356574;
-
-  // Secondary container (active nav bg)
-  --color-secondary-container:    #ceecb7;
-  --color-on-secondary-container: #455e36;
-
-  // Backgrounds (Surface #f9faf4)
-  --color-bg-base:             #f9faf4;
-  --color-bg-card:             #ffffff;
-  --color-bg-subtle:           #f4f4ee;
-  --color-bg-container:        #eeeee8;
-  --color-bg-container-high:   #e8e9e3;
-  --color-bg-hover:            #e2e3dd;
-
-  // Text
-  --color-text-primary:   #1a1c19;
-  --color-text-secondary: #44483f;
-  --color-text-muted:     #74796e;
-  --color-text-disabled:  #c4c8bc;
-  --color-text-inverse:   #ffffff;
-
-  // Borders
-  --color-border:         #c4c8bc;
-  --color-border-light:   #dadad5;
-  --color-border-focus:   #5d774c;
-  --color-border-hover:   #74796e;
-
-  // Status
-  --color-success:        #345f56;
-  --color-success-bg:     #beece0;
-  --color-warning:        #b07b3e;
-  --color-warning-bg:     #f3e8d6;
-  --color-error:          #ba1a1a;
-  --color-error-bg:       #ffdad6;
-  --color-info:           #356574;
-  --color-info-bg:        #b7e7f9;
-
-  // Layout (light sidebar)
-  --color-sidebar-bg:        #f4f4ee;
-  --color-sidebar-text:      #44483f;
-  --color-sidebar-active:    #455e36;
-  --color-sidebar-active-bg: #ceecb7;
-  --color-sidebar-border:    #c4c8bc;
-  --color-header-bg:         #f9faf4;
-  --color-header-border:     #c4c8bc;
-  --color-footer-bg:         #eeeee8;
-  --color-footer-text:       #74796e;
-
-  // Elevation (airy, minimal shadows per design spec)
-  --shadow-flat:     none;
-  --shadow-raised:   0 1px 4px rgba(26, 28, 25, 0.06);
-  --shadow-elevated: 0 4px 12px rgba(26, 28, 25, 0.08);
-  --shadow-floating: 0 8px 24px rgba(26, 28, 25, 0.05);
-  --shadow-modal:    0 12px 28px rgba(26, 28, 25, 0.1);
-
-  --shadow-sm:   var(--shadow-raised);
-  --shadow-md:   var(--shadow-elevated);
-  --shadow-lg:   var(--shadow-floating);
-  --shadow-card: var(--shadow-flat);
-}
-
-// ─── Dark Theme (Nocturnal Forest) ───────────────────────────────────────────
+[data-theme='light'],
 [data-theme='dark'],
 body.theme-dark {
-  // Brand
-  --color-primary:        #b7d7a8;
-  --color-primary-hover:  #c9e5ba;
-  --color-primary-active: #9abd87;
-  --color-accent:         #8eb2ac;
-  --color-accent-text:    #c3ddd9;
+  // ── Teal / water (primary) ────────────────────────────────────────────────
+  --teal-50:  #eafbf6;
+  --teal-100: #d2f3ea;
+  --teal-200: #a8e6d8;
+  --teal-300: #78d3c4;
+  --teal-400: #45bcb0;
+  --teal-500: #1f9c97;
+  --teal-600: #16898f;
+  --teal-700: #106e75;
+  --teal-800: #0d555b;
+  --teal-900: #0a3e43;
+  --teal-950: #062a2e;
 
-  // Secondary container (active nav bg)
-  --color-secondary-container:    #24352f;
-  --color-on-secondary-container: #c9e5ba;
+  // ── Gold / lantern-lotus (secondary) ──────────────────────────────────────
+  --gold-50:  #fff9eb;
+  --gold-100: #ffefc2;
+  --gold-200: #ffe192;
+  --gold-300: #fdcb5c;
+  --gold-400: #f4ae33;
+  --gold-500: #e2921e;
+  --gold-600: #c07314;
+  --gold-700: #9a5710;
+  --gold-800: #77420f;
+  --gold-900: #5a330f;
 
-  // Backgrounds
-  --color-bg-base:             #101815;
-  --color-bg-card:             #18211d;
-  --color-bg-subtle:           #1d2823;
-  --color-bg-container:        #202b26;
-  --color-bg-container-high:   #2a3731;
-  --color-bg-hover:            #304039;
+  // ── Warm neutral (stone/bamboo) ───────────────────────────────────────────
+  --neutral-0:   #ffffff;
+  --neutral-50:  #f7f5f1;
+  --neutral-100: #eeeae3;
+  --neutral-200: #ddd6cb;
+  --neutral-300: #c2b9ab;
+  --neutral-400: #9c9184;
+  --neutral-500: #8a8177;
+  --neutral-600: #6b6459;
+  --neutral-700: #4c463d;
+  --neutral-800: #332f29;
+  --neutral-900: #1e1b17;
+  --neutral-950: #121110;
 
-  // Text
-  --color-text-primary:   #eef2e9;
-  --color-text-secondary: #c8d0c3;
-  --color-text-muted:     #8d9889;
-  --color-text-disabled:  #58635a;
-  --color-text-inverse:   #101815;
+  // ── Deep surface (dark UI panels, teal-tinted near-black) ─────────────────
+  --deep-1: #062226;
+  --deep-2: #0a2c31;
+  --deep-3: #123a40;
+  --deep-4: #1b4a50;
+  --deep-5: #265c62;
 
-  // Borders
-  --color-border:         #34423b;
-  --color-border-light:   #26332d;
-  --color-border-focus:   #b7d7a8;
-  --color-border-hover:   #5b7067;
+  // ── Semantic accents ───────────────────────────────────────────────────────
+  --success-500: #3f8f5c;
+  --success-600: #2f7048;
+  --danger-500:  #c1502e;
+  --danger-600:  #9e3e22;
+  --info-500:    var(--teal-500);
+  --warning-500: var(--gold-500);
 
-  // Status
-  --color-success:        #a9dbc8;
-  --color-success-bg:     #173c34;
-  --color-warning:        #e9c88f;
-  --color-warning-bg:     #44331e;
-  --color-error:          #ffb4ab;
-  --color-error-bg:       #5f1714;
-  --color-info:           #b9dce4;
-  --color-info-bg:        #173a42;
+  // ── Semantic aliases (spec's own names, used verbatim by new components) ─
+  --color-bg-page:                var(--neutral-50);
+  --color-bg-surface:             var(--neutral-0);
+  --color-bg-surface-muted:       var(--neutral-100);
+  --color-bg-deep:                var(--deep-1);
+  --color-bg-deep-raised:         var(--deep-2);
+  --color-text-primary:           var(--neutral-900);
+  --color-text-secondary:         var(--neutral-600);
+  --color-text-muted:             var(--neutral-400);
+  --color-text-inverse:           var(--neutral-0);
+  --color-text-on-deep:           var(--teal-50);
+  --color-text-on-deep-muted:     var(--teal-200);
+  --color-accent-primary:         var(--teal-600);
+  --color-accent-primary-hover:   var(--teal-700);
+  --color-accent-secondary:       var(--gold-500);
+  --color-accent-secondary-hover: var(--gold-600);
+  --color-border:                 var(--neutral-200);
+  --color-border-strong:          var(--neutral-300);
+  --color-border-deep:            var(--deep-4);
+  --color-focus-ring:             var(--teal-400);
 
-  // Layout
-  --color-sidebar-bg:        #141f1c;
-  --color-sidebar-text:      #c8d0c3;
-  --color-sidebar-active:    #e9f2df;
-  --color-sidebar-active-bg: #24352f;
-  --color-sidebar-border:    #26332d;
-  --color-header-bg:         #141f1c;
-  --color-header-border:     #26332d;
-  --color-footer-bg:         #141f1c;
-  --color-footer-text:       #8d9889;
+  // ── Back-compat aliases (existing app component SCSS uses these names) ───
+  --color-primary:           var(--color-accent-primary);
+  --color-primary-hover:     var(--color-accent-primary-hover);
+  --color-primary-active:    var(--teal-800);
+  --color-primary-light:     var(--teal-100);
+  --color-accent:            var(--color-accent-secondary);
+  --color-accent-text:       var(--gold-700);
 
-  // Elevation
-  --shadow-flat:     none;
-  --shadow-raised:   0 1px 5px rgba(0, 0, 0, 0.24);
-  --shadow-elevated: 0 8px 20px rgba(0, 0, 0, 0.26);
-  --shadow-floating: 0 14px 32px rgba(0, 0, 0, 0.28);
-  --shadow-modal:    0 18px 44px rgba(0, 0, 0, 0.34);
+  --color-secondary-container:    var(--deep-3);
+  --color-on-secondary-container: var(--teal-50);
 
-  --shadow-sm:   var(--shadow-raised);
-  --shadow-md:   var(--shadow-elevated);
-  --shadow-lg:   var(--shadow-floating);
-  --shadow-card: var(--shadow-flat);
+  --color-bg-base:           var(--color-bg-page);
+  --color-bg-card:           var(--color-bg-surface);
+  --color-bg-subtle:         var(--color-bg-surface-muted);
+  --color-bg-container:      var(--color-bg-surface-muted);
+  --color-bg-container-high: var(--neutral-200);
+  --color-bg-hover:          var(--color-bg-surface-muted);
+  --color-hover-bg:          var(--color-bg-surface-muted);
+
+  --color-text-disabled: var(--neutral-300);
+
+  --color-border-light:  var(--neutral-100);
+  --color-border-focus:  var(--color-focus-ring);
+  --color-border-hover:  var(--neutral-400);
+
+  --color-success:    var(--success-500);
+  --color-success-bg: #dcefe1;
+  --color-warning:    var(--gold-600);
+  --color-warning-bg: var(--gold-100);
+  --color-error:      var(--danger-500);
+  --color-error-bg:   #f7ddd4;
+  --color-danger:     var(--danger-500);
+  --color-info:       var(--teal-700);
+  --color-info-bg:    var(--teal-50);
+
+  --color-sidebar-bg:        var(--deep-1);
+  --color-sidebar-text:      var(--teal-300);
+  --color-sidebar-active:    var(--teal-50);
+  --color-sidebar-active-bg: var(--deep-3);
+  --color-sidebar-border:    var(--deep-3);
+  --color-header-bg:         var(--color-bg-surface);
+  --color-header-border:     var(--neutral-200);
+  --color-footer-bg:         var(--color-bg-surface-muted);
+  --color-footer-text:       var(--neutral-400);
+
+  // ── Elevation (real formula: warm-tinted, rgba(10,46,50,α)) ───────────────
+  --shadow-flat: none;
+  --shadow-sm:   0 1px 2px rgba(10, 46, 50, 0.08);
+  --shadow-md:   0 4px 12px rgba(10, 46, 50, 0.1);
+  --shadow-lg:   0 12px 32px rgba(10, 46, 50, 0.14);
+  --shadow-deep-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  --shadow-raised:   var(--shadow-sm);
+  --shadow-elevated: var(--shadow-md);
+  --shadow-floating: var(--shadow-lg);
+  --shadow-modal:    var(--shadow-lg);
+  --shadow-card:     var(--shadow-flat);
+
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast:   120ms;
+  --duration-normal: 200ms;
+  --duration-slow:   320ms;
 }

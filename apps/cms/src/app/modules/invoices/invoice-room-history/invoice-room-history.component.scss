@@ -1,0 +1,17 @@
+@use '../../../../styles/variables' as *;
+
+.room-history {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 32px;
+  max-width: 1500px;
+  margin: 0 auto;
+
+  &__card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: $radius-lg;
+    overflow: hidden;
+  }
+}

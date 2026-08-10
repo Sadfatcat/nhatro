@@ -1,0 +1,38 @@
+@use '../../../../styles/variables' as *;
+
+.billing-day {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__hint {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+
+  &__card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: $radius-lg;
+    overflow: hidden;
+  }
+
+  &__card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-border);
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+  }
+
+  &__no-invoice {
+    color: var(--color-text-muted);
+  }
+}
