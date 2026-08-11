@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 
-import { UtilityReadingLogComponent } from '../utility-reading-log/utility-reading-log.component';
+import { InvoiceCreationLogComponent } from '../invoice-creation-log/invoice-creation-log.component';
 import { InvoicesByBillingDayComponent } from '../invoices-by-billing-day/invoices-by-billing-day.component';
 
 @Component({
@@ -12,7 +12,7 @@ import { InvoicesByBillingDayComponent } from '../invoices-by-billing-day/invoic
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NzTabsModule,
-    UtilityReadingLogComponent, InvoicesByBillingDayComponent,
+    InvoiceCreationLogComponent, InvoicesByBillingDayComponent,
   ],
 })
 export class InvoicesListComponent {}

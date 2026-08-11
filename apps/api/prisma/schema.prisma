@@ -112,6 +112,12 @@ model Invoice {
   waterAmount       Int
   otherFees         Int           @default(0)
   totalAmount       Int
+  prevElec          Float         @default(0)
+  currElec          Float         @default(0)
+  prevWater         Float         @default(0)
+  currWater         Float         @default(0)
+  elecUnitPrice     Int           @default(0)
+  waterUnitPrice    Int           @default(0)
   referenceCode     String        @unique
   dueDate           DateTime
   status            InvoiceStatus @default(SENT)

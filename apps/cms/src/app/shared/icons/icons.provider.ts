@@ -52,6 +52,7 @@ import {
   LockOutline,
   MailOutline,
   CalendarOutline,
+  DeleteOutline,
 } from '@ant-design/icons-angular/icons';
 
 export const APP_ICONS = [
@@ -97,6 +98,7 @@ export const APP_ICONS = [
   LockOutline,
   MailOutline,
   CalendarOutline,
+  DeleteOutline,
 ];
 
 export const provideAppIcons = () => provideNzIcons(APP_ICONS);

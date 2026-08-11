@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { InvoiceStatus } from '@prisma/client';
 import { InvoicesService } from './invoices.service';
@@ -79,5 +79,15 @@ export class InvoicesController {
   ): Promise<ApiResponse<unknown>> {
     requireManagement(auth);
     return ok(await this.svc.bulkMarkPaid(dto), 'Đã đánh dấu thanh toán hàng loạt.');
+  }
+
+  @Delete(':id')
+  async remove(
+    @Param('id') id: string,
+    @Headers('authorization') auth: string,
+  ): Promise<ApiResponse<null>> {
+    requireManagement(auth);
+    await this.svc.remove(id);
+    return ok(null, 'Đã xoá hoá đơn.');
   }
 }

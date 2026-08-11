@@ -21,6 +21,7 @@ const INCLUDE_ROOM = { room: { select: { roomNumber: true, floor: true } } };
 
 const ELECTRICITY_PRICE_PER_KWH = 4000;
 const WATER_PRICE_PER_M3        = 15000;
+const TRASH_FEE_PER_ROOM        = 50000;
 const DEFAULT_DUE_DAYS          = 5;
 
 @Injectable()
@@ -89,7 +90,8 @@ export class InvoicesService {
       const rentAmount        = room.price;
       const electricityAmount = Math.round(elecUsed * ELECTRICITY_PRICE_PER_KWH);
       const waterAmount       = Math.round(waterUsed * WATER_PRICE_PER_M3);
-      const totalAmount       = rentAmount + electricityAmount + waterAmount;
+      const otherFees         = TRASH_FEE_PER_ROOM;
+      const totalAmount       = rentAmount + electricityAmount + waterAmount + otherFees;
 
       try {
         const invoice = await this.prisma.invoice.create({
@@ -100,9 +102,16 @@ export class InvoicesService {
             rentAmount,
             electricityAmount,
             waterAmount,
+            otherFees,
             totalAmount,
             referenceCode:     this.buildReferenceCode(room.roomNumber, dto.period),
             dueDate,
+            prevElec:          prevElec,
+            currElec:          currElec,
+            prevWater:         prevWater,
+            currWater:         currWater,
+            elecUnitPrice:     ELECTRICITY_PRICE_PER_KWH,
+            waterUnitPrice:    WATER_PRICE_PER_M3,
           },
         });
         created.push(invoice);
@@ -184,6 +193,15 @@ export class InvoicesService {
       this.events.emit('invoice.paid', { invoiceId: invoice.id });
     }
     return { updated: result.count };
+  }
+
+  async remove(id: string): Promise<void> {
+    const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+    if (!invoice) throw new NotFoundException('Không tìm thấy hoá đơn.');
+    if (invoice.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Không thể xoá hoá đơn đã thanh toán.');
+    }
+    await this.prisma.invoice.delete({ where: { id } });
   }
 
   private buildReferenceCode(roomNumber: string, period: string): string {

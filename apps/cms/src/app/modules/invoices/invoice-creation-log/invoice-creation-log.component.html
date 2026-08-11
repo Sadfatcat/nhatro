@@ -1,0 +1,19 @@
+<div class="creation-log">
+  <app-data-table
+    [config]="tableConfig"
+    [cellTemplates]="cellTemplates"
+    (rowClick)="onRowClick($event)"
+  />
+</div>
+
+<ng-template #statusTpl let-value>
+  <app-status-badge [status]="value" />
+</ng-template>
+
+<ng-template #amountTpl let-value>
+  <app-money-display [value]="value" />
+</ng-template>
+
+<ng-template #dateTpl let-value>
+  {{ value | date:'dd/MM/yyyy HH:mm' }}
+</ng-template>

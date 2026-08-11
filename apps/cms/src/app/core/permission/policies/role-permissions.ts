@@ -29,6 +29,7 @@ export type Permission =
   | 'invoices:update'
   | 'invoices:mark-paid'
   | 'invoices:notify'
+  | 'invoices:delete'
   | 'utilities:view'
   | 'utilities:create'
   | 'utilities:update'
@@ -70,6 +71,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   'invoices:update',
   'invoices:mark-paid',
   'invoices:notify',
+  'invoices:delete',
   'utilities:view',
   'utilities:create',
   'utilities:update',
@@ -105,6 +107,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'invoices:update',
     'invoices:mark-paid',
     'invoices:notify',
+    'invoices:delete',
     'utilities:view',
     'utilities:create',
     'utilities:update',

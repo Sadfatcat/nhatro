@@ -6,6 +6,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { finalize, forkJoin } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
+import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
+import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { DataTableComponent } from '../../../shared/components/display/data-table/data-table.component';
 import { TableConfig } from '../../../shared/components/display/data-table/data-table.model';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
@@ -14,6 +16,11 @@ import { Invoice } from '@nhatro/shared-types';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
+interface GenerateResult {
+  created: unknown[];
+  skipped: { roomId: string; roomNumber: string; reason: string }[];
+}
+
 type InvoiceRow = {
   id:            string;
   period:        string;
@@ -21,6 +28,11 @@ type InvoiceRow = {
   status:        Invoice['status'];
   dueDate:       string;
 } & Record<string, unknown>;
+
+function currentPeriod(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 @Component({
   selector:        'app-invoice-room-history',
@@ -31,7 +43,7 @@ type InvoiceRow = {
   imports: [
     CommonModule,
     NzButtonModule, NzIconModule,
-    DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent,
+    DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent, PermissionDirective,
   ],
 })
 export class InvoiceRoomHistoryComponent implements OnInit {
@@ -42,8 +54,12 @@ export class InvoiceRoomHistoryComponent implements OnInit {
   private route  = inject(ActivatedRoute);
   private router = inject(Router);
   private api    = inject(ApiService);
+  private toast  = inject(ToastService);
+
+  private roomId = '';
 
   loading = signal(false);
+  saving  = signal(false);
   roomNumber = signal<string>('');
   items = signal<InvoiceRow[]>([]);
 
@@ -69,6 +85,7 @@ export class InvoiceRoomHistoryComponent implements OnInit {
   ngOnInit(): void {
     const roomId = this.route.snapshot.paramMap.get('roomId');
     if (!roomId) return;
+    this.roomId = roomId;
     this.loadData(roomId);
   }
 
@@ -98,5 +115,23 @@ export class InvoiceRoomHistoryComponent implements OnInit {
     this.router.navigateByUrl(`/app/invoices/${row.id}`);
   }
 
-  goBack(): void { this.router.navigateByUrl('/app/invoices/by-billing-day'); }
+  goBack(): void { this.router.navigateByUrl('/app/invoices'); }
+
+  createInvoice(): void {
+    if (!this.roomId) return;
+    this.saving.set(true);
+    this.api.post<ApiResponse<GenerateResult>>('/invoices/generate', {
+      period: currentPeriod(),
+      roomIds: [this.roomId],
+    }).pipe(finalize(() => this.saving.set(false)))
+      .subscribe(res => {
+        if (!res.success || !res.data) return;
+        if (res.data.created.length > 0) {
+          this.toast.success('Đã tạo hoá đơn.');
+          this.loadData(this.roomId);
+        } else {
+          this.toast.error(res.data.skipped[0]?.reason ?? 'Không tạo được hoá đơn.');
+        }
+      });
+  }
 }

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { finalize } from 'rxjs';
 import { Invoice } from '@nhatro/shared-types';
 
@@ -24,7 +25,7 @@ interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzModalModule,
     MoneyDisplayComponent, StatusBadgeComponent, PermissionDirective,
   ],
 })
@@ -38,6 +39,7 @@ export class InvoiceDetailComponent implements OnInit {
   invoice = signal<Invoice | null>(null);
   loading = signal(true);
   saving  = signal(false);
+  showDeleteModal = signal(false);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -80,6 +82,25 @@ export class InvoiceDetailComponent implements OnInit {
         } else {
           this.toast.error(res.data?.reason ?? 'Không gửi được thông báo.');
         }
+      });
+  }
+
+  confirmDelete(): void {
+    const inv = this.invoice();
+    if (!inv) return;
+    this.saving.set(true);
+    this.api.delete<ApiResponse<null>>(`/invoices/${inv.id}`)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: res => {
+          if (!res.success) return;
+          this.toast.success('Đã xoá hoá đơn.');
+          this.showDeleteModal.set(false);
+          this.router.navigate(['/app/invoices']);
+        },
+        error: err => {
+          this.toast.error(err?.error?.message ?? 'Không xoá được hoá đơn.');
+        },
       });
   }
 

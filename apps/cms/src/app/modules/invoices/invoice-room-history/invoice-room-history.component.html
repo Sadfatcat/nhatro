@@ -12,6 +12,17 @@
         <h1>Lịch sử hoá đơn — Phòng {{ roomNumber() }}</h1>
         <p>Toàn bộ hoá đơn đã sinh cho phòng này, mới nhất trước.</p>
       </div>
+      <div class="room-history__header-actions">
+        <button
+          *appPermission="'invoices:create'"
+          nz-button nzType="primary"
+          [nzLoading]="saving()"
+          (click)="createInvoice()"
+        >
+          <span nz-icon nzType="plus"></span>
+          Tạo hoá đơn
+        </button>
+      </div>
     </div>
   </div>
 

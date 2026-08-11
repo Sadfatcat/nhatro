@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 
 interface RecordDto {
@@ -10,7 +11,10 @@ interface RecordDto {
 
 @Injectable()
 export class UtilitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   async findAll() {
     const rooms = await this.prisma.room.findMany({
@@ -101,6 +105,7 @@ export class UtilitiesService {
         billingMonth,
       },
     });
+    this.events.emit('utility.recorded', { roomId, billingMonth });
     return record;
   }
 

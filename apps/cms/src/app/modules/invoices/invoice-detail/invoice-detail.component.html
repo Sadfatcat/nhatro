@@ -45,6 +45,14 @@
           >
             <nz-icon nzType="check-circle" /> Đánh dấu đã thanh toán
           </button>
+          <button
+            *appPermission="'invoices:delete'"
+            nz-button nzDanger
+            [nzLoading]="saving()"
+            (click)="showDeleteModal.set(true)"
+          >
+            <nz-icon nzType="delete" /> Xoá hoá đơn
+          </button>
         }
       </div>
     </div>
@@ -145,3 +153,20 @@
   }
 
 </section>
+
+<!-- Confirm Delete -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showDeleteModal()"
+  nzTitle="Xác nhận xoá"
+  nzOkText="Xoá"
+  nzOkDanger
+  [nzOkLoading]="saving()"
+  (nzOnOk)="confirmDelete()"
+  (nzOnCancel)="showDeleteModal.set(false)"
+>
+  <ng-container *nzModalContent>
+    <p>Bạn có chắc muốn xoá hoá đơn <strong>{{ invoice()?.referenceCode }}</strong>?</p>
+    <p style="color: var(--color-text-muted); font-size: 13px;">Xoá xong có thể chốt lại điện nước để hệ thống tự sinh hoá đơn mới cho kỳ này.</p>
+  </ng-container>
+</nz-modal>
