@@ -12,6 +12,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize } from 'rxjs';
@@ -24,6 +25,7 @@ import { MoneyDisplayComponent } from '../../shared/components/display/money-dis
 import { StatusBadgeComponent } from '../../shared/components/display/status-badge/status-badge.component';
 import { PaginatorComponent } from '../../shared/components/navigation/paginator/paginator.component';
 import { PermissionDirective } from '../../core/permission/directives/permission.directive';
+import { LayoutService } from '../../core/services/layout.service';
 
 const PAGE_SIZE = 10;
 
@@ -57,7 +59,7 @@ interface RoomOption { roomId: string; roomNumber: string; floor: number; price:
   imports: [
     CommonModule, FormsModule, RouterModule, PermissionDirective,
     NzButtonModule, NzIconModule, NzInputModule, NzInputNumberModule,
-    NzModalModule, NzPopconfirmModule, NzSelectModule, NzSpinModule, NzTableModule, NzTagModule, NzTooltipModule,
+    NzModalModule, NzPopconfirmModule, NzSelectModule, NzSpinModule, NzTableModule, NzTabsModule, NzTagModule, NzTooltipModule,
     MoneyDisplayComponent, StatusBadgeComponent, PaginatorComponent,
   ],
 })
@@ -68,6 +70,7 @@ export class ContractsComponent implements OnInit, OnDestroy {
   private sanitizer   = inject(DomSanitizer);
   private router      = inject(Router);
   private permissions = inject(PermissionService);
+  layout = inject(LayoutService);
 
   // ── Core state ────────────────────────────────────────────────────────────────
   loading     = signal(false);
@@ -83,18 +86,24 @@ export class ContractsComponent implements OnInit, OnDestroy {
   pdfLoading = signal(false);
   private _blobUrl: string | null = null;
 
+  // ── Tabs (management): active vs ended ────────────────────────────────────────
+  activeTab         = signal<0 | 1>(0);
+  activeCount       = computed(() => this.contracts().filter(r => r.status === 'ACTIVE').length);
+  endedCount        = computed(() => this.contracts().filter(r => r.status !== 'ACTIVE').length);
+
+  onTabChange(i: number): void {
+    this.activeTab.set(i === 1 ? 1 : 0);
+    this.page.set(1);
+  }
+
   // ── Filters (management) ──────────────────────────────────────────────────────
   filterSearch      = signal('');
-  filterStatus      = signal<string | null>(null);
   filterSearchValue = '';
-  filterStatusValue: string | null = null;
 
   filteredContracts = computed(() => {
-    let rows = this.contracts();
     const q = this.filterSearch().toLowerCase();
-    const s = this.filterStatus();
+    let rows = this.contracts().filter(r => this.activeTab() === 1 ? r.status !== 'ACTIVE' : r.status === 'ACTIVE');
     if (q) rows = rows.filter(r => r.room.roomNumber.toLowerCase().includes(q) || r.tenant.fullName.toLowerCase().includes(q));
-    if (s) rows = rows.filter(r => r.status === s);
     return rows;
   });
 
@@ -127,19 +136,12 @@ export class ContractsComponent implements OnInit, OnDestroy {
   terminateStatus: ContractStatus = 'TERMINATED';
   terminateStatusValue: ContractStatus = 'TERMINATED';
 
-  // ── Delete countdown ──────────────────────────────────────────────────────────
-  deleteCountdown = signal(30);
-  deleteArmed     = signal(false);
-  deleteCounting  = signal(false);
-  private _countdownId: ReturnType<typeof setInterval> | null = null;
-
   priceFormatter = (v: number) => v ? v.toLocaleString('vi-VN') : '';
   priceParser    = (v: string) => Number(v.replace(/\D/g, ''));
 
   ngOnInit(): void { this.load(); }
 
   ngOnDestroy(): void {
-    this.clearCountdown();
     if (this._blobUrl) { URL.revokeObjectURL(this._blobUrl); this._blobUrl = null; }
   }
 
@@ -206,8 +208,6 @@ export class ContractsComponent implements OnInit, OnDestroy {
   resetFilters(): void {
     this.filterSearch.set('');
     this.filterSearchValue = '';
-    this.filterStatus.set(null);
-    this.filterStatusValue = null;
     this.page.set(1);
   }
 
@@ -273,16 +273,11 @@ export class ContractsComponent implements OnInit, OnDestroy {
   // ── View ──────────────────────────────────────────────────────────────────────
   openViewModal(row: ContractRow): void {
     this.selected.set(row);
-    this.deleteArmed.set(false);
-    this.deleteCounting.set(false);
     this.loadPdf(row.id);
     this.viewModal.set(true);
   }
   closeViewModal(): void {
     this.viewModal.set(false);
-    this.clearCountdown();
-    this.deleteArmed.set(false);
-    this.deleteCounting.set(false);
     if (this._blobUrl) { URL.revokeObjectURL(this._blobUrl); this._blobUrl = null; }
     this.pdfUrl.set(null);
   }
@@ -339,32 +334,15 @@ export class ContractsComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ── Delete countdown ──────────────────────────────────────────────────────────
-  startDeleteCountdown(): void {
-    this.clearCountdown();
-    this.deleteCountdown.set(30);
-    this.deleteArmed.set(false);
-    this.deleteCounting.set(true);
-    this._countdownId = setInterval(() => {
-      const curr = this.deleteCountdown();
-      if (curr <= 1) { this.clearCountdown(); this.deleteArmed.set(true); this.deleteCounting.set(false); }
-      else this.deleteCountdown.set(curr - 1);
-    }, 1000);
-  }
-
-  private clearCountdown(): void {
-    if (this._countdownId !== null) { clearInterval(this._countdownId); this._countdownId = null; }
-  }
-
+  // ── Delete ────────────────────────────────────────────────────────────────────
   confirmDelete(): void {
-    if (!this.deleteArmed()) return;
     const id = this.selected()?.id;
     if (!id) return;
     this.saving.set(true);
     this.api.delete<ApiResponse<unknown>>(`/contracts/${id}`)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
-        next:  () => { this.toast.success('Đã xoá hợp đồng.'); this.deleteCounting.set(false); this.closeViewModal(); this.load(); },
+        next:  () => { this.toast.success('Đã xoá hợp đồng.'); this.closeViewModal(); this.load(); },
         error: () => this.toast.error('Không xoá được hợp đồng.'),
       });
   }

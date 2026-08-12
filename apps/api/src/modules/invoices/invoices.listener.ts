@@ -11,12 +11,10 @@ export class InvoicesListener {
   @OnEvent('utility.recorded')
   async onUtilityRecorded(payload: { roomId: string; billingMonth: string }): Promise<void> {
     try {
-      const result = await this.invoices.generate({ period: payload.billingMonth, roomIds: [payload.roomId] });
-      if (result.created.length > 0) {
-        this.logger.log(`Đã tự động sinh hoá đơn cho phòng ${payload.roomId}, kỳ ${payload.billingMonth}.`);
-      }
+      await this.invoices.syncInvoiceForPeriod(payload.roomId, payload.billingMonth);
+      this.logger.log(`Đã đồng bộ hoá đơn cho phòng ${payload.roomId}, kỳ ${payload.billingMonth}.`);
     } catch (err) {
-      this.logger.warn(`Không tự sinh được hoá đơn cho phòng ${payload.roomId}, kỳ ${payload.billingMonth}: ${err instanceof Error ? err.message : err}`);
+      this.logger.warn(`Không đồng bộ được hoá đơn cho phòng ${payload.roomId}, kỳ ${payload.billingMonth}: ${err instanceof Error ? err.message : err}`);
     }
   }
 }

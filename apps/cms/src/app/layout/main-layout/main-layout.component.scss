@@ -3,16 +3,46 @@
 .main-layout {
   min-height: 100vh;
   padding-top: $header-height;
+  background: var(--color-bg-subtle);
+
+  // Mobile: fixed-position bottom-nav is unreliable on real mobile browsers
+  // (dynamic toolbar / containing-block quirks). Instead, size the shell to
+  // the viewport and let bottom-nav sit as a normal flex child at the end —
+  // guaranteed to stay put, no `position: fixed` involved.
+  &.is-mobile {
+    height: 100dvh;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .content-layout {
   margin-left: $sidebar-width;
   transition: margin-left $transition-slow;
   min-height: calc(100vh - #{$header-height});
+  background: var(--color-bg-subtle);
   display: flex;
   flex-direction: column;
 
   &.collapsed { margin-left: $sidebar-collapsed-width; }
+
+  &.is-mobile {
+    margin-left: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+
+    // Real mobile browsers use overlay scrollbars (no layout width), but
+    // desktop browsers in responsive/emulation mode reserve gutter space —
+    // shrinking this scroll container and revealing the page background on
+    // the right edge. Hide the scrollbar chrome; scrolling still works.
+    scrollbar-width: none;      // Firefox
+    -ms-overflow-style: none;   // legacy Edge/IE
+    &::-webkit-scrollbar { display: none; } // Chromium/WebKit
+  }
 }
 
 .page-content {

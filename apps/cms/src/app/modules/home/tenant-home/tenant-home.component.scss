@@ -102,6 +102,15 @@
     .role-toggle__dot   { background: var(--teal-600); transform: scale(1); }
     .role-toggle__label { color: var(--teal-800); font-weight: 600; }
   }
+
+  // Fixed 132px tabs + flex-shrink:0 push the page wider than narrow phone
+  // viewports (measured on iPhone 13: whole page shifted/clipped ~33px right).
+  @media (max-width: 640px) {
+    &__glow, &__thumb, &__tab { width: 100px; }
+    &--pos-1 &__glow,
+    &--pos-1 &__thumb { left: 106px; }
+    &__label { font-size: 13px; }
+  }
 }
 
 .welcome-title {
@@ -322,6 +331,7 @@
   border-radius: $radius-lg;
   padding: 20px;
   box-sizing: border-box;
+  min-width: 0; // grid items default to min-width:auto, refusing to shrink below the canvas's content width — clamp to the actual grid track
 
   &__header {
     display: flex;

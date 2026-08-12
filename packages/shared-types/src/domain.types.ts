@@ -58,6 +58,12 @@ export interface Invoice {
   waterAmount: number;
   otherFees: number;
   totalAmount: number;
+  prevElec: number;
+  currElec: number;
+  prevWater: number;
+  currWater: number;
+  elecUnitPrice: number;
+  waterUnitPrice: number;
   referenceCode: string;
   dueDate: string;
   status: InvoiceStatus;
@@ -78,6 +84,17 @@ export interface UtilityReading {
   prevWater: number;
   currWater: number;
   recordedAt: string;
+}
+
+export interface UtilityHistoryPoint {
+  billingMonth: string;
+  prevElec: number;
+  currElec: number;
+  prevWater: number;
+  currWater: number;
+  elecUsed: number;
+  waterUsed: number;
+  recordedAt: string | null;
 }
 
 export interface UtilityPrices {

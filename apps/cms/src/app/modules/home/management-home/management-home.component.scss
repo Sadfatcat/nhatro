@@ -500,6 +500,37 @@
   }
 }
 
+@media (max-width: 767.98px) {
+  .mgmt-home { padding: 12px; }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .header-badges {
+    flex-wrap: wrap;
+    flex-shrink: initial;
+    width: 100%;
+  }
+
+  .stat-badge {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .kcard {
+    flex-wrap: wrap;
+
+    &__readings {
+      flex-basis: 100%;
+      order: 3;
+      margin-top: 2px;
+    }
+  }
+}
+
 // CDK drag-and-drop global preview
 .cdk-drag-preview {
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);

@@ -18,20 +18,22 @@ import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { UserRole } from '../../../core/auth/auth.types';
-import { RoomWithUtility } from '@nhatro/shared-types';
+import { RoomWithUtility, UtilityReading } from '@nhatro/shared-types';
+import { LayoutService } from '../../../core/services/layout.service';
+import { MonthPickerComponent } from '../../../shared/components/form/month-picker/month-picker.component';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 type BillingDay = 15 | 30;
-type ReadingInput = { prevElec: number; currElec: number; prevWater: number; currWater: number };
+type ReadingInput = { currElec: number; currWater: number };
 
 @Component({
   selector:        'app-management-home',
   standalone:  true,
   templateUrl: './management-home.component.html',
   styleUrls:   ['./management-home.component.scss'],
-  imports:     [CommonModule, DatePipe, FormsModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzDividerModule, NzButtonModule],
+  imports:     [CommonModule, DatePipe, FormsModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzDividerModule, NzButtonModule, MonthPickerComponent],
 })
 export class ManagementHomeComponent implements OnInit, AfterViewInit {
   @ViewChild('donutChart') donutRef!: ElementRef<HTMLCanvasElement>;
@@ -40,6 +42,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   private toast  = inject(ToastService);
   private router = inject(Router);
   readonly auth  = inject(AuthService);
+  layout = inject(LayoutService);
 
   readonly isAdmin = computed(() => this.auth.hasRole(UserRole.ADMIN));
 
@@ -59,10 +62,10 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   pendingAmount = signal(0);
 
   // ── Utility prices ────────────────────────────────────────────────────────
-  prices          = signal({ electricityPerKwh: 4000, waterPerM3: 15000 });
+  prices          = signal({ electricityPerKwh: 3500, waterPerM3: 30000 });
   editPrices      = signal(false);
-  draftElecPrice  = signal(4000);
-  draftWaterPrice = signal(15000);
+  draftElecPrice  = signal(3500);
+  draftWaterPrice = signal(30000);
 
   openPriceEdit(): void {
     this.draftElecPrice.set(this.prices().electricityPerKwh);
@@ -197,6 +200,9 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
 
   // ── Reading modal ─────────────────────────────────────────────────────────
   activeModalRoomId = signal<string | null>(null);
+  activeModalMonth  = signal<Date>(new Date());
+  activeModalPrev   = signal<{ prevElec: number; prevWater: number }>({ prevElec: 0, prevWater: 0 });
+  modalLoading      = signal(false);
   inputMap          = signal<Map<string, ReadingInput>>(new Map());
 
   activeModalRoom = computed(() => {
@@ -204,28 +210,49 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     return id ? this.rooms().find(r => r.roomId === id) ?? null : null;
   });
 
+  private monthKey(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
   isChot(roomId: string): boolean {
     const room = this.rooms().find(r => r.roomId === roomId);
     if (!room?.utilityRecord) return false;
-    const now = new Date();
-    const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    return room.utilityRecord.billingMonth === key;
+    return room.utilityRecord.billingMonth === this.monthKey(new Date());
   }
 
   openModal(roomId: string): void {
-    const room = this.rooms().find(r => r.roomId === roomId);
-    const rec  = room?.utilityRecord;
-    const init: ReadingInput = rec
-      ? { prevElec: rec.currElec, currElec: rec.currElec, prevWater: rec.currWater, currWater: rec.currWater }
-      : { prevElec: 0, currElec: 0, prevWater: 0, currWater: 0 };
-    this.inputMap.update(m => { const n = new Map(m); n.set(roomId, init); return n; });
+    this.activeModalMonth.set(new Date());
     this.activeModalRoomId.set(roomId);
+    this.loadReadingForMonth(roomId, new Date());
   }
 
   closeModal(): void { this.activeModalRoomId.set(null); }
 
+  onModalMonthChange(month: Date | null): void {
+    const roomId = this.activeModalRoomId();
+    if (!roomId || !month) return;
+    this.activeModalMonth.set(month);
+    this.loadReadingForMonth(roomId, month);
+  }
+
+  private loadReadingForMonth(roomId: string, month: Date): void {
+    this.modalLoading.set(true);
+    this.api.get<ApiResponse<{ utilityRecord: UtilityReading | null }>>(`/utilities/${roomId}`, { month: this.monthKey(month) })
+      .pipe(finalize(() => this.modalLoading.set(false)))
+      .subscribe(res => {
+        if (!res.success || !res.data) return;
+        const rec = res.data.utilityRecord;
+        this.inputMap.update(m => {
+          const n = new Map(m);
+          n.set(roomId, { currElec: rec?.currElec ?? 0, currWater: rec?.currWater ?? 0 });
+          return n;
+        });
+        this.activeModalPrev.set({ prevElec: rec?.prevElec ?? 0, prevWater: rec?.prevWater ?? 0 });
+      });
+  }
+
   getInput(roomId: string): ReadingInput {
-    return this.inputMap().get(roomId) ?? { prevElec: 0, currElec: 0, prevWater: 0, currWater: 0 };
+    return this.inputMap().get(roomId) ?? { currElec: 0, currWater: 0 };
   }
 
   patchInput(roomId: string, patch: Partial<ReadingInput>): void {
@@ -239,25 +266,32 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     if (!roomId) return;
     const inp = this.getInput(roomId);
     this.saving.set(true);
-    this.api.post<ApiResponse<unknown>>(`/utilities/${roomId}/record`, inp)
+    this.api.post<ApiResponse<unknown>>(`/utilities/${roomId}/record`, {
+      currElec:     inp.currElec,
+      currWater:    inp.currWater,
+      billingMonth: this.monthKey(this.activeModalMonth()),
+    })
       .pipe(finalize(() => this.saving.set(false)))
-      .subscribe(res => {
-        if (!res.success) return;
-        this.toast.success('Đã chốt số điện nước.');
-        this.closeModal();
-        this.loadData(true);
+      .subscribe({
+        next: res => {
+          if (!res.success) return;
+          this.toast.success('Đã chốt số điện nước.');
+          this.closeModal();
+          this.loadData(true);
+        },
+        error: err => this.toast.error(err?.error?.message ?? 'Không lưu được chỉ số.'),
       });
   }
 
   elecUsed  = computed(() => {
     const id = this.activeModalRoomId(); if (!id) return 0;
     const inp = this.getInput(id);
-    return Math.max(0, inp.currElec - inp.prevElec);
+    return Math.max(0, inp.currElec - this.activeModalPrev().prevElec);
   });
   waterUsed = computed(() => {
     const id = this.activeModalRoomId(); if (!id) return 0;
     const inp = this.getInput(id);
-    return Math.max(0, inp.currWater - inp.prevWater);
+    return Math.max(0, inp.currWater - this.activeModalPrev().prevWater);
   });
   elecAmount  = computed(() => this.elecUsed()  * this.prices().electricityPerKwh);
   waterAmount = computed(() => this.waterUsed() * this.prices().waterPerM3);
@@ -334,5 +368,9 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
         },
       },
     });
+
+    // Chart.js can capture a stale container width when the mobile app-shell
+    // layout (100dvh flex + internal scroll) settles a frame after view init.
+    requestAnimationFrame(() => this.donutChart?.resize());
   }
 }

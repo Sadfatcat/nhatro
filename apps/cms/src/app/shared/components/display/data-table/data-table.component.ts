@@ -4,6 +4,7 @@ import {
   computed,
   ContentChild,
   EventEmitter,
+  inject,
   Input,
   OnChanges,
   Output,
@@ -24,6 +25,8 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { PageChangeEvent, SortEvent, TableAction, TableConfig } from './data-table.model';
+import { LayoutService } from '../../../../core/services/layout.service';
+import { PaginatorComponent } from '../../navigation/paginator/paginator.component';
 
 @Component({
   selector:        'app-data-table',
@@ -41,13 +44,18 @@ import { PageChangeEvent, SortEvent, TableAction, TableConfig } from './data-tab
     NzDropDownModule,
     NzTooltipModule,
     NzEmptyModule,
+    PaginatorComponent,
   ],
 })
 export class DataTableComponent<T extends Record<string, unknown>> implements OnChanges {
+  layout = inject(LayoutService);
+
   @Input() config!: TableConfig<T>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   @Input() cellTemplates: Record<string, TemplateRef<any>> = {};
   @ContentChild('cellTemplate') cellTemplateRef?: TemplateRef<unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  @ContentChild('mobileCard') mobileCardTpl?: TemplateRef<any>;
 
   @Output() sortChange   = new EventEmitter<SortEvent>();
   @Output() pageChange   = new EventEmitter<PageChangeEvent>();

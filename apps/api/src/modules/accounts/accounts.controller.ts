@@ -1,8 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../common/auth/roles.decorator';
 import { AccountsService } from './accounts.service';
 import { CreateLandlordAccountDto } from './dto/create-landlord-account.dto';
 
+@Roles('ADMIN')
 @ApiTags('accounts')
 @Controller('accounts')
 export class AccountsController {

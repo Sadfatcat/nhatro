@@ -3,7 +3,24 @@
     [config]="tableConfig"
     [cellTemplates]="cellTemplates"
     (rowClick)="onRowClick($event)"
-  />
+  >
+    <ng-template #mobileCard let-row>
+      <div class="invoice-log-card" (click)="onRowClick(row)">
+        <div class="invoice-log-card__header">
+          <strong>Phòng {{ row.roomNumber }}</strong>
+          <app-status-badge [status]="row.status" />
+        </div>
+        <div class="invoice-log-card__body">
+          <span>Kỳ {{ row.period }}</span>
+          <app-money-display [value]="row.totalAmount" />
+        </div>
+        <div class="invoice-log-card__dates">
+          <span>Tạo: {{ row.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          <span>Hạn: {{ row.dueDate | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+      </div>
+    </ng-template>
+  </app-data-table>
 </div>
 
 <ng-template #statusTpl let-value>

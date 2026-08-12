@@ -1,3 +1,22 @@
+@if (layout.isMobile() && mobileCardTpl) {
+  <div class="data-table-cards">
+    @for (row of config.data; track row[config.rowKey]) {
+      <ng-container *ngTemplateOutlet="mobileCardTpl; context: { $implicit: row, row, selected: isSelected(row), toggle: toggleRow.bind(this, row) }" />
+    } @empty {
+      <nz-empty [nzNotFoundContent]="config.emptyText ?? 'Không có dữ liệu'" />
+    }
+  </div>
+
+  @if ((config.pagination?.total ?? 0) > 0) {
+    <app-paginator
+      [total]="config.pagination?.total ?? 0"
+      [page]="config.pagination?.page ?? 1"
+      [pageSize]="config.pagination?.pageSize ?? 10"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+} @else {
+
 <nz-table
   #nzTable
   [nzData]="config.data"
@@ -103,3 +122,5 @@
     }
   </tbody>
 </nz-table>
+
+}

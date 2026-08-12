@@ -187,25 +187,31 @@
   [nzFooter]="modalFooter"
   (nzOnCancel)="closeModal()"
   (keydown.enter)="saveReading()"
-  nzWidth="480px">
+  [nzWidth]="layout.isMobile() ? '100vw' : 480"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''">
 
   <ng-container *nzModalContent>
+    <div class="modal-field" style="margin-bottom:16px">
+      <label>Tháng chốt</label>
+      <app-month-picker
+        [value]="activeModalMonth()"
+        [allowClear]="false"
+        (valueChange)="onModalMonthChange($event)" />
+    </div>
+
     <div class="modal-section">
         <div class="modal-section__title modal-section__title--elec">⚡ Điện</div>
         <div class="modal-row">
           <div class="modal-field">
             <label>Chỉ số trước (kWh)</label>
-            <nz-input-number
-              [ngModel]="getInput(roomId).prevElec"
-              (ngModelChange)="patchInput(roomId, { prevElec: $event })"
-              [nzMin]="0" style="width:100%" />
+            <nz-input-number [ngModel]="activeModalPrev().prevElec" [nzDisabled]="true" style="width:100%" />
           </div>
           <div class="modal-field">
             <label>Chỉ số nay (kWh)</label>
             <nz-input-number
               [ngModel]="getInput(roomId).currElec"
               (ngModelChange)="patchInput(roomId, { currElec: $event })"
-              [nzMin]="0" style="width:100%" />
+              [nzMin]="0" [nzDisabled]="modalLoading()" style="width:100%" />
           </div>
         </div>
         <div class="modal-computed modal-computed--elec">
@@ -222,17 +228,14 @@
         <div class="modal-row">
           <div class="modal-field">
             <label>Chỉ số trước (m³)</label>
-            <nz-input-number
-              [ngModel]="getInput(roomId).prevWater"
-              (ngModelChange)="patchInput(roomId, { prevWater: $event })"
-              [nzMin]="0" style="width:100%" />
+            <nz-input-number [ngModel]="activeModalPrev().prevWater" [nzDisabled]="true" style="width:100%" />
           </div>
           <div class="modal-field">
             <label>Chỉ số nay (m³)</label>
             <nz-input-number
               [ngModel]="getInput(roomId).currWater"
               (ngModelChange)="patchInput(roomId, { currWater: $event })"
-              [nzMin]="0" style="width:100%" />
+              [nzMin]="0" [nzDisabled]="modalLoading()" style="width:100%" />
           </div>
         </div>
         <div class="modal-computed modal-computed--water">
@@ -244,8 +247,8 @@
   </ng-container>
 
   <ng-template #modalFooter>
-    <button class="btn-ghost" (click)="closeModal()">Hủy</button>
-    <button class="btn-primary" (click)="saveReading()">Lưu chỉ số</button>
+    <button class="btn btn--ghost" (click)="closeModal()">Hủy</button>
+    <button class="btn btn--primary" [disabled]="modalLoading() || saving()" (click)="saveReading()">Lưu chỉ số</button>
   </ng-template>
 
 </nz-modal>
@@ -262,7 +265,8 @@
   [nzOkLoading]="saving()"
   (nzOnOk)="confirmAddToDay()"
   (nzOnCancel)="showAddModal.set(null)"
-  nzWidth="480px">
+  [nzWidth]="layout.isMobile() ? '100vw' : 480"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''">
 
   <ng-container *nzModalContent>
     <input nz-input placeholder="Tìm số phòng..."

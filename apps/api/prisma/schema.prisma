@@ -40,12 +40,12 @@ model Room {
   invoices      Invoice[]
   landlord      Landlord?      @relation(fields: [landlordId], references: [id])
   account       User?
-  utilityRecord UtilityRecord?
+  utilityRecords UtilityRecord[]
 }
 
 model UtilityRecord {
   id           String   @id @default(cuid())
-  roomId       String   @unique
+  roomId       String
   prevElec     Float    @default(0)
   currElec     Float    @default(0)
   prevWater    Float    @default(0)
@@ -55,6 +55,9 @@ model UtilityRecord {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   room         Room     @relation(fields: [roomId], references: [id])
+
+  @@unique([roomId, billingMonth])
+  @@index([billingMonth])
 }
 
 model Tenant {

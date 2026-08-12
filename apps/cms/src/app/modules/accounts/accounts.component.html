@@ -25,6 +25,35 @@
       </div>
     </div>
 
+    @if (layout.isMobile()) {
+      <div class="account-cards">
+        @for (row of landlords(); track row.landlordId) {
+          <div class="account-card">
+            <div class="account-card__header">
+              <strong>{{ row.fullName }}</strong>
+              <span class="badge" [class]="row.role === 'ADMIN' ? 'badge--gold' : 'badge--teal'">
+                {{ row.role === 'ADMIN' ? 'Admin' : 'Chủ nhà' }}
+              </span>
+            </div>
+            <div class="account-card__body">
+              <span>{{ row.username }} · {{ row.phone ?? '—' }}</span>
+              <span class="badge" [class]="row.isActive ? 'badge--success' : 'badge--gray'">
+                {{ row.isActive ? 'Hoạt động' : 'Khóa' }}
+              </span>
+            </div>
+            <div class="account-card__meta">{{ row.roomCount }} phòng</div>
+            <div class="account-card__actions">
+              <button nz-button nzType="default" (click)="openChangeRoleModal(row)">
+                <span nz-icon nzType="swap"></span> {{ row.role === 'ADMIN' ? 'Hạ xuống Chủ nhà' : 'Nâng lên Admin' }}
+              </button>
+              <button nz-button nzType="default" (click)="openChangePasswordForUser(row.userId)">
+                <span nz-icon nzType="setting"></span> Đổi mật khẩu
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
     <nz-table [nzData]="landlords()" [nzLoading]="loading()" [nzShowPagination]="false" nzSize="middle">
       <thead>
         <tr>
@@ -72,6 +101,7 @@
         }
       </tbody>
     </nz-table>
+    }
   </div>
 
 </section>
@@ -81,6 +111,8 @@
   [nzMaskClosable]="false" [nzVisible]="landlordModal()" nzTitle="Tạo tài khoản chủ nhà"
   nzOkText="Tạo tài khoản"
   nzCancelText="Huỷ"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnCancel)="closeLandlordModal()"
   (nzOnOk)="createLandlordAccount()"
   [nzOkLoading]="saving()">
@@ -103,6 +135,8 @@
   [nzMaskClosable]="false" [nzVisible]="changeRoleModal()" nzTitle="Đổi vai trò"
   nzOkText="Xác nhận" nzCancelText="Huỷ"
   [nzOkLoading]="saving()"
+  [nzWidth]="layout.isMobile() ? '100vw' : 480"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnOk)="submitChangeRole()"
   (nzOnCancel)="closeChangeRoleModal()">
   <ng-template nzModalContent>
@@ -128,6 +162,8 @@
   [nzMaskClosable]="false" [nzVisible]="changePasswordModal()" nzTitle="Đổi mật khẩu"
   nzOkText="Lưu" nzCancelText="Huỷ"
   [nzOkLoading]="saving()"
+  [nzWidth]="layout.isMobile() ? '100vw' : 480"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnOk)="submitChangePassword()"
   (nzOnCancel)="closeChangePasswordModal()">
   <ng-template nzModalContent>

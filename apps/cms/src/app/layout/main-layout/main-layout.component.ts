@@ -7,11 +7,14 @@ import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { TopbarComponent } from '../../shared/components/layout/topbar/topbar.component';
 import { FooterComponent } from '../../shared/components/layout/footer/footer.component';
+import { BottomNavComponent } from '../../shared/components/layout/bottom-nav/bottom-nav.component';
+import { OfflineBannerComponent } from '../../shared/components/layout/offline-banner/offline-banner.component';
 import { StorageService } from '../../core/services/storage.service';
 import { PermissionService } from '../../core/permission/services/permission.service';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { UserRole } from '../../core/auth/auth.types';
-import { MenuItem, NAV_ITEMS } from '../../layout/sidebar/side-items';
+import { MenuItem, NAV_ITEMS, canShowNavItem } from '../../layout/sidebar/side-items';
+import { LayoutService } from '../../core/services/layout.service';
 
 @Component({
   selector:        'app-main-layout',
@@ -26,6 +29,8 @@ import { MenuItem, NAV_ITEMS } from '../../layout/sidebar/side-items';
     NzIconModule,
     TopbarComponent,
     FooterComponent,
+    BottomNavComponent,
+    OfflineBannerComponent,
   ],
 })
 export class MainLayoutComponent {
@@ -33,9 +38,18 @@ export class MainLayoutComponent {
   private router      = inject(Router);
   private permissions = inject(PermissionService);
   private auth        = inject(AuthService);
+  layout              = inject(LayoutService);
 
   collapsed = signal<boolean>(this.storage.get<boolean>('sidebar_collapsed') ?? false);
-  menuItems: MenuItem[] = NAV_ITEMS;
+
+  get menuItems(): MenuItem[] {
+    const roomId = this.auth.currentUser()?.roomId;
+    return NAV_ITEMS.map(item =>
+      item.route?.includes(':roomId') && roomId
+        ? { ...item, route: item.route.replace(':roomId', roomId) }
+        : item,
+    );
+  }
 
   private currentUrl = toSignal(
     this.router.events.pipe(
@@ -65,16 +79,10 @@ export class MainLayoutComponent {
   }
 
   canShow(item: MenuItem): boolean {
-    if (item.divider) {
-      const idx = this.menuItems.indexOf(item);
-      return this.menuItems.slice(idx + 1).some(next => !next.divider && this.canShow(next));
-    }
-    // Admin holds both home:view and management-home:view via ALL_PERMISSIONS.
-    // The tenant-home entry point for Admin is the in-page toggle on
-    // ManagementHomeComponent, not a second sidebar item.
-    if (item.key === 'home' && this.auth.hasRole(UserRole.ADMIN)) return false;
-    if (!item.permission) return true;
-    const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
-    return perms.every(p => this.permissions.hasPermission(p));
+    return canShowNavItem(item, this.menuItems, {
+      hasPermission: p => this.permissions.hasPermission(p),
+      isAdmin:       this.auth.hasRole(UserRole.ADMIN),
+      isTenant:      this.auth.hasRole(UserRole.TENANT),
+    });
   }
 }

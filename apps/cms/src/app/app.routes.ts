@@ -26,7 +26,8 @@ export const routes: Routes = [
     children: [
       {
         path:          'rooms',
-        canActivate:   [authGuard],
+        canActivate:   [authGuard, permissionGuard],
+        data:          { permissions: ['rooms:view'] },
         loadComponent: () => import('./modules/rooms/rooms-list/rooms-list.component').then(m => m.RoomsListComponent),
       },
       {
@@ -74,7 +75,7 @@ export const routes: Routes = [
           {
             path:          'invoices',
             canActivate:   [permissionGuard],
-            data:          { permissions: ['invoices:view'] },
+            data:          { permissions: ['invoices:manage'] },
             loadComponent: () => import('./modules/invoices/invoices-list/invoices-list.component').then(m => m.InvoicesListComponent),
           },
           {

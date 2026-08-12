@@ -25,6 +25,7 @@ export type Permission =
   | 'contracts:upload'
   | 'contracts:delete'
   | 'invoices:view'
+  | 'invoices:manage'
   | 'invoices:create'
   | 'invoices:update'
   | 'invoices:mark-paid'
@@ -67,6 +68,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   'contracts:upload',
   'contracts:delete',
   'invoices:view',
+  'invoices:manage',
   'invoices:create',
   'invoices:update',
   'invoices:mark-paid',
@@ -100,9 +102,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'tenants:update',
     'contracts:view',
     'contracts:create',
-    'contracts:update',
     'contracts:upload',
     'invoices:view',
+    'invoices:manage',
     'invoices:create',
     'invoices:update',
     'invoices:mark-paid',

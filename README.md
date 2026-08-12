@@ -18,7 +18,7 @@ Monorepo tối giản cho dự án quản lý nhà trọ.
 ## Scripts
 
 ```bash
-npm run cms:start
+npm run cms:startcl
 npm run cms:build
 npm run cms:test
 ```

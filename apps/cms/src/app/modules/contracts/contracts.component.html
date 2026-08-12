@@ -22,6 +22,12 @@
 
     <div class="table-container">
 
+      <!-- Tabs: đang hiệu lực / đã kết thúc -->
+      <nz-tabs [nzSelectedIndex]="activeTab()" (nzSelectedIndexChange)="onTabChange($event)">
+        <nz-tab [nzTitle]="'Đang hiệu lực (' + activeCount() + ')'" />
+        <nz-tab [nzTitle]="'Đã kết thúc (' + endedCount() + ')'" />
+      </nz-tabs>
+
       <!-- Filter bar -->
       <div class="filter-bar">
         <div class="filter-bar__left">
@@ -32,14 +38,6 @@
           </nz-input-group>
           <ng-template #searchIcon><nz-icon nzType="search" /></ng-template>
 
-          <nz-select [(ngModel)]="filterStatusValue"
-            (ngModelChange)="filterStatus.set($event); page.set(1)"
-            nzPlaceHolder="Tất cả trạng thái" nzAllowClear style="width:180px">
-            <nz-option nzValue="ACTIVE"     nzLabel="Hiệu lực" />
-            <nz-option nzValue="EXPIRED"    nzLabel="Hết hạn" />
-            <nz-option nzValue="TERMINATED" nzLabel="Đã kết thúc" />
-          </nz-select>
-
           <button type="button" class="add-link" (click)="resetFilters()">↻ Đặt lại</button>
         </div>
         <div class="filter-bar__right">
@@ -48,6 +46,41 @@
       </div>
 
       <!-- Table -->
+      @if (!loading() && filteredContracts().length === 0) {
+        <div class="list-empty">
+          <nz-icon nzType="file-text" style="font-size:40px" />
+          <span>{{ activeTab() === 1 ? 'Chưa có hợp đồng nào đã kết thúc.' : 'Chưa có hợp đồng đang hiệu lực.' }}</span>
+        </div>
+      } @else if (layout.isMobile()) {
+        <div class="contract-cards">
+          @for (row of pagedRows(); track row.id) {
+            <div class="contract-card">
+              <div class="contract-card__header">
+                <strong>Phòng {{ row.room.roomNumber }}</strong>
+                <app-status-badge [status]="row.status" />
+              </div>
+              <div class="contract-card__body">
+                <span>{{ row.tenant.fullName }}</span>
+                <app-money-display [value]="row.deposit" />
+              </div>
+              <div class="contract-card__meta">Từ ngày {{ fmtDate(row.startDate) }}</div>
+              <div class="contract-card__actions">
+                <button nz-button nzType="default" [routerLink]="['/app/contracts', row.id]">
+                  <span nz-icon nzType="eye"></span> Xem
+                </button>
+                <button nz-button nzType="default" *appPermission="'contracts:update'" (click)="openEditModal(row)">
+                  <span nz-icon nzType="edit"></span> Sửa
+                </button>
+                @if (row.status === 'ACTIVE') {
+                  <button nz-button nzType="default" *appPermission="'contracts:update'" (click)="openTerminateModal(row)">
+                    <span nz-icon nzType="stop"></span> Kết thúc
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
       <nz-table [nzData]="pagedRows()" [nzLoading]="loading()" [nzShowPagination]="false" nzSize="middle">
         <thead>
           <tr>
@@ -94,6 +127,7 @@
           }
         </tbody>
       </nz-table>
+      }
 
       <div class="table-footer">
         <app-paginator
@@ -179,7 +213,8 @@
 <!-- ══ Modal: Xem chi tiết hợp đồng (management) ═══════════════════════════ -->
 <nz-modal
   [nzMaskClosable]="false" [nzVisible]="viewModal()" nzTitle="Chi tiết hợp đồng"
-  [nzWidth]="760" [nzFooter]="null"
+  [nzWidth]="layout.isMobile() ? '100vw' : 760" [nzFooter]="null"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnCancel)="closeViewModal()">
   <ng-template nzModalContent>
     @if (selected()) {
@@ -257,29 +292,17 @@
             </ng-container>
           </div>
 
-          <!-- Delete: click-to-start countdown -->
+          <!-- Delete -->
           <div class="detail-modal__footer-right" *appPermission="'contracts:delete'">
-            @if (!deleteCounting() && !deleteArmed()) {
-              <button class="btn btn--danger" (click)="startDeleteCountdown()">
-                <nz-icon nzType="delete" />
-                Xoá
-              </button>
-            } @else if (deleteCounting()) {
-              <button class="btn btn--danger-outline" disabled>
-                <nz-icon nzType="delete" />
-                Xoá ({{ deleteCountdown() }}s)...
-              </button>
-            } @else {
-              <button class="btn btn--danger"
-                nz-popconfirm
-                nzPopconfirmTitle="Xác nhận xoá hợp đồng phòng {{ selected()!.room.roomNumber }}? Hành động này không thể hoàn tác."
-                nzOkText="Xoá" nzCancelText="Huỷ"
-                (nzOnConfirm)="confirmDelete()"
-                [disabled]="saving()">
-                <nz-icon nzType="delete" />
-                Xoá hợp đồng
-              </button>
-            }
+            <button class="btn btn--danger"
+              nz-popconfirm
+              nzPopconfirmTitle="Xác nhận xoá hợp đồng phòng {{ selected()!.room.roomNumber }}? Hành động này không thể hoàn tác."
+              nzOkText="Xoá" nzCancelText="Huỷ"
+              (nzOnConfirm)="confirmDelete()"
+              [disabled]="saving()">
+              <nz-icon nzType="delete" />
+              Xoá hợp đồng
+            </button>
           </div>
         </div>
 
@@ -294,6 +317,8 @@
   [nzMaskClosable]="false" [nzVisible]="createModal()"
   [nzTitle]="previewMode() ? 'Xem trước hợp đồng' : 'Tạo hợp đồng mới'"
   [nzFooter]="null"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnCancel)="closeCreateModal()">
   <ng-template nzModalContent>
 
@@ -374,6 +399,8 @@
 <nz-modal
   [nzMaskClosable]="false" [nzVisible]="editModal()" nzTitle="Chỉnh sửa hợp đồng"
   nzOkText="Lưu" [nzOkLoading]="saving()"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnOk)="submitEdit()" (nzOnCancel)="closeEditModal()">
   <ng-template nzModalContent>
     <div class="form-grid">
@@ -392,6 +419,8 @@
 <nz-modal
   [nzMaskClosable]="false" [nzVisible]="terminateModal()" nzTitle="Cập nhật trạng thái hợp đồng"
   nzOkText="Xác nhận" [nzOkLoading]="saving()"
+  [nzWidth]="layout.isMobile() ? '100vw' : 480"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnOk)="submitTerminate()" (nzOnCancel)="closeTerminateModal()">
   <ng-template nzModalContent>
     <p>

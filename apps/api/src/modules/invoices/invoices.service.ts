@@ -15,12 +15,13 @@ interface InvoiceFilter {
   status?: InvoiceStatus;
   period?: string;
   roomId?: string;
+  contractId?: string;
 }
 
 const INCLUDE_ROOM = { room: { select: { roomNumber: true, floor: true } } };
 
-const ELECTRICITY_PRICE_PER_KWH = 4000;
-const WATER_PRICE_PER_M3        = 15000;
+const ELECTRICITY_PRICE_PER_KWH = 3500;
+const WATER_PRICE_PER_M3        = 30000;
 const TRASH_FEE_PER_ROOM        = 50000;
 const DEFAULT_DUE_DAYS          = 5;
 
@@ -77,7 +78,7 @@ export class InvoicesService {
         continue;
       }
 
-      const utility = await this.utilities.findByRoom(room.roomId);
+      const utility = await this.utilities.findByRoom(room.roomId, dto.period);
       if (!utility.utilityRecord || utility.utilityRecord.billingMonth !== dto.period) {
         skipped.push({ roomId: room.roomId, roomNumber: room.roomNumber, reason: 'Chưa chốt số điện nước cho kỳ này.' });
         continue;
@@ -131,6 +132,39 @@ export class InvoicesService {
     return { created, skipped };
   }
 
+  /** Called when a utility reading is (re)saved for a period. Creates the invoice
+   *  if none exists yet for that period, or recalculates an existing non-PAID one. */
+  async syncInvoiceForPeriod(roomId: string, period: string): Promise<void> {
+    const existing = await this.prisma.invoice.findFirst({ where: { roomId, period } });
+    if (!existing) {
+      await this.generate({ period, roomIds: [roomId] });
+      return;
+    }
+    if (existing.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Hoá đơn kỳ này đã thanh toán, không thể sửa chỉ số điện nước.');
+    }
+
+    const utility = await this.utilities.findByRoom(roomId, period);
+    if (!utility.utilityRecord || utility.utilityRecord.billingMonth !== period) return;
+
+    const { prevElec, currElec, prevWater, currWater } = utility.utilityRecord;
+    const elecUsed           = Math.max(0, currElec - prevElec);
+    const waterUsed          = Math.max(0, currWater - prevWater);
+    const electricityAmount  = Math.round(elecUsed * ELECTRICITY_PRICE_PER_KWH);
+    const waterAmount        = Math.round(waterUsed * WATER_PRICE_PER_M3);
+    const totalAmount        = existing.rentAmount + electricityAmount + waterAmount + existing.otherFees;
+
+    await this.prisma.invoice.update({
+      where: { id: existing.id },
+      data: {
+        prevElec, currElec, prevWater, currWater,
+        electricityAmount, waterAmount, totalAmount,
+        elecUnitPrice:  ELECTRICITY_PRICE_PER_KWH,
+        waterUnitPrice: WATER_PRICE_PER_M3,
+      },
+    });
+  }
+
   async findDueSoon(daysAhead: number): Promise<{ id: string }[]> {
     const target = new Date();
     target.setDate(target.getDate() + daysAhead);
@@ -147,7 +181,7 @@ export class InvoicesService {
 
   async findAll(filter: InvoiceFilter) {
     return this.prisma.invoice.findMany({
-      where:   { status: filter.status, period: filter.period, roomId: filter.roomId },
+      where:   { status: filter.status, period: filter.period, roomId: filter.roomId, contractId: filter.contractId },
       include: INCLUDE_ROOM,
       orderBy: { createdAt: 'desc' },
     });

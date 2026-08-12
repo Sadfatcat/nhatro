@@ -10,6 +10,27 @@ export interface MenuItem {
   divider?:    boolean;
 }
 
+export function canShowNavItem(
+  item: MenuItem,
+  allItems: MenuItem[],
+  opts: { hasPermission: (p: Permission) => boolean; isAdmin: boolean; isTenant: boolean },
+): boolean {
+  if (item.divider) {
+    const idx = allItems.indexOf(item);
+    return allItems.slice(idx + 1).some(next => !next.divider && canShowNavItem(next, allItems, opts));
+  }
+  // Admin holds both home:view and management-home:view via ALL_PERMISSIONS.
+  // The tenant-home entry point for Admin is the in-page toggle on
+  // ManagementHomeComponent, not a second sidebar item.
+  if (item.key === 'home' && opts.isAdmin) return false;
+  // "Hóa đơn của tôi" only makes sense for a tenant's own room — ADMIN/LANDLORD
+  // already have the management list (key 'invoices') and have no single roomId.
+  if (item.key === 'invoices-tenant' && !opts.isTenant) return false;
+  if (!item.permission) return true;
+  const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
+  return perms.every(p => opts.hasPermission(p));
+}
+
 export const NAV_ITEMS: MenuItem[] = [
   {
     key:        'management-home',
@@ -65,6 +86,13 @@ export const NAV_ITEMS: MenuItem[] = [
     label:      'Hóa đơn',
     icon:       'dollar',
     route:      '/app/invoices',
+    permission: 'invoices:manage',
+  },
+  {
+    key:        'invoices-tenant',
+    label:      'Hóa đơn',
+    icon:       'dollar',
+    route:      '/app/invoices/room/:roomId',
     permission: 'invoices:view',
   },
   // {

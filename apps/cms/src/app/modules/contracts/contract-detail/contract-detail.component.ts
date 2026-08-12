@@ -21,6 +21,7 @@ import { ToastService } from '../../../shared/components/feedback/toast/toast.se
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
+import { LayoutService } from '../../../core/services/layout.service';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
@@ -53,6 +54,7 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
 private api       = inject(ApiService);
   private toast     = inject(ToastService);
   private sanitizer = inject(DomSanitizer);
+  layout    = inject(LayoutService);
 
   contract   = signal<ContractRow | null>(null);
   loading    = signal(true);
@@ -69,12 +71,6 @@ private api       = inject(ApiService);
   editModal = signal(false);
   editForm  = { startDate: '', endDate: '', firstBillingDate: 0, lastBillingDate: 0, deposit: 0 };
 
-  // Delete countdown
-  deleteCountdown = signal(10);
-  deleteArmed     = signal(false);
-  deleteCounting  = signal(false);
-  private _countdownId: ReturnType<typeof setInterval> | null = null;
-
   priceFormatter = (v: number) => v ? v.toLocaleString('vi-VN') : '';
   priceParser    = (v: string) => Number(v.replace(/\D/g, ''));
 
@@ -85,7 +81,6 @@ private api       = inject(ApiService);
   }
 
   ngOnDestroy(): void {
-    this.clearCountdown();
     if (this._blobUrl) { URL.revokeObjectURL(this._blobUrl); this._blobUrl = null; }
   }
 
@@ -161,26 +156,10 @@ private api       = inject(ApiService);
       });
   }
 
-  // ── Delete countdown ────────────────────────────────────────────────────────
-  startDeleteCountdown(): void {
-    this.clearCountdown();
-    this.deleteCountdown.set(10);
-    this.deleteArmed.set(false);
-    this.deleteCounting.set(true);
-    this._countdownId = setInterval(() => {
-      const curr = this.deleteCountdown();
-      if (curr <= 1) { this.clearCountdown(); this.deleteArmed.set(true); this.deleteCounting.set(false); }
-      else this.deleteCountdown.set(curr - 1);
-    }, 1000);
-  }
-
-  private clearCountdown(): void {
-    if (this._countdownId !== null) { clearInterval(this._countdownId); this._countdownId = null; }
-  }
-
+  // ── Delete ──────────────────────────────────────────────────────────────────
   confirmDelete(): void {
     const id = this.contract()?.id;
-    if (!id || !this.deleteArmed()) return;
+    if (!id) return;
     this.saving.set(true);
     this.api.delete<ApiResponse<unknown>>(`/contracts/${id}`)
       .pipe(finalize(() => this.saving.set(false)))

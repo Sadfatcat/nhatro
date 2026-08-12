@@ -13,6 +13,15 @@
     "test": "npm run test --workspace @nhatro/cms",
     "cms:start": "npm run start --workspace @nhatro/cms",
     "cms:build": "npm run build --workspace @nhatro/cms",
-    "cms:test": "npm run test --workspace @nhatro/cms"
+    "cms:test": "npm run test --workspace @nhatro/cms",
+    "api:test": "jest -c .test/jest.config.js"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.29",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^7.2.1",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.12"
   }
 }

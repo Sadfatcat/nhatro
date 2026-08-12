@@ -12,6 +12,25 @@
   margin:         0 auto;
 }
 
+// ─── Status tabs ──────────────────────────────────────────────────────────────
+.table-container ::ng-deep .ant-tabs-nav {
+  margin: 0;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+// ─── Empty state (management list) ────────────────────────────────────────────
+.list-empty {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             10px;
+  padding:         48px 16px;
+  color:           var(--color-text-muted);
+  font-size:       14px;
+}
+
 // ─── Filter bar ───────────────────────────────────────────────────────────────
 .filter-bar {
   @include flex-between;
@@ -271,4 +290,77 @@
 // ─── Print ────────────────────────────────────────────────────────────────────
 @media print {
   .contracts-page > *:not(.tenant-contract-wrapper) { display: none !important; }
+}
+
+// ─── Mobile ───────────────────────────────────────────────────────────────────
+@media (max-width: 767.98px) {
+  .contracts-page { padding: 12px; }
+  .filter-bar { padding: 12px; }
+  .filter-bar__left > * { width: 100%; }
+
+  // Tabs must scroll inside their own strip, never widen the page
+  .table-container ::ng-deep .ant-tabs-nav { padding: 0 12px; }
+  .table-container ::ng-deep .ant-tabs-tab { font-size: 13px; }
+  .list-empty { padding: 32px 12px; }
+
+  .detail-modal__cols { grid-template-columns: 1fr; }
+  .detail-modal__footer { flex-direction: column; align-items: stretch; }
+  .detail-modal__footer-left { flex-wrap: wrap; }
+
+  .pdf-frame { height: 320px; }
+
+  .contract-card__actions {
+    flex-wrap: wrap;
+    gap: 8px;
+
+    button {
+      height: 32px;
+      font-size: 13px;
+      padding: 0 12px;
+    }
+  }
+}
+
+.contract-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.contract-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  background: var(--color-bg-card);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+
+  &__meta {
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+
+    button { flex: 1; min-height: $touch-target; }
+  }
 }

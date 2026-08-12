@@ -12,6 +12,8 @@ export class RoomsService {
   ) {}
 
   async findAll() {
+    await this.reconcileOccupiedStatus();
+
     const rooms = await this.prisma.room.findMany({
       orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
       include: {
@@ -45,6 +47,15 @@ export class RoomsService {
           username:  usernameByRoomId.get(r.id) ?? null,
         } : null,
       };
+    });
+  }
+
+  /** Phòng đang đánh dấu OCCUPIED nhưng không còn hợp đồng ACTIVE nào (hợp đồng hết hạn/bị
+   *  huỷ ngoài luồng update() bình thường) — tự chuyển về AVAILABLE để tránh lệch trạng thái. */
+  private async reconcileOccupiedStatus(): Promise<void> {
+    await this.prisma.room.updateMany({
+      where: { status: 'OCCUPIED', contracts: { none: { status: 'ACTIVE' } } },
+      data:  { status: 'AVAILABLE' },
     });
   }
 

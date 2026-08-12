@@ -14,6 +14,7 @@ import { finalize } from 'rxjs';
 
 import { ApiService } from '../../core/services/api.service';
 import { RoomWithUtility } from '@nhatro/shared-types';
+import { LayoutService } from '../../core/services/layout.service';
 
 Chart.register(
   DoughnutController, ArcElement,
@@ -36,6 +37,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   @ViewChild('roomStatusChart') donutRef!:       ElementRef<HTMLCanvasElement>;
 
   private api = inject(ApiService);
+  layout = inject(LayoutService);
 
   readonly today = new Date();
 
@@ -86,6 +88,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.buildIncomeChart();
     this.buildDonutChart();
+    // Chart.js can capture a stale container width when the mobile app-shell
+    // layout (100dvh flex + internal scroll) settles a frame after view init.
+    requestAnimationFrame(() => {
+      this.incomeChart?.resize();
+      this.donutChart?.resize();
+    });
   }
 
   onChartModeChange(): void { this.buildIncomeChart(); }
@@ -105,9 +113,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: this.layout.isMobile() ? 20 : 0 } },
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 12 }, usePointStyle: true } },
+          legend: { display: !this.layout.isMobile(), position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 12 }, usePointStyle: true } },
           tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${(+(ctx.raw as number) / 1_000_000).toFixed(2)}tr đ` } },
         },
         scales: {

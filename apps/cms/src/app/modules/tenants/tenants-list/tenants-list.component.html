@@ -10,7 +10,7 @@
     <div class="page-header">
       <div>
         <h1>Người thuê</h1>
-        <p>Thông tin cá nhân người thuê, tách riêng khỏi tài khoản phòng.</p>
+        <p class="page-header__date">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
       </div>
       <div class="tenants__header-actions">
         <button
@@ -43,7 +43,36 @@
       <app-data-table
         [config]="tableConfig"
         [cellTemplates]="cellTemplates"
-      />
+      >
+        <ng-template #mobileCard let-row>
+          <div class="tenant-card">
+            <div class="tenant-card__header">
+              <strong>{{ row.fullName }}</strong>
+              <span>{{ row.phone ?? '—' }}</span>
+            </div>
+            <div class="tenant-card__body">
+              @if (row.roomNumber) {
+                <span>{{ row.roomNumber }}</span>
+              } @else {
+                <span class="tenants__no-room">Không thuê phòng</span>
+              }
+              @if (row.price !== null) {
+                <app-money-display [value]="row.price" />
+              } @else {
+                <span class="tenants__no-room">—</span>
+              }
+            </div>
+            <div class="tenant-card__actions">
+              <button nz-button nzType="default" *appPermission="'tenants:update'" (click)="openEdit(row)">
+                <span nz-icon nzType="edit"></span> Cập nhật
+              </button>
+              <button nz-button nzType="default" nzDanger *appPermission="'tenants:delete'" (click)="openDelete(row)">
+                <span nz-icon nzType="delete"></span> Xoá
+              </button>
+            </div>
+          </div>
+        </ng-template>
+      </app-data-table>
     </div>
   </div>
 

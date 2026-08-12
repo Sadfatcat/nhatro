@@ -112,3 +112,53 @@
 .cell-muted { color: var(--color-text-muted); font-size: 13px; }
 
 .actions { text-align: right; white-space: nowrap; }
+
+@media (max-width: 767.98px) {
+  .accounts-page { padding: 12px; }
+  .filter-bar { padding: 12px; }
+}
+
+.account-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.account-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  background: var(--color-bg-card);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+
+  &__meta {
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 4px;
+
+    button { min-height: $touch-target; }
+  }
+}

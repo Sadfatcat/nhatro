@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
+import { PermissionService } from '../../../core/permission/services/permission.service';
 import { DataTableComponent } from '../../../shared/components/display/data-table/data-table.component';
 import { TableConfig } from '../../../shared/components/display/data-table/data-table.model';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
@@ -51,12 +52,14 @@ export class InvoiceRoomHistoryComponent implements OnInit {
   @ViewChild('amountTpl', { static: true }) amountTpl!: TemplateRef<unknown>;
   @ViewChild('dueDateTpl', { static: true }) dueDateTpl!: TemplateRef<unknown>;
 
-  private route  = inject(ActivatedRoute);
-  private router = inject(Router);
-  private api    = inject(ApiService);
-  private toast  = inject(ToastService);
+  private route       = inject(ActivatedRoute);
+  private router      = inject(Router);
+  private api         = inject(ApiService);
+  private toast       = inject(ToastService);
+  private permissions = inject(PermissionService);
 
   private roomId = '';
+  canManage = this.permissions.hasPermission('invoices:manage');
 
   loading = signal(false);
   saving  = signal(false);
@@ -91,13 +94,10 @@ export class InvoiceRoomHistoryComponent implements OnInit {
 
   loadData(roomId: string): void {
     this.loading.set(true);
-    forkJoin({
-      rooms:    this.api.get<ApiResponse<{ roomId: string; roomNumber: string }[]>>('/rooms'),
-      invoices: this.api.get<ApiResponse<(Invoice & { room: { roomNumber: string } })[]>>('/invoices', { roomId }),
-    }).pipe(finalize(() => this.loading.set(false)))
-      .subscribe(({ rooms, invoices }) => {
-        const room = rooms.data?.find(r => r.roomId === roomId);
-        this.roomNumber.set(room?.roomNumber ?? invoices.data?.[0]?.room.roomNumber ?? '');
+    this.api.get<ApiResponse<(Invoice & { room: { roomNumber: string } })[]>>('/invoices', { roomId })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe(invoices => {
+        this.roomNumber.set(invoices.data?.[0]?.room.roomNumber ?? '');
 
         this.items.set((invoices.data ?? [])
           .map(inv => ({

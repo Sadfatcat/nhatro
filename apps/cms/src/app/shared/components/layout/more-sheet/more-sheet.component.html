@@ -1,0 +1,26 @@
+<nz-drawer
+  [nzVisible]="visible"
+  nzPlacement="bottom"
+  nzHeight="auto"
+  nzTitle="Thêm"
+  [nzClosable]="true"
+  (nzOnClose)="close()"
+>
+  <ng-container *nzDrawerContent>
+    <div class="more-sheet-list">
+      @for (item of items; track item.key) {
+        @if (!item.divider) {
+          <a
+            class="more-sheet-item"
+            [class.active]="isActive(item.route)"
+            [href]="item.route"
+            (click)="onNavigate(item.route); $event.preventDefault()"
+          >
+            @if (item.icon) { <nz-icon [nzType]="item.icon" class="more-sheet-icon" /> }
+            <span class="more-sheet-label">{{ item.label }}</span>
+          </a>
+        }
+      }
+    </div>
+  </ng-container>
+</nz-drawer>

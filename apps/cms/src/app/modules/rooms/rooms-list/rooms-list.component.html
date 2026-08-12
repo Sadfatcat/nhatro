@@ -10,6 +10,7 @@
     <div class="page-header">
       <div>
         <h1>Phòng trọ</h1>
+        <p class="page-header__date">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
         <p>Quản lý toàn bộ phòng trong hệ thống.</p>
       </div>
       <div class="rooms__header-actions">
@@ -75,45 +76,71 @@
     </div>
 
     <div class="rooms__table">
-      <nz-table
-        #table
-        [nzData]="pagedItems()"
-        [nzShowPagination]="false"
-        [nzLoading]="loading()"
-        nzSize="middle"
-      >
-        <thead>
-          <tr>
-            <th>Số phòng</th>
-            <th>Tầng</th>
-            <th>Giá thuê</th>
-            <th>Trạng thái</th>
-            <th>Người thuê</th>
-            <th *appPermission="'rooms:update'">Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of table.data; track row.roomId; let i = $index) {
-            <tr class="stagger-item" [style.--stagger-i]="i">
-              <td><strong>{{ row.roomNumber }}</strong></td>
-              <td>Tầng {{ row.floor }}</td>
-              <td><app-money-display [value]="row.price" /></td>
-              <td><app-status-badge [status]="row.status" /></td>
-              <td>{{ row.tenant?.fullName ?? '—' }}</td>
-              <td *appPermission="'rooms:update'">
-                <div class="rooms__actions">
-                  <button nz-button nzType="text" nzSize="small" (click)="openEdit(row)">
-                    <span nz-icon nzType="edit"></span>
-                  </button>
-                  <button nz-button nzType="text" nzSize="small" (click)="openPasswordModal(row)" nz-tooltip nzTooltipTitle="Đổi mật khẩu phòng">
-                    <span nz-icon nzType="lock"></span>
-                  </button>
-                </div>
-              </td>
-            </tr>
+      @if (layout.isMobile()) {
+        <div class="rooms__cards">
+          @for (row of pagedItems(); track row.roomId) {
+            <div class="room-card">
+              <div class="room-card__header">
+                <strong class="room-card__number">{{ row.roomNumber }}</strong>
+                <app-status-badge [status]="row.status" />
+              </div>
+              <div class="room-card__body">
+                <span>Tầng {{ row.floor }}</span>
+                <app-money-display [value]="row.price" />
+              </div>
+              <div class="room-card__tenant">{{ row.tenant?.fullName ?? 'Chưa có người thuê' }}</div>
+              <div class="room-card__actions" *appPermission="'rooms:update'">
+                <button nz-button nzType="default" (click)="openEdit(row)">
+                  <span nz-icon nzType="edit"></span> Sửa
+                </button>
+                <button nz-button nzType="default" (click)="openPasswordModal(row)">
+                  <span nz-icon nzType="lock"></span> Đổi mật khẩu
+                </button>
+              </div>
+            </div>
           }
-        </tbody>
-      </nz-table>
+        </div>
+      } @else {
+        <nz-table
+          #table
+          [nzData]="pagedItems()"
+          [nzShowPagination]="false"
+          [nzLoading]="loading()"
+          nzSize="middle"
+        >
+          <thead>
+            <tr>
+              <th>Số phòng</th>
+              <th>Tầng</th>
+              <th>Giá thuê</th>
+              <th>Trạng thái</th>
+              <th>Người thuê</th>
+              <th *appPermission="'rooms:update'">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of table.data; track row.roomId; let i = $index) {
+              <tr class="stagger-item" [style.--stagger-i]="i">
+                <td><strong>{{ row.roomNumber }}</strong></td>
+                <td>Tầng {{ row.floor }}</td>
+                <td><app-money-display [value]="row.price" /></td>
+                <td><app-status-badge [status]="row.status" /></td>
+                <td>{{ row.tenant?.fullName ?? '—' }}</td>
+                <td *appPermission="'rooms:update'">
+                  <div class="rooms__actions">
+                    <button nz-button nzType="text" nzSize="small" (click)="openEdit(row)">
+                      <span nz-icon nzType="edit"></span>
+                    </button>
+                    <button nz-button nzType="text" nzSize="small" (click)="openPasswordModal(row)" nz-tooltip nzTooltipTitle="Đổi mật khẩu phòng">
+                      <span nz-icon nzType="lock"></span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
 
       @if (!loading() && filteredItems().length === 0) {
         <app-empty-state title="Không có phòng nào" description="Thử thay đổi bộ lọc hoặc thêm phòng mới." />
@@ -140,6 +167,8 @@
   [nzVisible]="showCreateModal()"
   nzTitle="Thêm phòng mới"
   [nzFooter]="null"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnCancel)="showCreateModal.set(false)"
 >
   <ng-container *nzModalContent>
@@ -158,6 +187,8 @@
   [nzVisible]="showEditModal()"
   nzTitle="Chỉnh sửa phòng {{ selectedItem()?.roomNumber }}"
   [nzFooter]="null"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnCancel)="showEditModal.set(false)"
 >
   <ng-container *nzModalContent>
@@ -178,6 +209,8 @@
   nzTitle="Đổi mật khẩu phòng {{ selectedItem()?.roomNumber }}"
   nzOkText="Đổi mật khẩu"
   [nzOkLoading]="saving()"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnOk)="confirmChangePassword()"
   (nzOnCancel)="closePasswordModal()"
 >
@@ -197,6 +230,8 @@
   nzOkText="Cung cấp phòng"
   [nzOkDisabled]="!assignRoomId() || !assignTenantId()"
   [nzOkLoading]="saving()"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520"
+  [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnOk)="confirmAssignRoom()"
   (nzOnCancel)="closeAssignModal()"
 >

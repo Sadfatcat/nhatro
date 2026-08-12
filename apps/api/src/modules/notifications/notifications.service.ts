@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationPayload, NotificationProvider, NotificationTemplateKey } from './providers/notification-provider.interface';
 import { EmailProvider } from './providers/email.provider';
-import { ZaloProvider } from './providers/zalo.provider';
 
 const INCLUDE_TENANT = {
   room:     { select: { roomNumber: true } },
@@ -18,7 +17,6 @@ export class NotificationsService {
     private readonly config:        ConfigService,
     private readonly prisma:        PrismaService,
     private readonly emailProvider: EmailProvider,
-    private readonly zaloProvider:  ZaloProvider,
   ) {}
 
   async sendForInvoice(invoiceId: string, templateKey: NotificationTemplateKey): Promise<{ success: boolean; reason?: string }> {
@@ -61,7 +59,6 @@ export class NotificationsService {
 
   private resolveProvider(name: string | undefined): NotificationProvider | null {
     if (name === 'email') return this.emailProvider;
-    if (name === 'zalo') return this.zaloProvider;
     return null;
   }
 

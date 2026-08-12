@@ -11,6 +11,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../shared/components/feedback/toast/toast.service';
+import { LayoutService } from '../../core/services/layout.service';
 
 interface LandlordRow {
   userId:     string;
@@ -40,6 +41,7 @@ interface AccountsResponse { landlords: LandlordRow[]; }
 export class AccountsComponent implements OnInit {
   private api   = inject(ApiService);
   private toast = inject(ToastService);
+  layout = inject(LayoutService);
 
   loading   = signal(false);
   saving    = signal(false);

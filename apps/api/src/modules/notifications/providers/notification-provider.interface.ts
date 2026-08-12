@@ -5,7 +5,7 @@ export type NotificationTemplateKey =
   | 'invoice-paid';
 
 export interface NotificationPayload {
-  to: { email?: string; phone?: string; zaloUserId?: string };
+  to: { email?: string };
   templateKey: NotificationTemplateKey;
   data: Record<string, string | number>;
 }

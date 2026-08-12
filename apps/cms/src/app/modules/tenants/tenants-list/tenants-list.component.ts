@@ -15,6 +15,7 @@ import { MoneyDisplayComponent } from '../../../shared/components/display/money-
 import { FormBuilderComponent } from '../../../shared/components/form/form-builder/form-builder.component';
 import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
+import { PermissionService } from '../../../core/permission/services/permission.service';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
@@ -54,8 +55,11 @@ export class TenantsListComponent implements OnInit {
   @ViewChild('roomTpl',  { static: true }) roomTpl!:  TemplateRef<unknown>;
   @ViewChild('priceTpl', { static: true }) priceTpl!: TemplateRef<unknown>;
 
-  private api   = inject(ApiService);
-  private toast = inject(ToastService);
+  private api         = inject(ApiService);
+  private toast       = inject(ToastService);
+  private permissions = inject(PermissionService);
+
+  readonly today = new Date();
 
   loading      = signal(false);
   saving       = signal(false);
@@ -131,8 +135,8 @@ export class TenantsListComponent implements OnInit {
 
   get rowActions(): TableAction<TenantRow>[] {
     return [
-      { label: 'Cập nhật', icon: 'edit',   action: row => this.openEdit(row) },
-      { label: 'Xoá',      icon: 'delete', color: 'danger', action: row => this.openDelete(row) },
+      { label: 'Cập nhật', icon: 'edit',   visible: () => this.permissions.hasPermission('tenants:update'), action: row => this.openEdit(row) },
+      { label: 'Xoá',      icon: 'delete', color: 'danger', visible: () => this.permissions.hasPermission('tenants:delete'), action: row => this.openDelete(row) },
     ];
   }
 

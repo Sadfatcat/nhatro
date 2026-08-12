@@ -10,7 +10,7 @@ import { finalize } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { UserRole } from '../../../core/auth/auth.types';
-import { RoomWithUtility, Invoice } from '@nhatro/shared-types';
+import { RoomWithUtility, Invoice, UtilityHistoryPoint } from '@nhatro/shared-types';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 
@@ -52,12 +52,12 @@ export class TenantHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   elecPrev   = computed(() => this.utilityRecord()?.prevElec  ?? 0);
   elecCurr   = computed(() => this.utilityRecord()?.currElec  ?? 0);
   elecUsed   = computed(() => Math.max(0, this.elecCurr() - this.elecPrev()));
-  elecAmount  = computed(() => this.elecUsed() * 4000);
+  elecAmount  = computed(() => this.elecUsed() * 3500);
 
   waterPrev  = computed(() => this.utilityRecord()?.prevWater ?? 0);
   waterCurr  = computed(() => this.utilityRecord()?.currWater ?? 0);
   waterUsed  = computed(() => Math.max(0, this.waterCurr() - this.waterPrev()));
-  waterAmount = computed(() => this.waterUsed() * 15000);
+  waterAmount = computed(() => this.waterUsed() * 30000);
 
   lastUpdated = computed(() =>
     this.utilityRecord()?.recordedAt ? new Date(this.utilityRecord()!.recordedAt) : null
@@ -85,23 +85,29 @@ export class TenantHomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => { if (res.success && res.data) this.roomData.set(res.data); });
     this.loadInvoices();
+    this.loadHistory();
+  }
+
+  private loadHistory(): void {
+    this.api.get<ApiResponse<UtilityHistoryPoint[]>>(`/utilities/${this.roomId}/history`, { months: 6 })
+      .subscribe(res => { if (res.success && res.data) this.applyHistory(res.data); });
   }
 
   private elecChartInstance:  Chart | null = null;
   private waterChartInstance: Chart | null = null;
 
   ngAfterViewInit(): void {
-    const labels = this.monthLabels();
-    const empty  = Array(6).fill(0);
+    const empty = Array(6).fill(0);
 
     this.elecChartInstance = new Chart(this.elecChartRef.nativeElement, {
       type: 'bar',
       data: {
-        labels,
-        datasets: [{ label: 'kWh', data: empty, backgroundColor: empty.map((_, i) => i === 5 ? '#16898F' : 'rgba(22,137,143,0.25)'), borderRadius: 6, borderSkipped: false }],
+        labels: empty.map(() => ''),
+        datasets: [{ label: 'kWh', data: empty, backgroundColor: 'rgba(22,137,143,0.25)', borderRadius: 6, borderSkipped: false }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 28 } },
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} kWh` } } },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
@@ -110,26 +116,48 @@ export class TenantHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.waterChartInstance = new Chart(this.waterChartRef.nativeElement, {
       type: 'bar',
       data: {
-        labels,
-        datasets: [{ label: 'm³', data: empty, backgroundColor: empty.map((_, i) => i === 5 ? '#435f72' : 'rgba(67,95,114,0.25)'), borderRadius: 6, borderSkipped: false }],
+        labels: empty.map(() => ''),
+        datasets: [{ label: 'm³', data: empty, backgroundColor: 'rgba(67,95,114,0.25)', borderRadius: 6, borderSkipped: false }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 28 } },
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} m³` } } },
         scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
       },
     });
+
+    // Chart.js's ResizeObserver can capture a stale container width when the
+    // mobile app-shell layout (100dvh flex + internal scroll) settles a frame
+    // after view init — force a resize once layout is final.
+    requestAnimationFrame(() => {
+      this.elecChartInstance?.resize();
+      this.waterChartInstance?.resize();
+    });
+  }
+
+  private applyHistory(history: UtilityHistoryPoint[]): void {
+    const labels  = history.map(h => `T${Number(h.billingMonth.split('-')[1])}`);
+    const lastIdx = history.length - 1;
+
+    if (this.elecChartInstance) {
+      this.elecChartInstance.data.labels = labels;
+      this.elecChartInstance.data.datasets[0].data = history.map(h => h.elecUsed);
+      this.elecChartInstance.data.datasets[0].backgroundColor =
+        history.map((_, i) => i === lastIdx ? '#16898F' : 'rgba(22,137,143,0.25)');
+      this.elecChartInstance.update();
+    }
+    if (this.waterChartInstance) {
+      this.waterChartInstance.data.labels = labels;
+      this.waterChartInstance.data.datasets[0].data = history.map(h => h.waterUsed);
+      this.waterChartInstance.data.datasets[0].backgroundColor =
+        history.map((_, i) => i === lastIdx ? '#435f72' : 'rgba(67,95,114,0.25)');
+      this.waterChartInstance.update();
+    }
   }
 
   ngOnDestroy(): void {
     this.elecChartInstance?.destroy();
     this.waterChartInstance?.destroy();
-  }
-
-  private monthLabels(): string[] {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
-      return `T${d.getMonth() + 1}`;
-    });
   }
 }

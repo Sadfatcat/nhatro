@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "node set-lan-ip.js && ng serve --host 0.0.0.0",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -31,7 +31,9 @@
     "@angular/build": "^21.2.11",
     "@angular/cli": "^21.2.11",
     "@angular/compiler-cli": "^21.2.0",
+    "jsdom": "^30.0.1",
     "prettier": "^3.8.1",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.10"
   }
 }

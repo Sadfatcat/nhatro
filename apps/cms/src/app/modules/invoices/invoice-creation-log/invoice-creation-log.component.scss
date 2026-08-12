@@ -6,3 +6,33 @@
   border-radius: $radius-lg;
   overflow: hidden;
 }
+
+.invoice-log-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-md;
+  background: var(--color-bg-card);
+  cursor: pointer;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__dates {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+}

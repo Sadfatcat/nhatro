@@ -150,26 +150,16 @@
 
             <div class="action-divider"></div>
 
-            <!-- Delete: click-to-start -->
+            <!-- Delete -->
             <div *appPermission="'contracts:delete'">
-              @if (!deleteCounting() && !deleteArmed()) {
-                <button class="btn btn--danger action-btn" (click)="startDeleteCountdown()">
-                  <nz-icon nzType="delete" /> Xoá hợp đồng
-                </button>
-              } @else if (deleteCounting()) {
-                <button class="btn btn--danger-outline action-btn" disabled>
-                  <nz-icon nzType="loading" nzSpin /> Xoá ({{ deleteCountdown() }}s)...
-                </button>
-              } @else {
-                <button class="btn btn--danger action-btn"
-                  nz-popconfirm
-                  nzPopconfirmTitle="Xác nhận xoá hợp đồng phòng {{ contract()!.room.roomNumber }}? Hành động này không thể hoàn tác."
-                  nzOkText="Xoá" nzCancelText="Huỷ"
-                  (nzOnConfirm)="confirmDelete()"
-                  [disabled]="saving()">
-                  <nz-icon nzType="delete" /> Xác nhận xoá
-                </button>
-              }
+              <button class="btn btn--danger action-btn"
+                nz-popconfirm
+                nzPopconfirmTitle="Xác nhận xoá hợp đồng phòng {{ contract()!.room.roomNumber }}? Hành động này không thể hoàn tác."
+                nzOkText="Xoá" nzCancelText="Huỷ"
+                (nzOnConfirm)="confirmDelete()"
+                [disabled]="saving()">
+                <nz-icon nzType="delete" /> Xoá hợp đồng
+              </button>
             </div>
 
           </div>
@@ -187,6 +177,7 @@
 <nz-modal
   [nzMaskClosable]="false" [nzVisible]="editModal()" nzTitle="Cập nhật hợp đồng"
   nzOkText="Lưu & Tạo lại PDF" [nzOkLoading]="saving()"
+  [nzWidth]="layout.isMobile() ? '100vw' : 520" [nzClassName]="layout.isMobile() ? 'fullscreen' : ''"
   (nzOnOk)="submitEdit()" (nzOnCancel)="editModal.set(false)">
   <ng-template nzModalContent>
     <div class="form-grid">

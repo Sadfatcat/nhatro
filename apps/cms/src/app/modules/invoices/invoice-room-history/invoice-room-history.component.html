@@ -3,8 +3,10 @@
   <!-- Page Header Container -->
   <div class="page-header-container">
     <nav class="breadcrumb">
-      <a class="crumb-link" (click)="goBack()">Theo ngày chốt</a>
-      <span>/</span>
+      @if (canManage) {
+        <a class="crumb-link" (click)="goBack()">Theo ngày chốt</a>
+        <span>/</span>
+      }
       <span class="crumb-active">Phòng {{ roomNumber() }}</span>
     </nav>
     <div class="page-header">

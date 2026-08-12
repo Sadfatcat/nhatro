@@ -1,6 +1,8 @@
-<nz-layout class="main-layout">
+<nz-layout class="main-layout" [class.is-mobile]="layout.isMobile()">
+  <app-offline-banner />
   <app-topbar (toggleSidebar)="toggleSidebar()" />
 
+  @if (!layout.isMobile()) {
   <aside class="app-sidebar" [class.collapsed]="collapsed()">
     <div class="sidebar-logo">
       @if (!collapsed()) {
@@ -60,12 +62,19 @@
       </div>
     }
   </aside>
+  }
 
-  <nz-layout class="content-layout" [class.collapsed]="collapsed()">
+  <nz-layout class="content-layout" [class.collapsed]="collapsed() && !layout.isMobile()" [class.is-mobile]="layout.isMobile()">
     <nz-content class="page-content">
       <router-outlet></router-outlet>
     </nz-content>
 
-    <app-footer />
+    @if (!layout.isMobile()) {
+      <app-footer />
+    }
   </nz-layout>
+
+  @if (layout.isMobile()) {
+    <app-bottom-nav />
+  }
 </nz-layout>

@@ -20,6 +20,7 @@ import { FormBuilderComponent } from '../../../shared/components/form/form-build
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
 import { RoomStatus } from '@nhatro/shared-types';
+import { LayoutService } from '../../../core/services/layout.service';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
@@ -64,10 +65,13 @@ export class RoomsListComponent implements OnInit {
   private toast = inject(ToastService);
   private route  = inject(ActivatedRoute);
   private router = inject(Router);
+  layout = inject(LayoutService);
 
   readonly PAGE_SIZE = PAGE_SIZE;
 
   // State
+  readonly today = new Date();
+
   loading = signal(false);
   saving  = signal(false);
   items   = signal<RoomRow[]>([]);

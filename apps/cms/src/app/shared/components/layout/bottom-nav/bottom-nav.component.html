@@ -1,0 +1,28 @@
+<nav class="bottom-nav">
+  @for (item of primaryItems(); track item.key) {
+    <a
+      class="bottom-nav-item"
+      [class.active]="isActive(item.route)"
+      [href]="item.route"
+      (click)="navigate(item.route); $event.preventDefault()"
+    >
+      @if (item.icon) { <nz-icon [nzType]="item.icon" class="bottom-nav-icon" /> }
+      <span class="bottom-nav-label">{{ item.label }}</span>
+    </a>
+  }
+
+  @if (moreItems().length > 0) {
+    <button type="button" class="bottom-nav-item bottom-nav-more" [class.active]="isMoreActive()" (click)="openMore()">
+      <nz-icon nzType="ellipsis" class="bottom-nav-icon" />
+      <span class="bottom-nav-label">Thêm</span>
+    </button>
+  }
+</nav>
+
+<app-more-sheet
+  [items]="moreItems()"
+  [visible]="moreOpen()"
+  [isActive]="isActive"
+  (visibleChange)="moreOpen.set($event)"
+  (navigate)="navigate($event)"
+/>

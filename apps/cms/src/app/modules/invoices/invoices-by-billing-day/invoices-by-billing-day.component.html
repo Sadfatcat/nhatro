@@ -23,7 +23,40 @@
       [cellTemplates]="cellTemplates"
       (selectChange)="onSelectChange15($event)"
       (rowClick)="onRowClick($event)"
-    />
+    >
+      <ng-template #mobileCard let-row let-selected="selected" let-toggle="toggle">
+        <div class="billing-day-card">
+          <div class="billing-day-card__header">
+            <label nz-checkbox [ngModel]="selected" (ngModelChange)="toggle()" (click)="$event.stopPropagation()"></label>
+            <strong (click)="onRowClick(row)">Phòng {{ row.roomNumber }}</strong>
+            @if (row.invoiceStatus) {
+              <app-status-badge [status]="row.invoiceStatus" />
+            } @else {
+              <span class="billing-day__no-invoice">Chưa sinh hoá đơn</span>
+            }
+          </div>
+          <div class="billing-day-card__body" (click)="onRowClick(row)">
+            <span>{{ row.tenantName }}</span>
+            @if (row.totalAmount !== null) {
+              <app-money-display [value]="row.totalAmount" />
+            } @else {
+              <span class="billing-day__no-invoice">—</span>
+            }
+          </div>
+          <div class="billing-day-card__footer">
+            <span>Hạn: {{ row.dueDate ? (row.dueDate | date:'dd/MM/yyyy') : '—' }}</span>
+            <button
+              *appPermission="'invoices:notify'"
+              nz-button nzType="default"
+              [disabled]="!row.invoiceId"
+              (click)="sendOne(row)"
+            >
+              <span nz-icon nzType="mail"></span> Gửi thông báo
+            </button>
+          </div>
+        </div>
+      </ng-template>
+    </app-data-table>
   </div>
 
   <!-- Column: Ngày 30 -->
@@ -47,7 +80,40 @@
       [cellTemplates]="cellTemplates"
       (selectChange)="onSelectChange30($event)"
       (rowClick)="onRowClick($event)"
-    />
+    >
+      <ng-template #mobileCard let-row let-selected="selected" let-toggle="toggle">
+        <div class="billing-day-card">
+          <div class="billing-day-card__header">
+            <label nz-checkbox [ngModel]="selected" (ngModelChange)="toggle()" (click)="$event.stopPropagation()"></label>
+            <strong (click)="onRowClick(row)">Phòng {{ row.roomNumber }}</strong>
+            @if (row.invoiceStatus) {
+              <app-status-badge [status]="row.invoiceStatus" />
+            } @else {
+              <span class="billing-day__no-invoice">Chưa sinh hoá đơn</span>
+            }
+          </div>
+          <div class="billing-day-card__body" (click)="onRowClick(row)">
+            <span>{{ row.tenantName }}</span>
+            @if (row.totalAmount !== null) {
+              <app-money-display [value]="row.totalAmount" />
+            } @else {
+              <span class="billing-day__no-invoice">—</span>
+            }
+          </div>
+          <div class="billing-day-card__footer">
+            <span>Hạn: {{ row.dueDate ? (row.dueDate | date:'dd/MM/yyyy') : '—' }}</span>
+            <button
+              *appPermission="'invoices:notify'"
+              nz-button nzType="default"
+              [disabled]="!row.invoiceId"
+              (click)="sendOne(row)"
+            >
+              <span nz-icon nzType="mail"></span> Gửi thông báo
+            </button>
+          </div>
+        </div>
+      </ng-template>
+    </app-data-table>
   </div>
 
 </div>

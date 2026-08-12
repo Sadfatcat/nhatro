@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, OnInit, TemplateRef, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { finalize, forkJoin } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
@@ -40,8 +42,8 @@ function currentPeriod(): string {
   styleUrls:       ['./invoices-by-billing-day.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
-    NzButtonModule, NzIconModule,
+    CommonModule, FormsModule,
+    NzButtonModule, NzIconModule, NzCheckboxModule,
     DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent, PermissionDirective,
   ],
 })

@@ -17,3 +17,7 @@
   cursor: help;
   font-size: $font-size-sm;
 }
+
+@media (max-width: 767.98px) {
+  nz-col { flex: 0 0 100% !important; max-width: 100% !important; }
+}

@@ -164,3 +164,58 @@
   opacity: .5;
   cursor: not-allowed;
 }
+
+// ── Mobile (≤767.98px, e.g. iPhone 13 @390×844) ─────────────────────────────
+@media (max-width: 767.98px) {
+  .detail-page {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .breadcrumb { font-size: 12px; }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+
+    &__left {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+
+      h1 { font-size: 17px; }
+      p  { font-size: 12px; }
+    }
+  }
+
+  // Single column: PDF card stays first (primary purpose of this screen),
+  // info + actions cards stack below — never a fixed side column forcing overflow.
+  .detail-body {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .col-card__header { padding: 10px 14px; }
+  .col-card__body   { padding: 14px; }
+
+  // dvh instead of vh — iOS Safari's collapsing toolbar resizes the vh unit while
+  // scrolling, which visibly shifts the PDF frame's height mid-scroll. dvh tracks
+  // the *current* visible viewport instead, so the frame no longer jumps.
+  .pdf-frame {
+    height: 60vh;
+    height: 60dvh;
+  }
+
+  .pdf-loading, .pdf-fallback { padding: 40px 16px; min-height: 200px; }
+
+  .action-btn { height: 40px; font-size: 14px; }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 4px 0;
+
+    label { margin-top: 8px; }
+  }
+}

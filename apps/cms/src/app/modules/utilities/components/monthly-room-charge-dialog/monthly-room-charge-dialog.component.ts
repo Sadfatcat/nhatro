@@ -62,8 +62,8 @@ export class MonthlyRoomChargeDialogComponent implements OnChanges {
     newElectricity:       [0, [Validators.required, Validators.min(0)]],
     oldWater:             [0, [Validators.required, Validators.min(0)]],
     newWater:             [0, [Validators.required, Validators.min(0)]],
-    electricityUnitPrice: [4000, [Validators.required, Validators.min(1)]],
-    waterUnitPrice:       [15000, [Validators.required, Validators.min(1)]],
+    electricityUnitPrice: [3500, [Validators.required, Validators.min(1)]],
+    waterUnitPrice:       [30000, [Validators.required, Validators.min(1)]],
     extraFee:             [0],
     extraFeeNote:         [''],
   });
@@ -72,7 +72,7 @@ export class MonthlyRoomChargeDialogComponent implements OnChanges {
 
   ngOnChanges(c: SimpleChanges): void {
     if (c['visible']?.currentValue === true) {
-      this.form.reset({ electricityUnitPrice: 4000, waterUnitPrice: 15000, extraFee: 0 });
+      this.form.reset({ electricityUnitPrice: 3500, waterUnitPrice: 30000, extraFee: 0 });
       this.preview.set(null);
     }
   }
