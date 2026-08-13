@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+apps/cms/dist
+apps/api/dist
+.git
+.claude
+.codex
+.test
+graphify-out
