@@ -29,6 +29,7 @@ services:
       DATABASE_URL: "postgresql://nhatro:nhatro@postgres:5432/nhatro?schema=public"
       PORT: "3000"
       HOME: /tmp
+      CORS_ORIGIN: "https://${CMS_DOMAIN}"
     ports:
       - "3000:3000"
     volumes:
@@ -37,5 +38,23 @@ services:
       postgres:
         condition: service_healthy
 
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/cms/Dockerfile
+    container_name: nhatro-web
+    restart: unless-stopped
+    environment:
+      CMS_DOMAIN: "${CMS_DOMAIN}"
+      API_DOMAIN: "${API_DOMAIN}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+    depends_on:
+      - api
+
 volumes:
   nhatro-pgdata:
+  caddy-data:

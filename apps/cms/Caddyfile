@@ -1,0 +1,9 @@
+{$CMS_DOMAIN} {
+	root * /srv/cms
+	file_server
+	try_files {path} /index.html
+}
+
+{$API_DOMAIN} {
+	reverse_proxy api:3000
+}

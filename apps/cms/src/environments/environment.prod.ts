@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl:     'https://api.myapp.vn/api',
+  apiUrl:     'https://api.nhatrovanthinh.id.vn/api',
 };
