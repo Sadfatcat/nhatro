@@ -86,6 +86,22 @@ export class InvoiceDetailComponent implements OnInit {
       });
   }
 
+  sendSms(): void {
+    const inv = this.invoice();
+    if (!inv) return;
+    this.saving.set(true);
+    this.api.post<ApiResponse<{ success: boolean; reason?: string }>>('/notifications/send', { invoiceId: inv.id, channel: 'sms' })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe(res => {
+        if (res.data?.success) {
+          this.toast.success('Đã gửi SMS.');
+        } else {
+          this.toast.error(res.data?.reason ?? 'Không gửi được SMS.');
+        }
+        this.loadData(inv.id);
+      });
+  }
+
   channelLabel(channel: string): string {
     if (channel === 'email') return 'Email';
     if (channel === 'sms') return 'SMS';

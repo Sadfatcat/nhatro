@@ -21,7 +21,7 @@ export class NotificationsService {
     private readonly smsProvider:   SmsProvider,
   ) {}
 
-  async sendForInvoice(invoiceId: string, templateKey: NotificationTemplateKey): Promise<{ success: boolean; reason?: string }> {
+  async sendForInvoice(invoiceId: string, templateKey: NotificationTemplateKey, forceChannel?: 'sms'): Promise<{ success: boolean; reason?: string }> {
     const invoice = await this.prisma.invoice.findUnique({ where: { id: invoiceId }, include: INCLUDE_TENANT });
     if (!invoice) {
       this.logger.warn(`Không tìm thấy hoá đơn ${invoiceId} để gửi thông báo "${templateKey}".`);
@@ -38,6 +38,7 @@ export class NotificationsService {
       to:   { email: email ?? undefined, phone: phone ?? undefined },
       templateKey,
       invoiceId,
+      forceChannel,
       data: {
         roomNumber:        invoice.room.roomNumber,
         period:            invoice.period,
@@ -80,6 +81,21 @@ export class NotificationsService {
   }
 
   async send(payload: NotificationPayload): Promise<{ success: boolean; reason?: string }> {
+    if (payload.forceChannel) {
+      const forced = this.resolveProvider(payload.forceChannel);
+      if (!forced) {
+        const reason = `Không tìm thấy provider hợp lệ ("${payload.forceChannel}").`;
+        this.logAttempt(payload, payload.forceChannel, false, reason);
+        return { success: false, reason };
+      }
+      const result = await forced.send(payload).catch(err => ({
+        success: false,
+        error: err instanceof Error ? err.message : 'Lỗi không xác định.',
+      }));
+      this.logAttempt(payload, payload.forceChannel, result.success, result.error);
+      return result.success ? { success: true } : { success: false, reason: result.error };
+    }
+
     const primaryName  = this.config.get<string>('NOTIFICATION_PRIMARY_PROVIDER');
     const fallbackName = this.config.get<string>('NOTIFICATION_FALLBACK_PROVIDER');
 

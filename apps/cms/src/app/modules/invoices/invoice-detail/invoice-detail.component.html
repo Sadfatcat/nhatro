@@ -36,6 +36,14 @@
         >
           <nz-icon nzType="mail" /> Gửi thông báo
         </button>
+        <button
+          *appPermission="'invoices:notify'"
+          nz-button
+          [nzLoading]="saving()"
+          (click)="sendSms()"
+        >
+          <nz-icon nzType="message" /> Gửi SMS
+        </button>
         @if (inv.status !== 'PAID') {
           <button
             *appPermission="'invoices:mark-paid'"

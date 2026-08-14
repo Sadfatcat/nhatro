@@ -16,7 +16,7 @@ export class NotificationsController {
 
   @Post('send')
   async send(@Body() dto: SendNotificationDto): Promise<ApiResponse<{ success: boolean; reason?: string }>> {
-    const result = await this.notifications.sendForInvoice(dto.invoiceId, 'invoice-created');
+    const result = await this.notifications.sendForInvoice(dto.invoiceId, 'invoice-created', dto.channel);
     return ok(result, result.success ? 'Đã gửi thông báo.' : (result.reason ?? 'Gửi thông báo thất bại.'));
   }
 

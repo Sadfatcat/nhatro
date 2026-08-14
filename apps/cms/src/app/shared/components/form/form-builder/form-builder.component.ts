@@ -230,4 +230,15 @@ export class FormBuilderComponent implements OnInit, OnChanges {
   getFieldSpan(field: FormFieldSchema): number {
     return field.span ?? 24;
   }
+
+  onDateInputBlur(event: FocusEvent, key: string): void {
+    const raw = (event.target as HTMLInputElement).value?.trim();
+    if (!raw) return;
+    const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(raw);
+    if (!match) return;
+    const [, d, m, y] = match.map(Number);
+    const parsed = new Date(y, m - 1, d);
+    if (parsed.getFullYear() !== y || parsed.getMonth() !== m - 1 || parsed.getDate() !== d) return;
+    this.form.get(key)?.setValue(parsed);
+  }
 }

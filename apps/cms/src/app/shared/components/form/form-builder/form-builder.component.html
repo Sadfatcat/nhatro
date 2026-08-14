@@ -149,6 +149,7 @@
                     [formControlName]="field.key"
                     [nzPlaceHolder]="field.placeholder ?? 'dd/mm/yyyy'"
                     nzFormat="dd/MM/yyyy"
+                    (blur)="onDateInputBlur($event, field.key)"
                     style="width: 100%" />
                 }
 

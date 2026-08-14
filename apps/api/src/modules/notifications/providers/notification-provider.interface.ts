@@ -9,6 +9,7 @@ export interface NotificationPayload {
   templateKey: NotificationTemplateKey;
   data: Record<string, string | number>;
   invoiceId?: string;
+  forceChannel?: 'sms';
 }
 
 export interface NotificationSendResult {

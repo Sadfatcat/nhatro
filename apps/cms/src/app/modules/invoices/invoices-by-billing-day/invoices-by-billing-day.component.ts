@@ -91,6 +91,12 @@ export class InvoicesByBillingDayComponent implements OnInit {
           disabled: row => !row.invoiceId,
           action:   row => this.sendOne(row),
         },
+        {
+          label:    'Gửi SMS',
+          icon:     'message',
+          disabled: row => !row.invoiceId,
+          action:   row => this.sendOneSms(row),
+        },
       ],
     };
   }
@@ -145,6 +151,20 @@ export class InvoicesByBillingDayComponent implements OnInit {
           this.toast.success(`Đã gửi thông báo cho phòng ${row.roomNumber}.`);
         } else {
           this.toast.error(res.data?.reason ?? 'Không gửi được thông báo.');
+        }
+      });
+  }
+
+  sendOneSms(row: RoomInvoiceRow): void {
+    if (!row.invoiceId) return;
+    this.saving.set(true);
+    this.api.post<ApiResponse<{ success: boolean; reason?: string }>>('/notifications/send', { invoiceId: row.invoiceId, channel: 'sms' })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe(res => {
+        if (res.data?.success) {
+          this.toast.success(`Đã gửi SMS cho phòng ${row.roomNumber}.`);
+        } else {
+          this.toast.error(res.data?.reason ?? 'Không gửi được SMS.');
         }
       });
   }

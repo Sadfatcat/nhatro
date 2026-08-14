@@ -53,6 +53,14 @@
             >
               <span nz-icon nzType="mail"></span> Gửi thông báo
             </button>
+            <button
+              *appPermission="'invoices:notify'"
+              nz-button nzType="default"
+              [disabled]="!row.invoiceId"
+              (click)="sendOneSms(row)"
+            >
+              <span nz-icon nzType="message"></span> Gửi SMS
+            </button>
           </div>
         </div>
       </ng-template>
@@ -109,6 +117,14 @@
               (click)="sendOne(row)"
             >
               <span nz-icon nzType="mail"></span> Gửi thông báo
+            </button>
+            <button
+              *appPermission="'invoices:notify'"
+              nz-button nzType="default"
+              [disabled]="!row.invoiceId"
+              (click)="sendOneSms(row)"
+            >
+              <span nz-icon nzType="message"></span> Gửi SMS
             </button>
           </div>
         </div>
