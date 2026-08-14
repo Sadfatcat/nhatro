@@ -15,6 +15,7 @@ interface InvoiceFilter {
   status?: InvoiceStatus;
   period?: string;
   roomId?: string;
+  roomIds?: string[];
   contractId?: string;
 }
 
@@ -181,14 +182,22 @@ export class InvoicesService {
 
   async findAll(filter: InvoiceFilter) {
     return this.prisma.invoice.findMany({
-      where:   { status: filter.status, period: filter.period, roomId: filter.roomId, contractId: filter.contractId },
+      where: {
+        status:     filter.status,
+        period:     filter.period,
+        roomId:     filter.roomIds?.length ? { in: filter.roomIds } : filter.roomId,
+        contractId: filter.contractId,
+      },
       include: INCLUDE_ROOM,
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findOne(id: string) {
-    const invoice = await this.prisma.invoice.findUnique({ where: { id }, include: INCLUDE_ROOM });
+    const invoice = await this.prisma.invoice.findUnique({
+      where:   { id },
+      include: { ...INCLUDE_ROOM, notificationLogs: { orderBy: { sentAt: 'desc' } } },
+    });
     if (!invoice) throw new NotFoundException('Không tìm thấy hoá đơn.');
     return {
       ...invoice,

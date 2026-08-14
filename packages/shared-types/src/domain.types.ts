@@ -73,6 +73,17 @@ export interface Invoice {
   updatedAt: string;
   room: { roomNumber: string; floor: number };
   bankInfo?: InvoiceBankInfo;
+  notificationLogs?: NotificationLog[];
+}
+
+export interface NotificationLog {
+  id: string;
+  invoiceId: string;
+  templateKey: string;
+  channel: string;
+  success: boolean;
+  reason: string | null;
+  sentAt: string;
 }
 
 export interface UtilityReading {

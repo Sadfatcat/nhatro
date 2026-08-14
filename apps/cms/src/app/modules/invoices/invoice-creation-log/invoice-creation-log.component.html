@@ -1,4 +1,6 @@
 <div class="creation-log">
+  <app-filter-panel [config]="filterConfig()" (filterChange)="onFilterChange($event)" />
+
   <app-data-table
     [config]="tableConfig"
     [cellTemplates]="cellTemplates"

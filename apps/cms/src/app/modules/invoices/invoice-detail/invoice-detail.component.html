@@ -150,6 +150,46 @@
       </div>
 
     </div>
+
+    <!-- Lịch sử gửi thông báo -->
+    <div class="col-card notify-log-card">
+      <div class="col-card__header">
+        <nz-icon nzType="history" />
+        <span>Lịch sử gửi thông báo</span>
+      </div>
+      <div class="col-card__body">
+        @if (inv.notificationLogs && inv.notificationLogs.length > 0) {
+          <table class="notify-log-table">
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Loại thông báo</th>
+                <th>Kênh</th>
+                <th>Kết quả</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of inv.notificationLogs; track log.id) {
+                <tr>
+                  <td>{{ log.sentAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>{{ templateLabel(log.templateKey) }}</td>
+                  <td>{{ channelLabel(log.channel) }}</td>
+                  <td>
+                    @if (log.success) {
+                      <span class="notify-log-result notify-log-result--ok">Thành công</span>
+                    } @else {
+                      <span class="notify-log-result notify-log-result--fail">Thất bại — {{ log.reason }}</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="bank-empty">Chưa gửi thông báo nào cho hoá đơn này.</p>
+        }
+      </div>
+    </div>
   }
 
 </section>

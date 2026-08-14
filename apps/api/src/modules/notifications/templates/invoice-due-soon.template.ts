@@ -12,3 +12,7 @@ export function invoiceDueSoonTemplate(data: Record<string, string | number>): {
     `,
   };
 }
+
+export function invoiceDueSoonSmsTemplate(data: Record<string, string | number>): string {
+  return `Nhắc hạn: hoá đơn phòng ${data.roomNumber} kỳ ${data.period} - ${data.totalAmount}đ sắp đến hạn ${data.dueDate}.`;
+}

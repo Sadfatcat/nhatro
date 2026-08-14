@@ -13,3 +13,7 @@ export function invoiceCreatedTemplate(data: Record<string, string | number>): {
     `,
   };
 }
+
+export function invoiceCreatedSmsTemplate(data: Record<string, string | number>): string {
+  return `Hoá đơn mới phòng ${data.roomNumber} kỳ ${data.period}: ${data.totalAmount}đ. Hạn ${data.dueDate}.`;
+}

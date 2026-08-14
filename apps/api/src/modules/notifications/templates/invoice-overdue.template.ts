@@ -12,3 +12,7 @@ export function invoiceOverdueTemplate(data: Record<string, string | number>): {
     `,
   };
 }
+
+export function invoiceOverdueSmsTemplate(data: Record<string, string | number>): string {
+  return `Hoá đơn phòng ${data.roomNumber} kỳ ${data.period} - ${data.totalAmount}đ đã quá hạn ${data.dueDate}. Vui lòng thanh toán sớm.`;
+}

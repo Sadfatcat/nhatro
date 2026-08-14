@@ -82,7 +82,24 @@ export class InvoiceDetailComponent implements OnInit {
         } else {
           this.toast.error(res.data?.reason ?? 'Không gửi được thông báo.');
         }
+        this.loadData(inv.id);
       });
+  }
+
+  channelLabel(channel: string): string {
+    if (channel === 'email') return 'Email';
+    if (channel === 'sms') return 'SMS';
+    return channel;
+  }
+
+  templateLabel(key: string): string {
+    const labels: Record<string, string> = {
+      'invoice-created':  'Hoá đơn mới',
+      'invoice-due-soon': 'Nhắc sắp đến hạn',
+      'invoice-overdue':  'Quá hạn',
+      'invoice-paid':     'Đã thanh toán',
+    };
+    return labels[key] ?? key;
   }
 
   confirmDelete(): void {

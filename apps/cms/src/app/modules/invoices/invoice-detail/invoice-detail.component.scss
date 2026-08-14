@@ -135,6 +135,29 @@
 
 .bank-empty { font-size: 13px; color: var(--color-text-muted); }
 
+// ── Notify log ────────────────────────────────────────────────────────────────
+.notify-log-card { margin-top: 16px; }
+.notify-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    padding: 6px 10px;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+}
+.notify-log-result--ok   { color: var(--color-success, #16a34a); }
+.notify-log-result--fail { color: var(--color-error); }
+
 // ── Ghost button ──────────────────────────────────────────────────────────────
 .btn--ghost {
   background: transparent;

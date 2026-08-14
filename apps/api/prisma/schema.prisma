@@ -129,11 +129,25 @@ model Invoice {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  room     Room     @relation(fields: [roomId], references: [id])
-  contract Contract @relation(fields: [contractId], references: [id])
+  room             Room              @relation(fields: [roomId], references: [id])
+  contract         Contract          @relation(fields: [contractId], references: [id])
+  notificationLogs NotificationLog[]
 
   @@index([status])
   @@index([period])
+}
+
+model NotificationLog {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  templateKey String
+  channel     String
+  success     Boolean
+  reason      String?
+  sentAt      DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
 }
 
 enum InvoiceStatus {

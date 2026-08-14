@@ -5,11 +5,12 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsListener } from './notifications.listener';
 import { NotificationsCron } from './notifications.cron';
 import { EmailProvider } from './providers/email.provider';
+import { SmsProvider } from './providers/sms.provider';
 
 @Module({
   imports:     [InvoicesModule],
   controllers: [NotificationsController],
-  providers:   [NotificationsService, NotificationsListener, NotificationsCron, EmailProvider],
+  providers:   [NotificationsService, NotificationsListener, NotificationsCron, EmailProvider, SmsProvider],
   exports:     [NotificationsService],
 })
 export class NotificationsModule {}

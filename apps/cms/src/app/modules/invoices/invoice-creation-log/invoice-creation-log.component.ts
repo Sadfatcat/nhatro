@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, TemplateRef, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, TemplateRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -8,6 +8,8 @@ import { DataTableComponent } from '../../../shared/components/display/data-tabl
 import { TableConfig } from '../../../shared/components/display/data-table/data-table.model';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
+import { FilterPanelComponent } from '../../../shared/components/form/filter-panel/filter-panel.component';
+import { FilterConfig, FilterValue } from '../../../shared/components/form/filter-panel/filter-panel.model';
 import { Invoice } from '@nhatro/shared-types';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
@@ -30,7 +32,7 @@ type InvoiceLogRow = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
-    DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent,
+    DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent, FilterPanelComponent,
   ],
 })
 export class InvoiceCreationLogComponent implements OnInit {
@@ -44,6 +46,43 @@ export class InvoiceCreationLogComponent implements OnInit {
   loading = signal(false);
   items   = signal<InvoiceLogRow[]>([]);
 
+  filterPeriod  = signal<string | null>(null);
+  filterRooms   = signal<string[] | null>(null);
+
+  periodOptions = computed(() => {
+    const periods = [...new Set(this.items().map(r => r.period))].sort((a, b) => b.localeCompare(a));
+    return periods.map(p => ({ label: `Kỳ ${p}`, value: p }));
+  });
+
+  roomOptions = computed(() => {
+    const rooms = [...new Set(this.items().map(r => r.roomNumber))]
+      .sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+    return rooms.map(r => ({ label: r, value: r }));
+  });
+
+  filterConfig = computed<FilterConfig>(() => ({
+    fields: [
+      { key: 'period',  label: 'Kỳ',   type: 'select',      options: this.periodOptions(), span: 8 },
+      { key: 'roomIds', label: 'Phòng', type: 'multiselect', options: this.roomOptions(),    span: 12 },
+    ],
+    autoSearch: true,
+    debounceMs: 0,
+  }));
+
+  filteredItems = computed(() => {
+    const period = this.filterPeriod();
+    const rooms  = this.filterRooms();
+    let rows = this.items();
+    if (period) rows = rows.filter(r => r.period === period);
+    if (rooms && rooms.length) rows = rows.filter(r => rooms.includes(r.roomNumber));
+    return [...rows].sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true }));
+  });
+
+  onFilterChange(value: FilterValue): void {
+    this.filterPeriod.set((value['period'] as string) ?? null);
+    this.filterRooms.set((value['roomIds'] as string[]) ?? null);
+  }
+
   get cellTemplates(): Record<string, TemplateRef<unknown>> {
     return { status: this.statusTpl, totalAmount: this.amountTpl, createdAt: this.dateTpl, dueDate: this.dateTpl };
   }
@@ -51,7 +90,7 @@ export class InvoiceCreationLogComponent implements OnInit {
   get tableConfig(): TableConfig<InvoiceLogRow> {
     return {
       rowKey:    'id',
-      data:      this.items(),
+      data:      this.filteredItems(),
       loading:   this.loading(),
       emptyText: 'Chưa có hoá đơn nào được tạo.',
       columns: [
@@ -82,8 +121,7 @@ export class InvoiceCreationLogComponent implements OnInit {
             status:      inv.status,
             createdAt:   inv.createdAt,
             dueDate:     inv.dueDate,
-          }))
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+          })));
       });
   }
 

@@ -36,11 +36,14 @@ export class InvoicesController {
     @Query('status') status?: InvoiceStatus,
     @Query('period') period?: string,
     @Query('roomId') roomId?: string,
+    @Query('roomIds') roomIdsCsv?: string,
   ): Promise<ApiResponse<unknown>> {
     let contractId: string | undefined;
+    let roomIds = roomIdsCsv ? roomIdsCsv.split(',').filter(Boolean) : undefined;
     if (user.role === 'TENANT') {
       if (roomId) assertOwnRoomOrManagement(user, roomId);
       roomId = user.roomId ?? '__none__'; // no room assigned → must not see every invoice in the system
+      roomIds = undefined; // tenant can never multi-select other rooms
 
       // Accounts stay attached to the room across tenant turnover (password reset, not a new
       // account) — scope to the CURRENT active contract so an incoming tenant can't see the
@@ -48,7 +51,7 @@ export class InvoicesController {
       const contract = await this.contracts.findByRoom(roomId);
       contractId = contract?.id ?? '__none__';
     }
-    return ok(await this.svc.findAll({ status, period, roomId, contractId }));
+    return ok(await this.svc.findAll({ status, period, roomId, roomIds, contractId }));
   }
 
   @Get(':id')

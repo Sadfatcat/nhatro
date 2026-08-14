@@ -11,3 +11,7 @@ export function invoicePaidTemplate(data: Record<string, string | number>): { su
     `,
   };
 }
+
+export function invoicePaidSmsTemplate(data: Record<string, string | number>): string {
+  return `Đã nhận thanh toán hoá đơn phòng ${data.roomNumber} kỳ ${data.period} - ${data.totalAmount}đ. Cảm ơn bạn.`;
+}
