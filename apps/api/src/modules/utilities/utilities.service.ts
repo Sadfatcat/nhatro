@@ -50,7 +50,21 @@ export class UtilitiesService {
     const utilityRecord = await this.prisma.utilityRecord.findUnique({
       where: { roomId_billingMonth: { roomId, billingMonth } },
     });
-    return this.mapRoom({ ...room, utilityRecord });
+
+    if (utilityRecord) return this.mapRoom({ ...room, utilityRecord });
+
+    // Chưa có chỉ số tháng này — vẫn cần điền sẵn "chỉ số trước" từ tháng liền trước
+    // để modal cập nhật không hiện 0 sai (carry-forward chỉ mới tính đúng lúc Lưu trước đây).
+    const { prevElec, prevWater } = await this.resolvePrevReading(roomId, billingMonth);
+    if (prevElec === 0 && prevWater === 0) return this.mapRoom({ ...room, utilityRecord: null });
+
+    return this.mapRoom({
+      ...room,
+      utilityRecord: {
+        id: null, roomId, billingMonth, prevElec, prevWater,
+        currElec: 0, currWater: 0, recordedAt: null,
+      },
+    });
   }
 
   async history(roomId: string, months = 6) {
@@ -96,13 +110,8 @@ export class UtilitiesService {
       throw new BadRequestException('Hoá đơn kỳ này đã thanh toán, không thể sửa chỉ số điện nước.');
     }
 
-    const prev = await this.prisma.utilityRecord.findFirst({
-      where:   { roomId, billingMonth: { lt: billingMonth } },
-      orderBy: { billingMonth: 'desc' },
-    });
-    const prevElec  = prev?.currElec  ?? 0;
-    const prevWater = prev?.currWater ?? 0;
-    const now       = new Date();
+    const { prevElec, prevWater } = await this.resolvePrevReading(roomId, billingMonth);
+    const now = new Date();
 
     const record = await this.prisma.utilityRecord.upsert({
       where:  { roomId_billingMonth: { roomId, billingMonth } },
@@ -121,6 +130,14 @@ export class UtilitiesService {
 
   async setBillingDayBulk(roomIds: string[], billingDay: number) {
     return this.prisma.room.updateMany({ where: { id: { in: roomIds } }, data: { billingDay } });
+  }
+
+  private async resolvePrevReading(roomId: string, billingMonth: string): Promise<{ prevElec: number; prevWater: number }> {
+    const prev = await this.prisma.utilityRecord.findFirst({
+      where:   { roomId, billingMonth: { lt: billingMonth } },
+      orderBy: { billingMonth: 'desc' },
+    });
+    return { prevElec: prev?.currElec ?? 0, prevWater: prev?.currWater ?? 0 };
   }
 
   private currentBillingMonth(): string {
