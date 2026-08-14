@@ -15,6 +15,24 @@ export function bankInfoLineSms(data: Record<string, string | number>): string {
   return accounts.length ? ` CK: ${accounts.join(' hoặc ')}.` : '';
 }
 
+export function bankInfoLineSmsPlain(data: Record<string, string | number>): string {
+  const accounts = [
+    data.bankAccountNumber ? `${data.bankAccountNumber} (${data.bankName})` : null,
+    data.bank2AccountNumber ? `${data.bank2AccountNumber} (${data.bank2Name})` : null,
+  ].filter(Boolean);
+  return accounts.length ? `\nCK: ${accounts.join(' hoac ')}` : '';
+}
+
+export function invoiceBreakdownSmsPlain(data: Record<string, string | number>): string {
+  return [
+    `Phong: ${data.rentAmount}d`,
+    `Dien ${data.prevElec}->${data.currElec}kWh(${data.elecUsed}kWh x ${data.elecUnitPrice}d): ${data.electricityAmount}d`,
+    `Nuoc ${data.prevWater}->${data.currWater}m3(${data.waterUsed}m3 x ${data.waterUnitPrice}d): ${data.waterAmount}d`,
+    `Rac: ${data.otherFees}d`,
+    `Tong: ${data.totalAmount}d`,
+  ].join('\n');
+}
+
 export function invoiceTable(data: Record<string, string | number>): string {
   return `
     <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:480px;font-family:sans-serif;font-size:14px">

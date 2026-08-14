@@ -1,4 +1,4 @@
-import { invoiceTable, bankInfoBlockHtml, bankInfoLineSms } from './invoice-table.helper';
+import { invoiceTable, bankInfoBlockHtml, invoiceBreakdownSmsPlain, bankInfoLineSmsPlain } from './invoice-table.helper';
 
 export function invoiceCreatedTemplate(data: Record<string, string | number>): { subject: string; html: string } {
   return {
@@ -15,5 +15,5 @@ export function invoiceCreatedTemplate(data: Record<string, string | number>): {
 }
 
 export function invoiceCreatedSmsTemplate(data: Record<string, string | number>): string {
-  return `Hoá đơn mới phòng ${data.roomNumber} kỳ ${data.period}: ${data.totalAmount}đ. Hạn ${data.dueDate}.${bankInfoLineSms(data)}`;
+  return `Hoa don moi phong ${data.roomNumber} ky ${data.period}\n${invoiceBreakdownSmsPlain(data)}\nHan: ${data.dueDate}${bankInfoLineSmsPlain(data)}`;
 }
