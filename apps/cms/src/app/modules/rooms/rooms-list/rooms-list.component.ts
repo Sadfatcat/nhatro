@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -60,7 +60,7 @@ interface TenantOption {
     MoneyDisplayComponent, EmptyStateComponent, FormBuilderComponent, PermissionDirective,
   ],
 })
-export class RoomsListComponent implements OnInit {
+export class RoomsListComponent implements OnInit, OnDestroy {
   private api   = inject(ApiService);
   private toast = inject(ToastService);
   private route  = inject(ActivatedRoute);
@@ -96,8 +96,14 @@ export class RoomsListComponent implements OnInit {
   showEditModal     = signal(false);
   showPasswordModal = signal(false);
   showAssignModal   = signal(false);
+  showDeleteModal   = signal(false);
   selectedItem      = signal<RoomRow | null>(null);
   newPassword       = '';
+
+  // Xoá phòng — đếm ngược 10s trước khi cho bấm xoá
+  readonly DELETE_COUNTDOWN_SECONDS = 10;
+  deleteCountdown = signal(this.DELETE_COUNTDOWN_SECONDS);
+  private deleteCountdownTimer: ReturnType<typeof setInterval> | null = null;
 
   // Cung cấp phòng
   assignRoomId   = signal<string | null>(null);
@@ -305,5 +311,49 @@ export class RoomsListComponent implements OnInit {
         },
         error: err => this.toast.error(err?.error?.message ?? 'Không cung cấp được phòng.'),
       });
+  }
+
+  // ── Xoá phòng ────────────────────────────────────────────────────────────
+  openDelete(row: RoomRow): void {
+    this.selectedItem.set(row);
+    this.showDeleteModal.set(true);
+    this.deleteCountdown.set(this.DELETE_COUNTDOWN_SECONDS);
+    this.deleteCountdownTimer = setInterval(() => {
+      const next = this.deleteCountdown() - 1;
+      this.deleteCountdown.set(next);
+      if (next <= 0 && this.deleteCountdownTimer) {
+        clearInterval(this.deleteCountdownTimer);
+        this.deleteCountdownTimer = null;
+      }
+    }, 1000);
+  }
+
+  closeDelete(): void {
+    this.showDeleteModal.set(false);
+    if (this.deleteCountdownTimer) {
+      clearInterval(this.deleteCountdownTimer);
+      this.deleteCountdownTimer = null;
+    }
+  }
+
+  confirmDelete(): void {
+    const id = this.selectedItem()?.roomId;
+    if (!id || this.deleteCountdown() > 0) return;
+    this.saving.set(true);
+    this.api.delete<ApiResponse<null>>(`/rooms/${id}`)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: res => {
+          if (!res.success) return;
+          this.toast.success('Đã xoá phòng.');
+          this.closeDelete();
+          this.loadData();
+        },
+        error: err => this.toast.error(err?.error?.message ?? 'Không xoá được phòng.'),
+      });
+  }
+
+  ngOnDestroy(): void {
+    if (this.deleteCountdownTimer) clearInterval(this.deleteCountdownTimer);
   }
 }

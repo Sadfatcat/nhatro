@@ -89,12 +89,17 @@
                 <app-money-display [value]="row.price" />
               </div>
               <div class="room-card__tenant">{{ row.tenant?.fullName ?? 'Chưa có người thuê' }}</div>
-              <div class="room-card__actions" *appPermission="'rooms:update'">
-                <button nz-button nzType="default" (click)="openEdit(row)">
-                  <span nz-icon nzType="edit"></span> Sửa
-                </button>
-                <button nz-button nzType="default" (click)="openPasswordModal(row)">
-                  <span nz-icon nzType="lock"></span> Đổi mật khẩu
+              <div class="room-card__actions">
+                <ng-container *appPermission="'rooms:update'">
+                  <button nz-button nzType="default" (click)="openEdit(row)">
+                    <span nz-icon nzType="edit"></span> Sửa
+                  </button>
+                  <button nz-button nzType="default" (click)="openPasswordModal(row)">
+                    <span nz-icon nzType="lock"></span> Đổi mật khẩu
+                  </button>
+                </ng-container>
+                <button *appPermission="'rooms:delete'" nz-button nzType="default" nzDanger (click)="openDelete(row)">
+                  <span nz-icon nzType="delete"></span> Xoá
                 </button>
               </div>
             </div>
@@ -133,6 +138,9 @@
                     </button>
                     <button nz-button nzType="text" nzSize="small" (click)="openPasswordModal(row)" nz-tooltip nzTooltipTitle="Đổi mật khẩu phòng">
                       <span nz-icon nzType="lock"></span>
+                    </button>
+                    <button *appPermission="'rooms:delete'" nz-button nzType="text" nzSize="small" nzDanger (click)="openDelete(row)" nz-tooltip nzTooltipTitle="Xoá phòng">
+                      <span nz-icon nzType="delete"></span>
                     </button>
                   </div>
                 </td>
@@ -269,5 +277,25 @@
         }
       </nz-select>
     </div>
+  </ng-container>
+</nz-modal>
+
+<!-- Xoá phòng -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showDeleteModal()"
+  nzTitle="Xác nhận xoá phòng"
+  [nzOkText]="deleteCountdown() > 0 ? 'Xoá (' + deleteCountdown() + 's)' : 'Xoá'"
+  nzOkDanger
+  [nzOkDisabled]="deleteCountdown() > 0"
+  [nzOkLoading]="saving()"
+  (nzOnOk)="confirmDelete()"
+  (nzOnCancel)="closeDelete()"
+>
+  <ng-container *nzModalContent>
+    <p>Bạn có chắc muốn xoá phòng <strong>{{ selectedItem()?.roomNumber }}</strong>?</p>
+    <p style="color: var(--color-error); font-size: 13px;">
+      Xoá phòng sẽ xoá luôn toàn bộ hợp đồng, hoá đơn và lịch sử điện nước liên quan — không thể hoàn tác.
+    </p>
   </ng-container>
 </nz-modal>

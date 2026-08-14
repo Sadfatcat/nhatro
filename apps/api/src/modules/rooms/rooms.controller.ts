@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RoomsService } from './rooms.service';
@@ -39,5 +39,12 @@ export class RoomsController {
   async changePassword(@Param('id') id: string, @Body() body: { password: string }): Promise<ApiResponse<null>> {
     await this.rooms.changePassword(id, body.password);
     return ok(null, 'Đã đổi mật khẩu phòng thành công.');
+  }
+
+  @Roles('ADMIN')
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<ApiResponse<null>> {
+    await this.rooms.remove(id);
+    return ok(null, 'Đã xoá phòng.');
   }
 }

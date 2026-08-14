@@ -103,4 +103,19 @@ export class RoomsService {
     const passwordHash = await bcrypt.hash(password, 10);
     await this.prisma.user.update({ where: { id: account.id }, data: { passwordHash } });
   }
+
+  /** Xoá phòng + toàn bộ dữ liệu liên quan (hoá đơn, hợp đồng, chỉ số điện nước).
+   *  Tài khoản đăng nhập gắn phòng (nếu có) chỉ bị gỡ liên kết, không bị xoá. */
+  async remove(id: string): Promise<void> {
+    const room = await this.prisma.room.findUnique({ where: { id } });
+    if (!room) throw new NotFoundException('Không tìm thấy phòng.');
+
+    await this.prisma.$transaction(async tx => {
+      await tx.user.updateMany({ where: { roomId: id }, data: { roomId: null } });
+      await tx.invoice.deleteMany({ where: { roomId: id } });
+      await tx.contract.deleteMany({ where: { roomId: id } });
+      await tx.utilityRecord.deleteMany({ where: { roomId: id } });
+      await tx.room.delete({ where: { id } });
+    });
+  }
 }
