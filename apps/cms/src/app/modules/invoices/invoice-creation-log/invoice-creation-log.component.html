@@ -13,7 +13,7 @@
           <app-status-badge [status]="row.status" />
         </div>
         <div class="invoice-log-card__body">
-          <span>Kỳ {{ row.period }}</span>
+          <span>Kỳ {{ row.period }} · {{ row.tenantName }}</span>
           <app-money-display [value]="row.totalAmount" />
         </div>
         <div class="invoice-log-card__dates">

@@ -188,7 +188,11 @@ export class InvoicesService {
         roomId:     filter.roomIds?.length ? { in: filter.roomIds } : filter.roomId,
         contractId: filter.contractId,
       },
-      include: INCLUDE_ROOM,
+      include: {
+        ...INCLUDE_ROOM,
+        contract: { select: { tenant: { select: { fullName: true } } } },
+        _count:   { select: { notificationLogs: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

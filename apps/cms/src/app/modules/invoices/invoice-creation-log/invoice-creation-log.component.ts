@@ -17,11 +17,13 @@ interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 type InvoiceLogRow = {
   id:            string;
   roomNumber:    string;
+  tenantName:    string;
   period:        string;
   totalAmount:   number;
   status:        Invoice['status'];
   createdAt:     string;
   dueDate:       string;
+  notified:      boolean;
 } & Record<string, unknown>;
 
 @Component({
@@ -60,27 +62,37 @@ export class InvoiceCreationLogComponent implements OnInit {
     return rooms.map(r => ({ label: r, value: r }));
   });
 
+  filterNotified = signal<string | null>(null);
+
   filterConfig = computed<FilterConfig>(() => ({
     fields: [
-      { key: 'period',  label: 'Kỳ',   type: 'select',      options: this.periodOptions(), span: 8 },
-      { key: 'roomIds', label: 'Phòng', type: 'multiselect', options: this.roomOptions(),    span: 12 },
+      { key: 'period',   label: 'Kỳ',     type: 'select',      options: this.periodOptions(), span: 6 },
+      { key: 'roomIds',  label: 'Phòng',   type: 'multiselect', options: this.roomOptions(),    span: 10 },
+      { key: 'notified', label: 'Đã gửi', type: 'select', span: 6, options: [
+        { label: 'Đã gửi',  value: 'yes' },
+        { label: 'Chưa gửi', value: 'no' },
+      ] },
     ],
     autoSearch: true,
     debounceMs: 0,
   }));
 
   filteredItems = computed(() => {
-    const period = this.filterPeriod();
-    const rooms  = this.filterRooms();
+    const period   = this.filterPeriod();
+    const rooms    = this.filterRooms();
+    const notified = this.filterNotified();
     let rows = this.items();
     if (period) rows = rows.filter(r => r.period === period);
     if (rooms && rooms.length) rows = rows.filter(r => rooms.includes(r.roomNumber));
+    if (notified === 'yes') rows = rows.filter(r => r.notified);
+    if (notified === 'no')  rows = rows.filter(r => !r.notified);
     return [...rows].sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true }));
   });
 
   onFilterChange(value: FilterValue): void {
     this.filterPeriod.set((value['period'] as string) ?? null);
     this.filterRooms.set((value['roomIds'] as string[]) ?? null);
+    this.filterNotified.set((value['notified'] as string) ?? null);
   }
 
   get cellTemplates(): Record<string, TemplateRef<unknown>> {
@@ -94,12 +106,13 @@ export class InvoiceCreationLogComponent implements OnInit {
       loading:   this.loading(),
       emptyText: 'Chưa có hoá đơn nào được tạo.',
       columns: [
-        { key: 'roomNumber',  label: 'Phòng' },
-        { key: 'period',      label: 'Kỳ' },
-        { key: 'totalAmount', label: 'Tổng tiền', align: 'right' },
-        { key: 'status',      label: 'Trạng thái' },
-        { key: 'createdAt',   label: 'Ngày tạo' },
-        { key: 'dueDate',     label: 'Hạn đóng' },
+        { key: 'roomNumber',  label: 'Phòng',      align: 'center' },
+        { key: 'tenantName',  label: 'Người thuê', align: 'center' },
+        { key: 'period',      label: 'Kỳ',         align: 'center' },
+        { key: 'totalAmount', label: 'Tổng tiền',  align: 'center' },
+        { key: 'status',      label: 'Trạng thái', align: 'center' },
+        { key: 'createdAt',   label: 'Ngày tạo',   align: 'center' },
+        { key: 'dueDate',     label: 'Hạn đóng',   align: 'center' },
       ],
     };
   }
@@ -108,7 +121,11 @@ export class InvoiceCreationLogComponent implements OnInit {
 
   loadData(): void {
     this.loading.set(true);
-    this.api.get<ApiResponse<(Invoice & { room: { roomNumber: string } })[]>>('/invoices')
+    this.api.get<ApiResponse<(Invoice & {
+      room: { roomNumber: string };
+      contract: { tenant: { fullName: string } };
+      _count: { notificationLogs: number };
+    })[]>>('/invoices')
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
@@ -116,11 +133,13 @@ export class InvoiceCreationLogComponent implements OnInit {
           .map(inv => ({
             id:          inv.id,
             roomNumber:  inv.room.roomNumber,
+            tenantName:  inv.contract.tenant.fullName,
             period:      inv.period,
             totalAmount: inv.totalAmount,
             status:      inv.status,
             createdAt:   inv.createdAt,
             dueDate:     inv.dueDate,
+            notified:    inv._count.notificationLogs > 0,
           })));
       });
   }
