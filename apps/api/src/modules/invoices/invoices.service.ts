@@ -197,6 +197,70 @@ export class InvoicesService {
     });
   }
 
+  async getDashboardStats() {
+    const currentPeriod = this.currentBillingPeriod();
+    const trendPeriods  = this.lastNBillingPeriods(6);
+
+    const [pending, currentIncome, trendGrouped, recent] = await Promise.all([
+      this.prisma.invoice.aggregate({
+        where: { status: { in: [InvoiceStatus.SENT, InvoiceStatus.OVERDUE] } },
+        _sum:   { totalAmount: true },
+        _count: true,
+      }),
+      this.prisma.invoice.aggregate({
+        where: { status: InvoiceStatus.PAID, period: currentPeriod },
+        _sum: { totalAmount: true },
+      }),
+      this.prisma.invoice.groupBy({
+        by:    ['period'],
+        where: { status: InvoiceStatus.PAID, period: { in: trendPeriods } },
+        _sum:  { totalAmount: true, rentAmount: true },
+      }),
+      this.prisma.invoice.findMany({
+        take:    5,
+        orderBy: { createdAt: 'desc' },
+        include: { ...INCLUDE_ROOM, contract: { select: { tenant: { select: { fullName: true } } } } },
+      }),
+    ]);
+
+    const trendByPeriod = new Map(trendGrouped.map(g => [g.period, g._sum]));
+    const incomeTrend = trendPeriods.map(period => ({
+      period,
+      totalIncome: trendByPeriod.get(period)?.totalAmount ?? 0,
+      rentIncome:  trendByPeriod.get(period)?.rentAmount  ?? 0,
+    }));
+
+    return {
+      pendingAmount:      pending._sum.totalAmount ?? 0,
+      unpaidCount:        pending._count,
+      currentMonthIncome: currentIncome._sum.totalAmount ?? 0,
+      incomeTrend,
+      recentInvoices: recent.map(inv => ({
+        id:          inv.id,
+        roomNumber:  inv.room.roomNumber,
+        tenantName:  inv.contract.tenant.fullName,
+        totalAmount: inv.totalAmount,
+        status:      inv.status,
+        createdAt:   inv.createdAt,
+      })),
+    };
+  }
+
+  private currentBillingPeriod(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private lastNBillingPeriods(n: number): string[] {
+    const out: string[] = [];
+    const d = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
+      out.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return out;
+  }
+
   async findOne(id: string) {
     const invoice = await this.prisma.invoice.findUnique({
       where:   { id },

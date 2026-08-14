@@ -133,14 +133,46 @@
 
   </section>
 
-  <!-- ── Recent invoices — chờ Invoice API ── -->
+  <!-- ── Recent invoices ── -->
   <section class="table-section">
     <div class="table-section__header">
       <div>
         <h4 class="chart-card__title">Hóa đơn gần đây</h4>
-        <p class="chart-card__subtitle">Sẽ hiển thị sau khi module Invoice hoàn thiện.</p>
+        <p class="chart-card__subtitle">5 hoá đơn tạo gần nhất</p>
       </div>
     </div>
+    @if (recentInvoices().length === 0) {
+      <p class="chart-card__subtitle" style="padding: 16px 0;">Chưa có hoá đơn nào.</p>
+    } @else {
+      <div class="table-scroll">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>Phòng</th>
+              <th>Người thuê</th>
+              <th>Số tiền</th>
+              <th>Trạng thái</th>
+              <th>Ngày tạo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of recentInvoices(); track inv.id) {
+              <tr [class.row--unpaid]="inv.status !== 'PAID'" [routerLink]="['/app/invoices', inv.id]" style="cursor:pointer">
+                <td class="cell-room">{{ inv.roomNumber }}</td>
+                <td class="cell-muted">{{ inv.tenantName }}</td>
+                <td class="cell-total">{{ inv.totalAmount | number:'1.0-0' }}đ</td>
+                <td>
+                  <span class="inv-badge" [class.inv-badge--paid]="inv.status === 'PAID'" [class.inv-badge--unpaid]="inv.status !== 'PAID'">
+                    {{ inv.status === 'PAID' ? 'Đã thanh toán' : inv.status === 'OVERDUE' ? 'Quá hạn' : 'Chưa thanh toán' }}
+                  </span>
+                </td>
+                <td class="cell-muted">{{ inv.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   </section>
 
 </div>

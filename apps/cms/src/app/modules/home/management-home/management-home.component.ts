@@ -312,7 +312,13 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   }
 
   // ── Load data ─────────────────────────────────────────────────────────────
-  ngOnInit(): void { this.loadData(); }
+  ngOnInit(): void {
+    this.loadData();
+    this.api.get<ApiResponse<{ pendingAmount: number }>>('/invoices/stats/dashboard')
+      .subscribe(res => {
+        if (res.success && res.data) this.pendingAmount.set(res.data.pendingAmount);
+      });
+  }
 
   loadData(keepPage = false): void {
     const savedPage15 = this.page15();

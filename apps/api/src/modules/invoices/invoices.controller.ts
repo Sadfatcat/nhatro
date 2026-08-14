@@ -54,6 +54,12 @@ export class InvoicesController {
     return ok(await this.svc.findAll({ status, period, roomId, roomIds, contractId }));
   }
 
+  @Roles(...MANAGEMENT)
+  @Get('stats/dashboard')
+  async dashboardStats(): Promise<ApiResponse<unknown>> {
+    return ok(await this.svc.getDashboardStats());
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
     const invoice = await this.svc.findOne(id);

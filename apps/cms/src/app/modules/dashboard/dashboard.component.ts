@@ -24,6 +24,23 @@ Chart.register(
 
 type ChartMode = 'month' | 'quarter' | 'year';
 
+interface RecentInvoice {
+  id: string;
+  roomNumber: string;
+  tenantName: string;
+  totalAmount: number;
+  status: 'SENT' | 'PAID' | 'OVERDUE';
+  createdAt: string;
+}
+
+interface DashboardStats {
+  pendingAmount: number;
+  unpaidCount: number;
+  currentMonthIncome: number;
+  incomeTrend: { period: string; totalIncome: number; rentIncome: number }[];
+  recentInvoices: RecentInvoice[];
+}
+
 @Component({
   selector:        'app-dashboard',
   standalone:      true,
@@ -53,12 +70,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   availableRate    = computed(() => this.totalRooms() ? Math.round(this.availableCount()   / this.totalRooms() * 100) : 0);
   maintenanceRate  = computed(() => this.totalRooms() ? Math.round(this.maintenanceCount() / this.totalRooms() * 100) : 0);
 
-  // ── Invoice stats — placeholder until invoice API is ready ────────────────
+  // ── Invoice stats ──────────────────────────────────────────────────────────
   currentMonthIncome = signal(0);
-  prevMonthIncome    = signal(0);
   unpaidCount        = signal(0);
   pendingAmount      = signal(0);
-  recentInvoices     = signal<unknown[]>([]);
+  incomeTrend        = signal<{ period: string; totalIncome: number; rentIncome: number }[]>([]);
+  recentInvoices     = signal<RecentInvoice[]>([]);
 
   // ── Charts ─────────────────────────────────────────────────────────────────
   selectedChartMode: ChartMode = 'month';
@@ -83,6 +100,17 @@ export class DashboardComponent implements OnInit, AfterViewInit {
           this.donutChart.update();
         }
       });
+
+    this.api.get<{ success: boolean; data: DashboardStats | null; message: string }>('/invoices/stats/dashboard')
+      .subscribe(res => {
+        if (!res.success || !res.data) return;
+        this.pendingAmount.set(res.data.pendingAmount);
+        this.unpaidCount.set(res.data.unpaidCount);
+        this.currentMonthIncome.set(res.data.currentMonthIncome);
+        this.incomeTrend.set(res.data.incomeTrend);
+        this.recentInvoices.set(res.data.recentInvoices);
+        this.buildIncomeChart();
+      });
   }
 
   ngAfterViewInit(): void {
@@ -100,15 +128,17 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   buildIncomeChart(): void {
     this.incomeChart?.destroy();
-    const labels = this.getMonthLabels();
-    const empty  = Array(labels.length).fill(0);
+    const trend  = this.incomeTrend();
+    const labels = trend.length ? trend.map(t => this.formatPeriodLabel(t.period)) : this.getMonthLabels();
+    const totalIncomeData = trend.length ? trend.map(t => t.totalIncome) : Array(labels.length).fill(0);
+    const rentIncomeData  = trend.length ? trend.map(t => t.rentIncome)  : Array(labels.length).fill(0);
     this.incomeChart = new Chart(this.incomeChartRef.nativeElement, {
       type: 'line',
       data: {
         labels,
         datasets: [
-          { label: 'Tổng thu',    data: empty, borderColor: '#16898F', backgroundColor: 'rgba(207,245,231,0.3)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#16898F', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2.5 },
-          { label: 'Tiền phòng', data: empty, borderColor: '#00009a', backgroundColor: 'transparent', fill: false, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#00009a', borderWidth: 1.5, borderDash: [4, 4] },
+          { label: 'Tổng thu',    data: totalIncomeData, borderColor: '#16898F', backgroundColor: 'rgba(207,245,231,0.3)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#16898F', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2.5 },
+          { label: 'Tiền phòng', data: rentIncomeData, borderColor: '#00009a', backgroundColor: 'transparent', fill: false, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#00009a', borderWidth: 1.5, borderDash: [4, 4] },
         ],
       },
       options: {
@@ -147,6 +177,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         },
       },
     });
+  }
+
+  private formatPeriodLabel(period: string): string {
+    const [, month] = period.split('-');
+    return `T${Number(month)}`;
   }
 
   private getMonthLabels(): string[] {
