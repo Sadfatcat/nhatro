@@ -73,13 +73,19 @@
                 <span class="info-label">Tiền phòng</span>
                 <app-money-display [value]="inv.rentAmount" />
               </div>
-              <div class="info-row">
-                <span class="info-label">Tiền điện</span>
-                <app-money-display [value]="inv.electricityAmount" />
+              <div class="info-row info-row--full">
+                <div class="info-row">
+                  <span class="info-label">Tiền điện</span>
+                  <app-money-display [value]="inv.electricityAmount" />
+                </div>
+                <span class="usage-note">{{ inv.prevElec }} → {{ inv.currElec }} kWh (dùng {{ inv.currElec - inv.prevElec }} kWh × {{ inv.elecUnitPrice | number:'1.0-0' }}đ)</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">Tiền nước</span>
-                <app-money-display [value]="inv.waterAmount" />
+              <div class="info-row info-row--full">
+                <div class="info-row">
+                  <span class="info-label">Tiền nước</span>
+                  <app-money-display [value]="inv.waterAmount" />
+                </div>
+                <span class="usage-note">{{ inv.prevWater }} → {{ inv.currWater }} m³ (dùng {{ inv.currWater - inv.prevWater }} m³ × {{ inv.waterUnitPrice | number:'1.0-0' }}đ)</span>
               </div>
               @if (inv.otherFees > 0) {
                 <div class="info-row">

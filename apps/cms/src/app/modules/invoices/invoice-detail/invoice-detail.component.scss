@@ -135,6 +135,11 @@
 
 .bank-empty { font-size: 13px; color: var(--color-text-muted); }
 
+.usage-note {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 // ── Notify log ────────────────────────────────────────────────────────────────
 .notify-log-card { margin-top: 16px; }
 .notify-log-table {
