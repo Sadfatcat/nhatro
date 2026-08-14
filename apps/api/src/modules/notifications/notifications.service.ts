@@ -56,6 +56,12 @@ export class NotificationsService {
         currWater:         invoice.currWater,
         waterUsed:         invoice.currWater - invoice.prevWater,
         waterUnitPrice:    invoice.waterUnitPrice.toLocaleString('vi-VN'),
+        bankName:          this.config.get<string>('LANDLORD_BANK_NAME') ?? '',
+        bankAccountNumber: this.config.get<string>('LANDLORD_BANK_ACCOUNT_NUMBER') ?? '',
+        bankAccountName:   this.config.get<string>('LANDLORD_BANK_ACCOUNT_NAME') ?? '',
+        bank2Name:          this.config.get<string>('LANDLORD_BANK_2_NAME') ?? '',
+        bank2AccountNumber: this.config.get<string>('LANDLORD_BANK_2_ACCOUNT_NUMBER') ?? '',
+        bank2AccountName:   this.config.get<string>('LANDLORD_BANK_2_ACCOUNT_NAME') ?? '',
       },
     });
   }

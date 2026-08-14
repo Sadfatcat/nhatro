@@ -1,4 +1,4 @@
-import { invoiceTable } from './invoice-table.helper';
+import { invoiceTable, bankInfoBlockHtml, bankInfoLineSms } from './invoice-table.helper';
 
 export function invoiceCreatedTemplate(data: Record<string, string | number>): { subject: string; html: string } {
   return {
@@ -8,12 +8,12 @@ export function invoiceCreatedTemplate(data: Record<string, string | number>): {
       ${invoiceTable(data)}
       <p>Hạn thanh toán: <strong>${data.dueDate}</strong></p>
       <p>Mã tham chiếu: ${data.referenceCode}</p>
-
+      ${bankInfoBlockHtml(data)}
       <p>Mọi thắc mắc vui lòng liên hệ Zalo.</p>
     `,
   };
 }
 
 export function invoiceCreatedSmsTemplate(data: Record<string, string | number>): string {
-  return `Hoá đơn mới phòng ${data.roomNumber} kỳ ${data.period}: ${data.totalAmount}đ. Hạn ${data.dueDate}.`;
+  return `Hoá đơn mới phòng ${data.roomNumber} kỳ ${data.period}: ${data.totalAmount}đ. Hạn ${data.dueDate}.${bankInfoLineSms(data)}`;
 }

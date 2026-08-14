@@ -1,3 +1,20 @@
+export function bankInfoBlockHtml(data: Record<string, string | number>): string {
+  const accounts = [
+    data.bankAccountNumber ? `${data.bankName} — <strong>${data.bankAccountNumber}</strong> (${data.bankAccountName})` : null,
+    data.bank2AccountNumber ? `${data.bank2Name} — <strong>${data.bank2AccountNumber}</strong> (${data.bank2AccountName})` : null,
+  ].filter(Boolean);
+  if (accounts.length === 0) return '';
+  return `<p>Chuyển khoản tới 1 trong 2 số tài khoản sau:<br>${accounts.join('<br>')}</p>`;
+}
+
+export function bankInfoLineSms(data: Record<string, string | number>): string {
+  const accounts = [
+    data.bankAccountNumber ? `${data.bankAccountNumber} (${data.bankName})` : null,
+    data.bank2AccountNumber ? `${data.bank2AccountNumber} (${data.bank2Name})` : null,
+  ].filter(Boolean);
+  return accounts.length ? ` CK: ${accounts.join(' hoặc ')}.` : '';
+}
+
 export function invoiceTable(data: Record<string, string | number>): string {
   return `
     <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:480px;font-family:sans-serif;font-size:14px">

@@ -1,4 +1,4 @@
-import { invoiceTable } from './invoice-table.helper';
+import { invoiceTable, bankInfoBlockHtml, bankInfoLineSms } from './invoice-table.helper';
 
 export function invoiceOverdueTemplate(data: Record<string, string | number>): { subject: string; html: string } {
   return {
@@ -8,11 +8,12 @@ export function invoiceOverdueTemplate(data: Record<string, string | number>): {
       ${invoiceTable(data)}
       <p>Hạn thanh toán: <strong>${data.dueDate}</strong></p>
       <p>Vui lòng thanh toán sớm nhất có thể.</p>
+      ${bankInfoBlockHtml(data)}
       <p>Mọi thắc mắc vui lòng liên hệ Zalo.</p>
     `,
   };
 }
 
 export function invoiceOverdueSmsTemplate(data: Record<string, string | number>): string {
-  return `Hoá đơn phòng ${data.roomNumber} kỳ ${data.period} - ${data.totalAmount}đ đã quá hạn ${data.dueDate}. Vui lòng thanh toán sớm.`;
+  return `Hoá đơn phòng ${data.roomNumber} kỳ ${data.period} - ${data.totalAmount}đ đã quá hạn ${data.dueDate}. Vui lòng thanh toán sớm.${bankInfoLineSms(data)}`;
 }
