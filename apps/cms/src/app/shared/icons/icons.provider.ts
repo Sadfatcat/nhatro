@@ -54,6 +54,7 @@ import {
   CalendarOutline,
   DeleteOutline,
   EllipsisOutline,
+  KeyOutline,
 } from '@ant-design/icons-angular/icons';
 
 export const APP_ICONS = [
@@ -101,6 +102,7 @@ export const APP_ICONS = [
   CalendarOutline,
   DeleteOutline,
   EllipsisOutline,
+  KeyOutline,
 ];
 
 export const provideAppIcons = () => provideNzIcons(APP_ICONS);

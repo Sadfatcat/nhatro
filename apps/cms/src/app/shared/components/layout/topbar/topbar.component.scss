@@ -303,3 +303,26 @@
     padding-left: 8px;
   }
 }
+
+// ── Đổi mật khẩu ──────────────────────────────────────────────────────────
+.change-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+}
+.admin-note {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
