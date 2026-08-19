@@ -145,7 +145,7 @@ model NotificationLog {
   success     Boolean
   reason      String?
   sentAt      DateTime @default(now())
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }
