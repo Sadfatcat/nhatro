@@ -31,7 +31,6 @@ services:
       DATABASE_URL: "postgresql://nhatro:nhatro@postgres:5432/nhatro?schema=public"
       PORT: "3000"
       HOME: /tmp
-      CORS_ORIGIN: "https://${CMS_DOMAIN}"
     ports:
       - "3000:3000"
     volumes:
