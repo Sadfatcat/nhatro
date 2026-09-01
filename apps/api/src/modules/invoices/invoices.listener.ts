@@ -12,7 +12,7 @@ export class InvoicesListener {
   async onUtilityRecorded(payload: { roomId: string; billingMonth: string }): Promise<void> {
     try {
       await this.invoices.syncInvoiceForPeriod(payload.roomId, payload.billingMonth);
-      this.logger.log(`Đã đồng bộ hoá đơn cho phòng ${payload.roomId}, kỳ ${payload.billingMonth}.`);
+      this.logger.log(`Đã tạo/đồng bộ hoá đơn cho phòng ${payload.roomId}, kỳ ${payload.billingMonth}.`);
     } catch (err) {
       this.logger.warn(`Không đồng bộ được hoá đơn cho phòng ${payload.roomId}, kỳ ${payload.billingMonth}: ${err instanceof Error ? err.message : err}`);
     }

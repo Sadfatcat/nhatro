@@ -142,29 +142,13 @@ export class InvoiceDetailComponent implements OnInit {
     const inv = this.invoice();
     if (!inv) return;
     this.saving.set(true);
-    this.api.post<ApiResponse<{ success: boolean; reason?: string }>>('/notifications/send', { invoiceId: inv.id })
+    this.api.post<ApiResponse<{ success: boolean; reason?: string; channel?: 'sms' | 'email' }>>('/notifications/send', { invoiceId: inv.id })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe(res => {
         if (res.data?.success) {
-          this.toast.success('Đã gửi thông báo.');
+          this.toast.success(`Đã gửi qua ${this.channelLabel(res.data.channel ?? '')}.`);
         } else {
-          this.toast.error(res.data?.reason ?? 'Không gửi được thông báo.');
-        }
-        this.loadData(inv.id);
-      });
-  }
-
-  sendSms(): void {
-    const inv = this.invoice();
-    if (!inv) return;
-    this.saving.set(true);
-    this.api.post<ApiResponse<{ success: boolean; reason?: string }>>('/notifications/send', { invoiceId: inv.id, channel: 'sms' })
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe(res => {
-        if (res.data?.success) {
-          this.toast.success('Đã gửi SMS.');
-        } else {
-          this.toast.error(res.data?.reason ?? 'Không gửi được SMS.');
+          this.toast.error(`Thất bại cả 2 kênh: ${res.data?.reason ?? 'Không gửi được thông báo.'}`);
         }
         this.loadData(inv.id);
       });

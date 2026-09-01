@@ -78,7 +78,7 @@ export class InvoicesByBillingDayComponent implements OnInit {
     return { invoiceStatus: this.statusTpl, totalAmount: this.amountTpl, dueDate: this.dueDateTpl };
   }
 
-  tableConfig(rows: RoomInvoiceRow[]): TableConfig<RoomInvoiceRow> {
+  private buildTableConfig(rows: RoomInvoiceRow[]): TableConfig<RoomInvoiceRow> {
     return {
       rowKey:     'roomId',
       data:       rows,
@@ -99,15 +99,12 @@ export class InvoicesByBillingDayComponent implements OnInit {
           disabled: row => !row.invoiceId,
           action:   row => this.sendOne(row),
         },
-        {
-          label:    'Gửi SMS',
-          icon:     'message',
-          disabled: row => !row.invoiceId,
-          action:   row => this.sendOneSms(row),
-        },
       ],
     };
   }
+
+  tableConfig15 = computed(() => this.buildTableConfig(this.rows15()));
+  tableConfig30 = computed(() => this.buildTableConfig(this.rows30()));
 
   ngOnInit(): void { this.loadData(); }
 
@@ -152,29 +149,21 @@ export class InvoicesByBillingDayComponent implements OnInit {
   sendOne(row: RoomInvoiceRow): void {
     if (!row.invoiceId) return;
     this.saving.set(true);
-    this.api.post<ApiResponse<{ success: boolean; reason?: string }>>('/notifications/send', { invoiceId: row.invoiceId })
+    this.api.post<ApiResponse<{ success: boolean; reason?: string; channel?: 'sms' | 'email' }>>('/notifications/send', { invoiceId: row.invoiceId })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe(res => {
         if (res.data?.success) {
-          this.toast.success(`Đã gửi thông báo cho phòng ${row.roomNumber}.`);
+          this.toast.success(`Phòng ${row.roomNumber}: Đã gửi qua ${this.channelLabel(res.data.channel ?? '')}.`);
         } else {
-          this.toast.error(res.data?.reason ?? 'Không gửi được thông báo.');
+          this.toast.error(`Thất bại cả 2 kênh: ${res.data?.reason ?? 'Không gửi được thông báo.'}`);
         }
       });
   }
 
-  sendOneSms(row: RoomInvoiceRow): void {
-    if (!row.invoiceId) return;
-    this.saving.set(true);
-    this.api.post<ApiResponse<{ success: boolean; reason?: string }>>('/notifications/send', { invoiceId: row.invoiceId, channel: 'sms' })
-      .pipe(finalize(() => this.saving.set(false)))
-      .subscribe(res => {
-        if (res.data?.success) {
-          this.toast.success(`Đã gửi SMS cho phòng ${row.roomNumber}.`);
-        } else {
-          this.toast.error(res.data?.reason ?? 'Không gửi được SMS.');
-        }
-      });
+  channelLabel(channel: string): string {
+    if (channel === 'email') return 'Email';
+    if (channel === 'sms') return 'SMS';
+    return channel;
   }
 
   bulkSend(): void {

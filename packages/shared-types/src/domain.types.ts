@@ -48,6 +48,41 @@ export interface InvoiceBankInfo {
   bankAccountName: string | null;
 }
 
+export interface MergedInvoiceChildInvoice {
+  id: string;
+  period: string;
+  rentAmount: number;
+  electricityAmount: number;
+  waterAmount: number;
+  garbageFee: number;
+  otherFees: number;
+  deduction: number;
+  totalAmount: number;
+  prevElec: number;
+  currElec: number;
+  prevWater: number;
+  currWater: number;
+  elecUnitPrice: number;
+  waterUnitPrice: number;
+  dueDate: string;
+  referenceCode: string;
+  status: InvoiceStatus;
+  room: { roomNumber: string };
+}
+
+export interface MergedInvoice {
+  id: string;
+  tenantId: string;
+  period: string;
+  roomLabel: string;
+  totalAmount: number;
+  dueDate: string;
+  status: InvoiceStatus;
+  paidAt: string | null;
+  invoices: MergedInvoiceChildInvoice[];
+  bankInfo?: InvoiceBankInfo;
+}
+
 export interface Invoice {
   id: string;
   roomId: string;
@@ -71,6 +106,7 @@ export interface Invoice {
   status: InvoiceStatus;
   paidAt: string | null;
   markedBy: string | null;
+  mergedInvoiceId: string | null;
   createdAt: string;
   updatedAt: string;
   room: { roomNumber: string; floor: number };

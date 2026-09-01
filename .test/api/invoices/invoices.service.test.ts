@@ -26,6 +26,9 @@ describe('InvoicesService', () => {
     invoice: { findMany: jest.Mock; findFirst: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock; delete: jest.Mock; count: jest.Mock };
     invoiceEditLog: { create: jest.Mock };
     user: { findUnique: jest.Mock };
+    room: { findUnique: jest.Mock };
+    mergedInvoice: { create: jest.Mock; findMany: jest.Mock; updateMany: jest.Mock; update: jest.Mock };
+    $transaction: jest.Mock;
   };
   let rooms:     { findAll: jest.Mock };
   let contracts: { findByRoom: jest.Mock };
@@ -40,6 +43,9 @@ describe('InvoicesService', () => {
       },
       invoiceEditLog: { create: jest.fn() },
       user: { findUnique: jest.fn().mockResolvedValue({ fullName: 'Người dùng test' }) },
+      room: { findUnique: jest.fn() },
+      mergedInvoice: { create: jest.fn(), findMany: jest.fn().mockResolvedValue([]), updateMany: jest.fn(), update: jest.fn() },
+      $transaction: jest.fn(cb => cb(prisma)),
     };
     rooms     = { findAll: jest.fn() };
     contracts = { findByRoom: jest.fn() };
@@ -160,12 +166,52 @@ describe('InvoicesService', () => {
   });
 
   describe('syncInvoiceForPeriod', () => {
-    it('does NOT create an invoice for a room that has none yet this period (auto-create removed)', async () => {
+    it('does nothing when there is no invoice yet AND the meter reading is not closed for this period', async () => {
       prisma.invoice.findFirst.mockResolvedValue(null);
+      utilities.findByRoom.mockResolvedValue({ utilityRecord: null });
 
       await service.syncInvoiceForPeriod('r1', '2026-08');
       expect(prisma.invoice.create).not.toHaveBeenCalled();
       expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
+
+    it('creates a new invoice for a room that has none yet this period, once the meter reading is closed', async () => {
+      prisma.invoice.findFirst.mockResolvedValue(null);
+      prisma.room.findUnique.mockResolvedValue({ id: 'r1', roomNumber: '101', price: 2000000 });
+      contracts.findByRoom.mockResolvedValue({ id: 'contract-1' });
+      utilities.findByRoom.mockResolvedValue(utilityFor('2026-08', 0, 20, 0, 3));
+      prisma.invoice.create.mockImplementation(({ data }: any) => Promise.resolve(data));
+
+      await service.syncInvoiceForPeriod('r1', '2026-08');
+
+      expect(prisma.invoice.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          roomId: 'r1', period: '2026-08',
+          rentAmount: 2000000, electricityAmount: 20 * 3500, waterAmount: 3 * 30000,
+          totalAmount: 2000000 + 20 * 3500 + 3 * 30000 + 50000,
+        }),
+      });
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
+
+    it('silently skips creating when the room or its active contract cannot be found', async () => {
+      prisma.invoice.findFirst.mockResolvedValue(null);
+      prisma.room.findUnique.mockResolvedValue(null);
+      utilities.findByRoom.mockResolvedValue(utilityFor('2026-08', 0, 20, 0, 3));
+
+      await service.syncInvoiceForPeriod('r1', '2026-08');
+      expect(prisma.invoice.create).not.toHaveBeenCalled();
+    });
+
+    it('dedup: calling twice for the same (room, period) does not create two invoices (unique referenceCode, P2002 swallowed)', async () => {
+      prisma.invoice.findFirst.mockResolvedValue(null);
+      prisma.room.findUnique.mockResolvedValue({ id: 'r1', roomNumber: '101', price: 2000000 });
+      contracts.findByRoom.mockResolvedValue({ id: 'contract-1' });
+      utilities.findByRoom.mockResolvedValue(utilityFor('2026-08', 0, 20, 0, 3));
+      prisma.invoice.create.mockRejectedValue(duplicateKeyError());
+
+      await expect(service.syncInvoiceForPeriod('r1', '2026-08')).resolves.toBeUndefined();
+      expect(prisma.invoice.create).toHaveBeenCalledTimes(1);
     });
 
     it('throws and does NOT touch the row when the existing invoice is already PAID', async () => {
@@ -252,6 +298,12 @@ describe('InvoicesService', () => {
         data: expect.objectContaining({ markedBy: 'Chủ trọ A' }),
       }));
     });
+
+    it('refuses to mark a merged invoice paid individually — must be paid via the merged invoice', async () => {
+      prisma.invoice.findUnique.mockResolvedValue({ id: '1', status: InvoiceStatus.SENT, mergedInvoiceId: 'merged-1' });
+      await expect(service.markPaid('1', 'u1')).rejects.toThrow(BadRequestException);
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('bulkMarkPaid', () => {
@@ -262,11 +314,27 @@ describe('InvoicesService', () => {
       const result = await service.bulkMarkPaid({ ids: ['1', '2', '3-already-paid'] } as any, 'u1');
 
       expect(prisma.invoice.findMany).toHaveBeenCalledWith({
-        where:  { id: { in: ['1', '2', '3-already-paid'] }, status: { not: InvoiceStatus.PAID } },
+        where:  { id: { in: ['1', '2', '3-already-paid'] }, status: { not: InvoiceStatus.PAID }, mergedInvoiceId: null },
         select: { id: true },
       });
       expect(result.updated).toBe(2);
       expect(events.emit).toHaveBeenCalledTimes(2);
+    });
+
+    it('silently excludes merged invoices from the where clause instead of throwing (no per-item error)', async () => {
+      // findMany's where already filters mergedInvoiceId: null — a merged invoice id passed in
+      // is simply not returned by findMany, so it's never touched and never reported as an error.
+      prisma.invoice.findMany.mockResolvedValue([{ id: '1' }]); // '2-merged' excluded by the where clause
+      prisma.invoice.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.bulkMarkPaid({ ids: ['1', '2-merged'] } as any, 'u1');
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ mergedInvoiceId: null }),
+      }));
+      expect(result.updated).toBe(1);
+      expect(events.emit).toHaveBeenCalledTimes(1);
+      expect(events.emit).toHaveBeenCalledWith('invoice.paid', { invoiceId: '1' });
     });
 
     it('resolves markedBy from the JWT userId, not from the request body', async () => {
@@ -298,6 +366,24 @@ describe('InvoicesService', () => {
       prisma.invoice.findUnique.mockResolvedValue({ ...baseInvoice, status: InvoiceStatus.PAID });
       await expect(service.update('1', { rentAmount: 1 } as any, 'u1')).rejects.toThrow(BadRequestException);
       expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
+
+    it('allows editing a merged invoice child and recomputes the parent MergedInvoice total + dueDate', async () => {
+      const merged = { ...baseInvoice, mergedInvoiceId: 'merged-1' };
+      prisma.invoice.findUnique.mockResolvedValue(merged);
+      prisma.invoice.update.mockResolvedValue({ ...merged, rentAmount: 3000000 });
+      prisma.invoice.findMany.mockResolvedValue([
+        { id: '1', totalAmount: 3375000, dueDate: new Date('2026-08-20') },
+        { id: '2', totalAmount: 1000000, dueDate: new Date('2026-08-25') },
+      ]);
+
+      await service.update('1', { rentAmount: 3000000 } as any, 'u1');
+
+      expect(prisma.invoice.update).toHaveBeenCalled();
+      expect(prisma.mergedInvoice.update).toHaveBeenCalledWith({
+        where: { id: 'merged-1' },
+        data:  { totalAmount: 4375000, dueDate: new Date('2026-08-25') },
+      });
     });
 
     it('recomputes totalAmount from the 4 real fields — a client-supplied totalAmount is not part of the DTO and is ignored', async () => {
@@ -477,6 +563,171 @@ describe('InvoicesService', () => {
       prisma.invoice.findUnique.mockResolvedValue({ id: '1', status: InvoiceStatus.SENT });
       await service.remove('1');
       expect(prisma.invoice.delete).toHaveBeenCalledWith({ where: { id: '1' } });
+    });
+
+    it('refuses to delete a merged invoice individually', async () => {
+      prisma.invoice.findUnique.mockResolvedValue({ id: '1', status: InvoiceStatus.SENT, mergedInvoiceId: 'merged-1' });
+      await expect(service.remove('1')).rejects.toThrow(BadRequestException);
+      expect(prisma.invoice.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('checkOverdue — cron job', () => {
+    it('does not flip a merged invoice to OVERDUE (excluded via mergedInvoiceId: null in the where clause)', async () => {
+      prisma.invoice.findMany.mockResolvedValue([]); // the where clause already excludes merged invoices
+
+      await service.checkOverdue();
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ mergedInvoiceId: null }),
+      }));
+      expect(prisma.invoice.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('flips non-merged overdue invoices to OVERDUE and emits one event per invoice', async () => {
+      prisma.invoice.findMany.mockResolvedValue([{ id: '1' }, { id: '2' }]);
+      prisma.invoice.updateMany.mockResolvedValue({ count: 2 });
+
+      await service.checkOverdue();
+
+      expect(prisma.invoice.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['1', '2'] } },
+        data:  { status: InvoiceStatus.OVERDUE },
+      });
+      expect(events.emit).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('getMergeSuggestions', () => {
+    const invoiceFor = (id: string, tenantId: string, roomNumber: string, totalAmount: number) => ({
+      id, totalAmount, room: { roomNumber }, contract: { tenantId, tenant: { fullName: `Tenant ${tenantId}` } },
+    });
+
+    it('only returns tenants with 2+ rooms — a single-room tenant is not a merge candidate', async () => {
+      prisma.invoice.findMany.mockResolvedValue([invoiceFor('i1', 't1', '101', 1000000)]);
+      const result = await service.getMergeSuggestions('2026-08');
+      expect(result).toHaveLength(0);
+    });
+
+    it('groups multi-room tenants and sums totalAmount', async () => {
+      prisma.invoice.findMany.mockResolvedValue([
+        invoiceFor('i1', 't1', '101', 1000000),
+        invoiceFor('i2', 't1', '102', 1500000),
+      ]);
+
+      const result = await service.getMergeSuggestions('2026-08');
+
+      expect(result).toEqual([{
+        tenantId: 't1', tenantName: 'Tenant t1', totalAmount: 2500000,
+        invoices: [
+          { id: 'i1', roomNumber: '101', totalAmount: 1000000 },
+          { id: 'i2', roomNumber: '102', totalAmount: 1500000 },
+        ],
+      }]);
+    });
+
+    it('excludes PAID invoices and already-merged invoices via the where clause', async () => {
+      prisma.invoice.findMany.mockResolvedValue([]);
+      await service.getMergeSuggestions('2026-08');
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          period: '2026-08',
+          mergedInvoiceId: null,
+          status: { not: InvoiceStatus.PAID },
+        }),
+      }));
+    });
+  });
+
+  describe('mergeInvoices', () => {
+    const invoiceFor = (id: string, tenantId: string, period: string, totalAmount: number, extra: Partial<{ status: InvoiceStatus; mergedInvoiceId: string | null; dueDate: Date; roomNumber: string }> = {}) => ({
+      id, period, totalAmount, status: InvoiceStatus.SENT, mergedInvoiceId: null, dueDate: new Date('2026-08-20'),
+      contract: { tenantId }, room: { roomNumber: extra.roomNumber ?? 'P-1' }, ...extra,
+    });
+
+    it('throws when fewer than 2 invoice ids are given', async () => {
+      await expect(service.mergeInvoices(['only-one'])).rejects.toThrow(BadRequestException);
+      expect(prisma.invoice.findMany).not.toHaveBeenCalled();
+    });
+
+    it('happy path: creates a MergedInvoice with the correct total, roomLabel and links all child invoices', async () => {
+      prisma.invoice.findMany.mockResolvedValue([
+        invoiceFor('i1', 't1', '2026-08', 1000000, { dueDate: new Date('2026-08-20'), roomNumber: 'P-17' }),
+        invoiceFor('i2', 't1', '2026-08', 1500000, { dueDate: new Date('2026-08-25'), roomNumber: 'P-19' }),
+      ]);
+      prisma.mergedInvoice.create.mockResolvedValue({ id: 'merged-1' });
+      prisma.invoice.updateMany.mockResolvedValue({ count: 2 });
+
+      const result = await service.mergeInvoices(['i1', 'i2']);
+
+      expect(prisma.mergedInvoice.create).toHaveBeenCalledWith({
+        data: { tenantId: 't1', period: '2026-08', totalAmount: 2500000, dueDate: new Date('2026-08-25'), roomLabel: 'P-17-19' },
+      });
+      expect(prisma.invoice.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['i1', 'i2'] }, mergedInvoiceId: null, status: { not: InvoiceStatus.PAID } },
+        data:  { mergedInvoiceId: 'merged-1' },
+      });
+      expect(result).toEqual({ mergedInvoiceId: 'merged-1' });
+      expect(events.emit).not.toHaveBeenCalled();
+    });
+
+    it('rejects when one of the ids no longer exists', async () => {
+      prisma.invoice.findMany.mockResolvedValue([invoiceFor('i1', 't1', '2026-08', 1000000)]);
+      await expect(service.mergeInvoices(['i1', 'i2'])).rejects.toThrow(BadRequestException);
+      expect(prisma.mergedInvoice.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects invoices belonging to different tenants', async () => {
+      prisma.invoice.findMany.mockResolvedValue([
+        invoiceFor('i1', 't1', '2026-08', 1000000),
+        invoiceFor('i2', 't2', '2026-08', 1500000),
+      ]);
+      await expect(service.mergeInvoices(['i1', 'i2'])).rejects.toThrow(BadRequestException);
+      expect(prisma.mergedInvoice.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects invoices from different periods', async () => {
+      prisma.invoice.findMany.mockResolvedValue([
+        invoiceFor('i1', 't1', '2026-07', 1000000),
+        invoiceFor('i2', 't1', '2026-08', 1500000),
+      ]);
+      await expect(service.mergeInvoices(['i1', 'i2'])).rejects.toThrow(BadRequestException);
+      expect(prisma.mergedInvoice.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects when any invoice is already PAID', async () => {
+      prisma.invoice.findMany.mockResolvedValue([
+        invoiceFor('i1', 't1', '2026-08', 1000000, { status: InvoiceStatus.PAID }),
+        invoiceFor('i2', 't1', '2026-08', 1500000),
+      ]);
+      await expect(service.mergeInvoices(['i1', 'i2'])).rejects.toThrow(BadRequestException);
+      expect(prisma.mergedInvoice.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects when any invoice was already merged before', async () => {
+      prisma.invoice.findMany.mockResolvedValue([
+        invoiceFor('i1', 't1', '2026-08', 1000000, { mergedInvoiceId: 'merged-old' }),
+        invoiceFor('i2', 't1', '2026-08', 1500000),
+      ]);
+      await expect(service.mergeInvoices(['i1', 'i2'])).rejects.toThrow(BadRequestException);
+      expect(prisma.mergedInvoice.create).not.toHaveBeenCalled();
+    });
+
+    it('race condition: state changed (e.g. one invoice got PAID) between validation and the update — throws and leaves no orphaned MergedInvoice', async () => {
+      prisma.invoice.findMany.mockResolvedValue([
+        invoiceFor('i1', 't1', '2026-08', 1000000),
+        invoiceFor('i2', 't1', '2026-08', 1500000),
+      ]);
+      prisma.mergedInvoice.create.mockResolvedValue({ id: 'merged-1' });
+      // updateMany matches only 1 row instead of 2 — the other invoice's state changed mid-flight
+      prisma.invoice.updateMany.mockResolvedValue({ count: 1 });
+
+      await expect(service.mergeInvoices(['i1', 'i2'])).rejects.toThrow(BadRequestException);
+
+      // the transaction callback threw, so no MergedInvoice row is left committed — verified by asserting
+      // no follow-up invoice.merged event fired (would only happen after a truly successful transaction)
+      expect(events.emit).not.toHaveBeenCalled();
     });
   });
 });

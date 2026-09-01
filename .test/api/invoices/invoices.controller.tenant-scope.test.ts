@@ -4,14 +4,14 @@ import { InvoicesController } from '../../../apps/api/src/modules/invoices/invoi
 // not a new account) — GET /invoices used to filter by roomId only, so an incoming tenant
 // could see the previous occupant's full invoice history for the same room.
 describe('InvoicesController.findAll — tenant scoped to their own contract, not just the room', () => {
-  let svc: { findAll: jest.Mock };
+  let svc: { findAll: jest.Mock; findAllCombined: jest.Mock };
   let contracts: { findByRoom: jest.Mock };
   let controller: InvoicesController;
 
   beforeEach(() => {
-    svc = { findAll: jest.fn().mockResolvedValue([]) };
+    svc = { findAll: jest.fn().mockResolvedValue([]), findAllCombined: jest.fn().mockResolvedValue({ items: [], total: 0 }) };
     contracts = { findByRoom: jest.fn() };
-    controller = new InvoicesController(svc as any, contracts as any);
+    controller = new InvoicesController(svc as any, contracts as any, {} as any);
   });
 
   it('a TENANT with an active contract is scoped to that contractId', async () => {
@@ -46,12 +46,12 @@ describe('InvoicesController.findAll — tenant scoped to their own contract, no
     });
   });
 
-  it('ADMIN/LANDLORD can pass page/pageSize/notified straight through', async () => {
+  it('ADMIN/LANDLORD can pass page/pageSize/notified straight through (routed to findAllCombined)', async () => {
     await controller.findAll(
       { id: 'u1', role: 'LANDLORD' }, undefined, '2026-08', undefined, 'r1,r2', 'true', '2', '20',
     );
 
-    expect(svc.findAll).toHaveBeenCalledWith(expect.objectContaining({
+    expect(svc.findAllCombined).toHaveBeenCalledWith(expect.objectContaining({
       period: '2026-08', roomIds: ['r1', 'r2'], notified: true, page: 2, pageSize: 20,
     }));
   });

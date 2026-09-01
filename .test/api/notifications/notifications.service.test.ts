@@ -60,7 +60,7 @@ describe('NotificationsService', () => {
       sms.send.mockResolvedValue({ success: true });
 
       const result = await service.sendForInvoice('inv-1', 'invoice-created');
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, channel: 'sms' });
       expect(sms.send).toHaveBeenCalled();
     });
 
@@ -76,14 +76,24 @@ describe('NotificationsService', () => {
       expect(payload.to).toEqual({ email: 'tenant@example.com', phone: '0900000000' });
     });
 
-    it('forceChannel="sms" bypasses the primary/fallback chain entirely (manual SMS-only trigger)', async () => {
+    it('returns channel:"sms" when the primary provider succeeds', async () => {
       prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
       sms.send.mockResolvedValue({ success: true });
 
-      await service.sendForInvoice('inv-1', 'invoice-created', 'sms');
+      const result = await service.sendForInvoice('inv-1', 'invoice-created');
 
-      expect(sms.send).toHaveBeenCalled();
+      expect(result).toEqual({ success: true, channel: 'sms' });
       expect(email.send).not.toHaveBeenCalled();
+    });
+
+    it('returns channel:"email" when the primary (SMS) fails and the fallback succeeds', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
+      sms.send.mockResolvedValue({ success: false, error: 'SMS gateway down' });
+      email.send.mockResolvedValue({ success: true });
+
+      const result = await service.sendForInvoice('inv-1', 'invoice-created');
+
+      expect(result).toEqual({ success: true, channel: 'email' });
     });
   });
 
@@ -99,7 +109,7 @@ describe('NotificationsService', () => {
     it('succeeds via SMS (primary) without ever touching the email fallback', async () => {
       sms.send.mockResolvedValue({ success: true });
       const result = await service.send({ to: { phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, channel: 'sms' });
       expect(email.send).not.toHaveBeenCalled();
     });
 
@@ -108,7 +118,7 @@ describe('NotificationsService', () => {
       email.send.mockResolvedValue({ success: true });
 
       const result = await service.send({ to: { email: 'x@x.com', phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, channel: 'email' });
       expect(email.send).toHaveBeenCalled();
     });
 

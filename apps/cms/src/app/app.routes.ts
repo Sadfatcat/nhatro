@@ -85,6 +85,12 @@ export const routes: Routes = [
             loadComponent: () => import('./modules/invoices/invoice-room-history/invoice-room-history.component').then(m => m.InvoiceRoomHistoryComponent),
           },
           {
+            path:          'invoices/merged/:id',
+            canActivate:   [permissionGuard],
+            data:          { permissions: ['invoices:view'] },
+            loadComponent: () => import('./modules/invoices/merged-invoice-detail/merged-invoice-detail.component').then(m => m.MergedInvoiceDetailComponent),
+          },
+          {
             path:          'invoices/:id',
             canActivate:   [permissionGuard],
             data:          { permissions: ['invoices:view'] },

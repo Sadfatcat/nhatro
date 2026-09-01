@@ -1,0 +1,190 @@
+<section class="detail-page">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <a class="crumb-link" (click)="goBack()">Hoá đơn</a>
+    <span class="crumb-sep">›</span>
+    <span class="crumb-active">
+      @if (merged()) { {{ merged()!.roomLabel }} } @else { Chi tiết }
+    </span>
+  </nav>
+
+  @if (loading()) {
+    <div class="detail-loading">
+      <nz-spin nzSimple [nzSize]="'large'" />
+    </div>
+  } @else if (merged(); as m) {
+
+    <!-- Page header -->
+    <div class="detail-header">
+      <div class="detail-header__left">
+        <button class="btn btn--ghost" (click)="goBack()">
+          <nz-icon nzType="left" /> Quay lại
+        </button>
+        <div>
+          <h1>Hoá đơn gộp — {{ m.roomLabel }}</h1>
+          <p>Kỳ <strong>{{ m.period }}</strong></p>
+        </div>
+      </div>
+      <div class="detail-header__right">
+        <app-status-badge [status]="m.status" />
+        <button
+          *appPermission="'invoices:notify'"
+          nz-button
+          [nzLoading]="saving()"
+          (click)="sendNotification()"
+        >
+          <nz-icon nzType="mail" /> Gửi thông báo
+        </button>
+        @if (m.status !== 'PAID') {
+          <button
+            *appPermission="'invoices:mark-paid'"
+            nz-button nzType="primary"
+            [nzLoading]="saving()"
+            (click)="markPaid()"
+          >
+            <nz-icon nzType="check-circle" /> Đánh dấu đã thanh toán
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Per-room breakdown blocks -->
+    <div class="merged-rooms">
+      @for (inv of m.invoices; track inv.id) {
+        <div class="col-card">
+          <div class="col-card__header">
+            <nz-icon nzType="file-text" />
+            <span>Phòng {{ inv.room.roomNumber }}</span>
+            @if (inv.status !== 'PAID' && editingId() !== inv.id) {
+              <button
+                *appPermission="'invoices:update'"
+                nz-button nzType="text" nzSize="small"
+                (click)="startEdit(inv)"
+              >
+                <nz-icon nzType="edit" /> Sửa
+              </button>
+            }
+          </div>
+          <div class="col-card__body">
+            @if (editingId() === inv.id) {
+              <div class="edit-form">
+                <div class="edit-form__row">
+                  <label>Tiền phòng</label>
+                  <nz-input-number [ngModel]="editForm().rentAmount" (ngModelChange)="patchEditForm({ rentAmount: $event })" [nzMin]="0" style="width:100%" />
+                </div>
+                <div class="edit-form__row">
+                  <label>Tiền điện</label>
+                  <nz-input-number [ngModel]="editForm().electricityAmount" (ngModelChange)="patchEditForm({ electricityAmount: $event })" [nzMin]="0" style="width:100%" />
+                </div>
+                <div class="edit-form__row">
+                  <label>Tiền nước</label>
+                  <nz-input-number [ngModel]="editForm().waterAmount" (ngModelChange)="patchEditForm({ waterAmount: $event })" [nzMin]="0" style="width:100%" />
+                </div>
+                <div class="edit-form__row">
+                  <label>Phí rác</label>
+                  <nz-input-number [ngModel]="editForm().garbageFee" (ngModelChange)="patchEditForm({ garbageFee: $event })" [nzMin]="0" style="width:100%" />
+                </div>
+                <div class="edit-form__row">
+                  <label>Phí khác</label>
+                  <nz-input-number [ngModel]="editForm().otherFees" (ngModelChange)="patchEditForm({ otherFees: $event })" [nzMin]="0" style="width:100%" />
+                </div>
+                <div class="edit-form__row">
+                  <label>Khấu trừ</label>
+                  <nz-input-number [ngModel]="editForm().deduction" (ngModelChange)="patchEditForm({ deduction: $event })" [nzMin]="0" style="width:100%" />
+                </div>
+                <div class="edit-form__row">
+                  <label>Hạn đóng</label>
+                  <nz-date-picker [ngModel]="editForm().dueDate" (ngModelChange)="patchEditForm({ dueDate: $event })" style="width:100%" />
+                </div>
+                <div class="edit-form__actions">
+                  <button nz-button nzType="default" (click)="cancelEdit()">Huỷ</button>
+                  <button nz-button nzType="primary" [nzLoading]="saving()" (click)="submitEdit()">Lưu</button>
+                </div>
+              </div>
+            } @else {
+            <div class="info-grid">
+              <div class="info-row">
+                <span class="info-label">Tiền phòng</span>
+                <app-money-display [value]="inv.rentAmount" />
+              </div>
+              <div class="info-row info-row--full">
+                <div class="info-row">
+                  <span class="info-label">Tiền điện</span>
+                  <app-money-display [value]="inv.electricityAmount" />
+                </div>
+                <span class="usage-note">{{ inv.prevElec }} → {{ inv.currElec }} kWh (dùng {{ inv.currElec - inv.prevElec }} kWh × {{ inv.elecUnitPrice | number:'1.0-0' }}đ)</span>
+              </div>
+              <div class="info-row info-row--full">
+                <div class="info-row">
+                  <span class="info-label">Tiền nước</span>
+                  <app-money-display [value]="inv.waterAmount" />
+                </div>
+                <span class="usage-note">{{ inv.prevWater }} → {{ inv.currWater }} m³ (dùng {{ inv.currWater - inv.prevWater }} m³ × {{ inv.waterUnitPrice | number:'1.0-0' }}đ)</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Phí rác</span>
+                <app-money-display [value]="inv.garbageFee" />
+              </div>
+              @if (inv.otherFees > 0) {
+                <div class="info-row">
+                  <span class="info-label">Phí khác</span>
+                  <app-money-display [value]="inv.otherFees" />
+                </div>
+              }
+              @if (inv.deduction > 0) {
+                <div class="info-row">
+                  <span class="info-label">Khấu trừ</span>
+                  <span class="deduction-value">− <app-money-display [value]="inv.deduction" /></span>
+                </div>
+              }
+              <div class="info-row info-row--total">
+                <span class="info-label">Tổng phòng</span>
+                <app-money-display [value]="inv.totalAmount" />
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="info-row info-row--total merged-grand-total">
+      <span class="info-label">Tổng cộng</span>
+      <app-money-display [value]="m.totalAmount" />
+    </div>
+
+    <!-- Bank info -->
+    <div class="col-card">
+      <div class="col-card__header">
+        <nz-icon nzType="bank" />
+        <span>Thông tin chuyển khoản</span>
+      </div>
+      <div class="col-card__body">
+        @if (m.bankInfo?.bankAccountNumber) {
+          <div class="info-grid">
+            <div class="info-row">
+              <span class="info-label">Ngân hàng</span>
+              <span>{{ m.bankInfo?.bankName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Số TK</span>
+              <span>{{ m.bankInfo?.bankAccountNumber }}</span>
+              <button nz-button nzType="text" nzSize="small" (click)="copyAccountNumber()">
+                <nz-icon nzType="copy" />
+              </button>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Chủ TK</span>
+              <span>{{ m.bankInfo?.bankAccountName }}</span>
+            </div>
+          </div>
+        } @else {
+          <p class="bank-empty">Chưa cấu hình thông tin chuyển khoản.</p>
+        }
+      </div>
+    </div>
+
+  }
+
+</section>

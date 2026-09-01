@@ -15,6 +15,13 @@
     </div>
   } @else if (invoice(); as inv) {
 
+    @if (inv.mergedInvoiceId) {
+      <div class="detail-merged-notice">
+        Hoá đơn này đã gộp vào hoá đơn chung.
+        <a [routerLink]="['/app/invoices/merged', inv.mergedInvoiceId]">Xem chi tiết</a>
+      </div>
+    }
+
     <!-- Page header -->
     <div class="detail-header">
       <div class="detail-header__left">
@@ -36,15 +43,7 @@
         >
           <nz-icon nzType="mail" /> Gửi thông báo
         </button>
-        <button
-          *appPermission="'invoices:notify'"
-          nz-button
-          [nzLoading]="saving()"
-          (click)="sendSms()"
-        >
-          <nz-icon nzType="message" /> Gửi SMS
-        </button>
-        @if (inv.status !== 'PAID') {
+        @if (inv.status !== 'PAID' && !inv.mergedInvoiceId) {
           @if (!editing()) {
             <button
               *appPermission="'invoices:update'"

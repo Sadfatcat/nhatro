@@ -276,13 +276,13 @@ export class RoomsListComponent implements OnInit, OnDestroy {
     this.assignRoomId.set(null);
     this.assignTenantId.set(null);
     this.showAssignModal.set(true);
-    this.api.get<ApiResponse<{ tenantId: string; fullName: string; room: { roomNumber: string } | null }[]>>('/tenants')
+    this.api.get<ApiResponse<{ tenantId: string; fullName: string; rooms: { roomNumber: string }[] }[]>>('/tenants')
       .subscribe(res => {
         if (!res.success || !res.data) return;
         this.tenantOptions.set(res.data.map(t => ({
           tenantId:   t.tenantId,
           fullName:   t.fullName,
-          roomNumber: t.room?.roomNumber ?? null,
+          roomNumber: t.rooms.length ? t.rooms.map(r => r.roomNumber).join(', ') : null,
         })));
       });
   }

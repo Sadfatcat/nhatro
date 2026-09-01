@@ -6,12 +6,16 @@ import { invoiceCreatedTemplate } from '../templates/invoice-created.template';
 import { invoiceDueSoonTemplate } from '../templates/invoice-due-soon.template';
 import { invoiceOverdueTemplate } from '../templates/invoice-overdue.template';
 import { invoicePaidTemplate } from '../templates/invoice-paid.template';
+import { invoiceMergedTemplate } from '../templates/invoice-merged.template';
+import { invoiceMergedPaidTemplate } from '../templates/invoice-merged-paid.template';
 
 const TEMPLATE_BUILDERS = {
-  'invoice-created':  invoiceCreatedTemplate,
-  'invoice-due-soon': invoiceDueSoonTemplate,
-  'invoice-overdue':  invoiceOverdueTemplate,
-  'invoice-paid':     invoicePaidTemplate,
+  'invoice-created':      invoiceCreatedTemplate,
+  'invoice-due-soon':     invoiceDueSoonTemplate,
+  'invoice-overdue':      invoiceOverdueTemplate,
+  'invoice-paid':         invoicePaidTemplate,
+  'invoice-merged':       invoiceMergedTemplate,
+  'invoice-merged-paid':  invoiceMergedPaidTemplate,
 };
 
 @Injectable()

@@ -2,14 +2,15 @@ export type NotificationTemplateKey =
   | 'invoice-created'
   | 'invoice-due-soon'
   | 'invoice-overdue'
-  | 'invoice-paid';
+  | 'invoice-paid'
+  | 'invoice-merged'
+  | 'invoice-merged-paid';
 
 export interface NotificationPayload {
   to: { email?: string; phone?: string };
   templateKey: NotificationTemplateKey;
   data: Record<string, string | number>;
   invoiceId?: string;
-  forceChannel?: 'sms';
 }
 
 export interface NotificationSendResult {

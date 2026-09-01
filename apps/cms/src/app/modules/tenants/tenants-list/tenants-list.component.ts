@@ -142,7 +142,7 @@ export class TenantsListComponent implements OnInit {
 
   loadData(): void {
     this.loading.set(true);
-    this.api.get<ApiResponse<{ tenantId: string; fullName: string; phone: string | null; room: { roomNumber: string; price: number } | null }[]>>('/tenants')
+    this.api.get<ApiResponse<{ tenantId: string; fullName: string; phone: string | null; rooms: { roomNumber: string; price: number }[] }[]>>('/tenants')
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
@@ -150,8 +150,8 @@ export class TenantsListComponent implements OnInit {
           tenantId:   t.tenantId,
           fullName:   t.fullName,
           phone:      t.phone,
-          roomNumber: t.room?.roomNumber ?? 'Không thuê phòng',
-          price:      t.room?.price ?? null,
+          roomNumber: t.rooms.length ? t.rooms.map(r => r.roomNumber).join(', ') : 'Không thuê phòng',
+          price:      t.rooms.length ? t.rooms.reduce((sum, r) => sum + r.price, 0) : null,
         })));
       });
   }

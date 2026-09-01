@@ -5,12 +5,16 @@ import { invoiceCreatedSmsTemplate } from '../templates/invoice-created.template
 import { invoiceDueSoonSmsTemplate } from '../templates/invoice-due-soon.template';
 import { invoiceOverdueSmsTemplate } from '../templates/invoice-overdue.template';
 import { invoicePaidSmsTemplate } from '../templates/invoice-paid.template';
+import { invoiceMergedSmsTemplate } from '../templates/invoice-merged.template';
+import { invoiceMergedPaidSmsTemplate } from '../templates/invoice-merged-paid.template';
 
 const TEMPLATE_BUILDERS = {
-  'invoice-created':  invoiceCreatedSmsTemplate,
-  'invoice-due-soon': invoiceDueSoonSmsTemplate,
-  'invoice-overdue':  invoiceOverdueSmsTemplate,
-  'invoice-paid':     invoicePaidSmsTemplate,
+  'invoice-created':      invoiceCreatedSmsTemplate,
+  'invoice-due-soon':     invoiceDueSoonSmsTemplate,
+  'invoice-overdue':      invoiceOverdueSmsTemplate,
+  'invoice-paid':         invoicePaidSmsTemplate,
+  'invoice-merged':       invoiceMergedSmsTemplate,
+  'invoice-merged-paid':  invoiceMergedPaidSmsTemplate,
 };
 
 @Injectable()

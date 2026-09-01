@@ -45,20 +45,75 @@ export class InvoicesService {
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async checkOverdue(): Promise<void> {
     const overdue = await this.prisma.invoice.findMany({
+      where:  { status: InvoiceStatus.SENT, dueDate: { lt: new Date() }, mergedInvoiceId: null },
+      select: { id: true },
+    });
+    if (overdue.length > 0) {
+      await this.prisma.invoice.updateMany({
+        where: { id: { in: overdue.map(i => i.id) } },
+        data:  { status: InvoiceStatus.OVERDUE },
+      });
+
+      for (const invoice of overdue) {
+        this.events.emit('invoice.overdue', { invoiceId: invoice.id });
+      }
+      this.logger.log(`Đã chuyển ${overdue.length} hoá đơn sang OVERDUE.`);
+    }
+
+    const overdueMerged = await this.prisma.mergedInvoice.findMany({
       where:  { status: InvoiceStatus.SENT, dueDate: { lt: new Date() } },
       select: { id: true },
     });
-    if (overdue.length === 0) return;
-
-    await this.prisma.invoice.updateMany({
-      where: { id: { in: overdue.map(i => i.id) } },
-      data:  { status: InvoiceStatus.OVERDUE },
-    });
-
-    for (const invoice of overdue) {
-      this.events.emit('invoice.overdue', { invoiceId: invoice.id });
+    if (overdueMerged.length) {
+      await this.prisma.mergedInvoice.updateMany({
+        where: { id: { in: overdueMerged.map(m => m.id) } },
+        data:  { status: InvoiceStatus.OVERDUE },
+      });
+      for (const m of overdueMerged) {
+        this.events.emit('merged-invoice.overdue', { mergedInvoiceId: m.id });
+      }
     }
-    this.logger.log(`Đã chuyển ${overdue.length} hoá đơn sang OVERDUE.`);
+  }
+
+  private buildInvoiceData(
+    room:     { roomId: string; roomNumber: string; price: number },
+    contract: { id: string },
+    utility:  { prevElec: number; currElec: number; prevWater: number; currWater: number },
+    period:   string,
+    dueDate:  Date,
+  ) {
+    const { prevElec, currElec, prevWater, currWater } = utility;
+    const elecUsed  = Math.max(0, currElec - prevElec);
+    const waterUsed = Math.max(0, currWater - prevWater);
+
+    const rentAmount        = room.price;
+    const electricityAmount = Math.round(elecUsed * ELECTRICITY_PRICE_PER_KWH);
+    const waterAmount       = Math.round(waterUsed * WATER_PRICE_PER_M3);
+    const garbageFee        = TRASH_FEE_PER_ROOM;
+    const otherFees         = 0;
+    const deduction         = 0;
+    const totalAmount       = rentAmount + electricityAmount + waterAmount + garbageFee + otherFees - deduction;
+
+    return {
+      roomId:            room.roomId,
+      contractId:        contract.id,
+      period,
+      rentAmount,
+      electricityAmount,
+      waterAmount,
+      garbageFee,
+      otherFees,
+      deduction,
+      totalAmount,
+      referenceCode:     this.buildReferenceCode(room.roomNumber, period),
+      dueDate,
+      prevElec,
+      currElec,
+      prevWater,
+      currWater,
+      elecUnitPrice:     ELECTRICITY_PRICE_PER_KWH,
+      waterUnitPrice:    WATER_PRICE_PER_M3,
+    };
   }
 
   async generate(dto: GenerateInvoiceDto) {
@@ -88,40 +143,9 @@ export class InvoicesService {
         continue;
       }
 
-      const { prevElec, currElec, prevWater, currWater } = utility.utilityRecord;
-      const elecUsed  = Math.max(0, currElec - prevElec);
-      const waterUsed = Math.max(0, currWater - prevWater);
-
-      const rentAmount        = room.price;
-      const electricityAmount = Math.round(elecUsed * ELECTRICITY_PRICE_PER_KWH);
-      const waterAmount       = Math.round(waterUsed * WATER_PRICE_PER_M3);
-      const garbageFee        = TRASH_FEE_PER_ROOM;
-      const otherFees         = 0;
-      const deduction         = 0;
-      const totalAmount       = rentAmount + electricityAmount + waterAmount + garbageFee + otherFees - deduction;
-
       try {
         const invoice = await this.prisma.invoice.create({
-          data: {
-            roomId:            room.roomId,
-            contractId:        contract.id,
-            period:            dto.period,
-            rentAmount,
-            electricityAmount,
-            waterAmount,
-            garbageFee,
-            otherFees,
-            deduction,
-            totalAmount,
-            referenceCode:     this.buildReferenceCode(room.roomNumber, dto.period),
-            dueDate,
-            prevElec:          prevElec,
-            currElec:          currElec,
-            prevWater:         prevWater,
-            currWater:         currWater,
-            elecUnitPrice:     ELECTRICITY_PRICE_PER_KWH,
-            waterUnitPrice:    WATER_PRICE_PER_M3,
-          },
+          data: this.buildInvoiceData(room, contract, utility.utilityRecord, dto.period, dueDate),
         });
         created.push(invoice);
       } catch (err) {
@@ -140,17 +164,34 @@ export class InvoicesService {
     return { created, skipped };
   }
 
-  /** Called when a utility reading is (re)saved for a period. Recalculates an
-   *  existing non-PAID invoice for that period; does not create new invoices. */
+  /** Called when a utility reading is (re)saved for a period. Creates the invoice
+   *  for that period if it doesn't exist yet; otherwise recalculates it, unless
+   *  it's already PAID. */
   async syncInvoiceForPeriod(roomId: string, period: string): Promise<void> {
     const existing = await this.prisma.invoice.findFirst({ where: { roomId, period } });
-    if (!existing) return;
-    if (existing.status === InvoiceStatus.PAID) {
+    if (existing?.status === InvoiceStatus.PAID) {
       throw new BadRequestException('Hoá đơn kỳ này đã thanh toán, không thể sửa chỉ số điện nước.');
     }
 
     const utility = await this.utilities.findByRoom(roomId, period);
     if (!utility.utilityRecord || utility.utilityRecord.billingMonth !== period) return;
+
+    if (!existing) {
+      const room = await this.prisma.room.findUnique({ where: { id: roomId }, select: { id: true, roomNumber: true, price: true } });
+      const contract = await this.contracts.findByRoom(roomId);
+      if (!room || !contract) return;
+      const roomForInvoice = { roomId: room.id, roomNumber: room.roomNumber, price: room.price };
+      const dueDate = new Date(Date.now() + DEFAULT_DUE_DAYS * 24 * 60 * 60 * 1000);
+      try {
+        await this.prisma.invoice.create({
+          data: this.buildInvoiceData(roomForInvoice, contract, utility.utilityRecord, period, dueDate),
+        });
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') return;
+        throw err;
+      }
+      return;
+    }
 
     const { prevElec, currElec, prevWater, currWater } = utility.utilityRecord;
     const elecUsed           = Math.max(0, currElec - prevElec);
@@ -214,6 +255,79 @@ export class InvoicesService {
       }),
       this.prisma.invoice.count({ where }),
     ]);
+    return { items, total };
+  }
+
+  /** Same filter/pagination contract as findAll(), but merges MergedInvoice rows in place of
+   *  their now-hidden child invoices — used by the paginated invoice-creation-log list only. */
+  async findAllCombined(filter: InvoiceFilter & { sortBy?: string; sortDir?: 'asc' | 'desc' }) {
+    const where: Prisma.InvoiceWhereInput = {
+      status:          filter.status,
+      period:          filter.period,
+      roomId:          filter.roomIds?.length ? { in: filter.roomIds } : filter.roomId,
+      contractId:      filter.contractId,
+      mergedInvoiceId: null,
+      notificationLogs: filter.notified === undefined ? undefined
+        : filter.notified ? { some: {} } : { none: {} },
+    };
+    const include = {
+      ...INCLUDE_ROOM,
+      contract: { select: { tenant: { select: { fullName: true } } } },
+      _count:   { select: { notificationLogs: true } },
+    };
+
+    type CombinedRow = {
+      id: string; roomNumber: string; tenantName: string; period: string; totalAmount: number;
+      status: InvoiceStatus; createdAt: Date; dueDate: Date; notified: boolean; kind: 'invoice' | 'merged';
+    };
+
+    const [invoices, mergedInvoices] = await Promise.all([
+      this.prisma.invoice.findMany({ where, include }),
+      this.prisma.mergedInvoice.findMany({
+        where:   { period: filter.period },
+        include: { tenant: { select: { fullName: true } } },
+      }),
+    ]);
+
+    const combined: CombinedRow[] = [
+      ...invoices.map(inv => ({
+        id:          inv.id,
+        roomNumber:  inv.room.roomNumber,
+        tenantName:  inv.contract.tenant.fullName,
+        period:      inv.period,
+        totalAmount: inv.totalAmount,
+        status:      inv.status,
+        createdAt:   inv.createdAt,
+        dueDate:     inv.dueDate,
+        notified:    inv._count.notificationLogs > 0,
+        kind:        'invoice' as const,
+      })),
+      ...mergedInvoices.map(m => ({
+        id:          m.id,
+        roomNumber:  m.roomLabel,
+        tenantName:  m.tenant.fullName,
+        period:      m.period,
+        totalAmount: m.totalAmount,
+        status:      m.status,
+        createdAt:   m.createdAt,
+        dueDate:     m.dueDate,
+        notified:    false,
+        kind:        'merged' as const,
+      })),
+    ];
+
+    const dir = filter.sortDir === 'desc' ? -1 : 1;
+    if (filter.sortBy === 'roomNumber') {
+      combined.sort((a, b) => dir * a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true }));
+    } else {
+      combined.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    }
+
+    const total    = combined.length;
+    const pageSize = filter.pageSize ?? 10;
+    const page     = filter.page ?? 1;
+    const items    = combined.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
+
     return { items, total };
   }
 
@@ -329,9 +443,23 @@ export class InvoicesService {
     if (dto.deduction         !== undefined && dto.deduction         !== invoice.deduction)          changes.deduction         = { from: invoice.deduction,         to: dto.deduction };
     if (dto.dueDate           !== undefined && dueDate.getTime()     !== invoice.dueDate.getTime())  changes.dueDate           = { from: invoice.dueDate,           to: dueDate };
 
-    const updated = await this.prisma.invoice.update({
-      where: { id },
-      data:  { rentAmount, electricityAmount, waterAmount, garbageFee, otherFees, deduction, totalAmount, dueDate },
+    const updated = await this.prisma.$transaction(async tx => {
+      const result = await tx.invoice.update({
+        where: { id },
+        data:  { rentAmount, electricityAmount, waterAmount, garbageFee, otherFees, deduction, totalAmount, dueDate },
+      });
+
+      if (invoice.mergedInvoiceId) {
+        const siblings = await tx.invoice.findMany({ where: { mergedInvoiceId: invoice.mergedInvoiceId } });
+        const mergedTotal   = siblings.reduce((sum, inv) => sum + inv.totalAmount, 0);
+        const mergedDueDate = new Date(Math.max(...siblings.map(inv => inv.dueDate.getTime())));
+        await tx.mergedInvoice.update({
+          where: { id: invoice.mergedInvoiceId },
+          data:  { totalAmount: mergedTotal, dueDate: mergedDueDate },
+        });
+      }
+
+      return result;
     });
 
     if (Object.keys(changes).length > 0) {
@@ -350,6 +478,9 @@ export class InvoicesService {
     if (invoice.status === InvoiceStatus.PAID) {
       throw new BadRequestException('Hoá đơn này đã được đánh dấu thanh toán.');
     }
+    if (invoice.mergedInvoiceId) {
+      throw new BadRequestException('Hoá đơn này đã được gộp — đánh dấu thanh toán ở hoá đơn gộp.');
+    }
     const markedBy = await this.resolveUserDisplayName(userId);
     const updated = await this.prisma.invoice.update({
       where: { id },
@@ -361,7 +492,7 @@ export class InvoicesService {
 
   async bulkMarkPaid(dto: BulkMarkPaidDto, userId: string) {
     const toUpdate = await this.prisma.invoice.findMany({
-      where:  { id: { in: dto.ids }, status: { not: InvoiceStatus.PAID } },
+      where:  { id: { in: dto.ids }, status: { not: InvoiceStatus.PAID }, mergedInvoiceId: null },
       select: { id: true },
     });
     const markedBy = await this.resolveUserDisplayName(userId);
@@ -388,6 +519,9 @@ export class InvoicesService {
     if (invoice.status === InvoiceStatus.PAID) {
       throw new BadRequestException('Không thể xoá hoá đơn đã thanh toán.');
     }
+    if (invoice.mergedInvoiceId) {
+      throw new BadRequestException('Hoá đơn này đã được gộp, không thể xoá riêng lẻ.');
+    }
     await this.prisma.invoice.delete({ where: { id } });
   }
 
@@ -395,5 +529,143 @@ export class InvoicesService {
     const code       = roomNumber.replace(/[^a-zA-Z0-9]/g, '');
     const [year, month] = period.split('-');
     return `NT-${code}-${month}${year}`;
+  }
+
+  /** Groups un-merged, non-PAID invoices for a period by tenant — tenants renting
+   *  more than one room are candidates for merging into a single invoice. */
+  async getMergeSuggestions(period: string) {
+    const invoices = await this.prisma.invoice.findMany({
+      where:   { period, mergedInvoiceId: null, status: { not: InvoiceStatus.PAID } },
+      include: { ...INCLUDE_ROOM, contract: { select: { tenantId: true, tenant: { select: { fullName: true } } } } },
+    });
+
+    const byTenant = new Map<string, { tenantId: string; tenantName: string; invoices: typeof invoices }>();
+    for (const inv of invoices) {
+      const tenantId = inv.contract.tenantId;
+      const group = byTenant.get(tenantId) ?? { tenantId, tenantName: inv.contract.tenant.fullName, invoices: [] };
+      group.invoices.push(inv);
+      byTenant.set(tenantId, group);
+    }
+
+    return [...byTenant.values()]
+      .filter(g => g.invoices.length >= 2)
+      .map(g => ({
+        tenantId:    g.tenantId,
+        tenantName:  g.tenantName,
+        totalAmount: g.invoices.reduce((sum, inv) => sum + inv.totalAmount, 0),
+        invoices: g.invoices.map(inv => ({
+          id:          inv.id,
+          roomNumber:  inv.room.roomNumber,
+          totalAmount: inv.totalAmount,
+        })),
+      }));
+  }
+
+  async mergeInvoices(invoiceIds: string[]): Promise<{ mergedInvoiceId: string }> {
+    if (invoiceIds.length < 2) {
+      throw new BadRequestException('Cần chọn ít nhất 2 hoá đơn để gộp.');
+    }
+
+    const invoices = await this.prisma.invoice.findMany({
+      where:   { id: { in: invoiceIds } },
+      include: { contract: { select: { tenantId: true } }, room: { select: { roomNumber: true } } },
+    });
+    if (invoices.length !== invoiceIds.length) {
+      throw new BadRequestException('Một số hoá đơn không tồn tại.');
+    }
+    if (invoices.some(inv => inv.status === InvoiceStatus.PAID)) {
+      throw new BadRequestException('Không thể gộp hoá đơn đã thanh toán.');
+    }
+    if (invoices.some(inv => inv.mergedInvoiceId !== null)) {
+      throw new BadRequestException('Một số hoá đơn đã được gộp trước đó.');
+    }
+    const tenantIds = new Set(invoices.map(inv => inv.contract.tenantId));
+    const periods    = new Set(invoices.map(inv => inv.period));
+    if (tenantIds.size > 1) {
+      throw new BadRequestException('Chỉ có thể gộp hoá đơn của cùng một người thuê.');
+    }
+    if (periods.size > 1) {
+      throw new BadRequestException('Chỉ có thể gộp hoá đơn cùng một kỳ.');
+    }
+
+    const totalAmount = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const [tenantId]  = tenantIds;
+    const [period]    = periods;
+    const dueDate     = new Date(Math.max(...invoices.map(inv => inv.dueDate.getTime())));
+    const roomLabel   = this.buildRoomLabel(invoices.map(inv => inv.room.roomNumber));
+
+    const merged = await this.prisma.$transaction(async tx => {
+      const mergedInvoice = await tx.mergedInvoice.create({
+        data: { tenantId, period, totalAmount, dueDate, roomLabel },
+      });
+      const result = await tx.invoice.updateMany({
+        where: { id: { in: invoiceIds }, mergedInvoiceId: null, status: { not: InvoiceStatus.PAID } },
+        data:  { mergedInvoiceId: mergedInvoice.id },
+      });
+      if (result.count !== invoiceIds.length) {
+        throw new BadRequestException('Một số hoá đơn đã được gộp hoặc thanh toán trong lúc xử lý — thử lại.');
+      }
+      return mergedInvoice;
+    });
+
+    return { mergedInvoiceId: merged.id };
+  }
+
+  private buildRoomLabel(roomNumbers: string[]): string {
+    const parsed = roomNumbers.map(rn => {
+      const m = rn.match(/^P-(\d+)$/);
+      return m ? { num: parseInt(m[1], 10) } : null;
+    });
+    if (parsed.every(p => p !== null)) {
+      const nums = parsed.map(p => p!.num).sort((a, b) => a - b);
+      return `P-${nums.join('-')}`;
+    }
+    return [...roomNumbers].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true })).join('-');
+  }
+
+  async getMergedInvoice(id: string) {
+    const merged = await this.prisma.mergedInvoice.findUnique({
+      where:   { id },
+      include: {
+        invoices: {
+          select: {
+            id: true, period: true, rentAmount: true, electricityAmount: true, waterAmount: true,
+            garbageFee: true, otherFees: true, deduction: true, totalAmount: true,
+            prevElec: true, currElec: true, prevWater: true, currWater: true,
+            elecUnitPrice: true, waterUnitPrice: true, dueDate: true, referenceCode: true, status: true,
+            room: { select: { roomNumber: true } },
+          },
+        },
+      },
+    });
+    if (!merged) throw new NotFoundException('Không tìm thấy hoá đơn gộp.');
+    return {
+      ...merged,
+      bankInfo: {
+        bankName:          this.config.get<string>('LANDLORD_BANK_NAME') ?? null,
+        bankAccountNumber: this.config.get<string>('LANDLORD_BANK_ACCOUNT_NUMBER') ?? null,
+        bankAccountName:   this.config.get<string>('LANDLORD_BANK_ACCOUNT_NAME') ?? null,
+      },
+    };
+  }
+
+  async markMergedInvoicePaid(mergedInvoiceId: string, userId: string) {
+    const merged = await this.prisma.mergedInvoice.findUnique({ where: { id: mergedInvoiceId } });
+    if (!merged) throw new NotFoundException('Không tìm thấy hoá đơn gộp.');
+    if (merged.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Hoá đơn gộp này đã được đánh dấu thanh toán.');
+    }
+
+    const markedBy = await this.resolveUserDisplayName(userId);
+    await this.prisma.$transaction([
+      this.prisma.mergedInvoice.update({
+        where: { id: mergedInvoiceId },
+        data:  { status: InvoiceStatus.PAID, paidAt: new Date() },
+      }),
+      this.prisma.invoice.updateMany({
+        where: { mergedInvoiceId },
+        data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy },
+      }),
+    ]);
   }
 }

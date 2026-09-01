@@ -1,23 +1,21 @@
 import { ChangeDetectionStrategy, Component, OnInit, TemplateRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import { NzSelectModule } from 'ng-zorro-antd/select';
 import { finalize } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
-import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { DataTableComponent } from '../../../shared/components/display/data-table/data-table.component';
-import { TableConfig, PageChangeEvent } from '../../../shared/components/display/data-table/data-table.model';
+import { TableConfig, PageChangeEvent, SortEvent } from '../../../shared/components/display/data-table/data-table.model';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { FilterPanelComponent } from '../../../shared/components/form/filter-panel/filter-panel.component';
 import { FilterConfig, FilterValue } from '../../../shared/components/form/filter-panel/filter-panel.model';
-import { Invoice, RoomWithUtility } from '@nhatro/shared-types';
+import { Invoice } from '@nhatro/shared-types';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
@@ -31,11 +29,14 @@ type InvoiceLogRow = {
   createdAt:     string;
   dueDate:       string;
   notified:      boolean;
+  kind:          'invoice' | 'merged';
 } & Record<string, unknown>;
 
-interface GenerateResult {
-  created: unknown[];
-  skipped: { roomId: string; roomNumber: string; reason: string }[];
+interface MergeSuggestion {
+  tenantId:    string;
+  tenantName:  string;
+  totalAmount: number;
+  invoices:    { id: string; roomNumber: string; totalAmount: number }[];
 }
 
 function currentBillingPeriod(): string {
@@ -62,9 +63,9 @@ function lastNBillingPeriods(n: number): string[] {
   styleUrls:       ['./invoice-creation-log.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, FormsModule,
-    NzButtonModule, NzIconModule, NzModalModule, NzSelectModule,
-    DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent, FilterPanelComponent, PermissionDirective,
+    CommonModule,
+    NzButtonModule, NzIconModule, NzModalModule,
+    DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent, FilterPanelComponent,
   ],
 })
 export class InvoiceCreationLogComponent implements OnInit {
@@ -75,6 +76,7 @@ export class InvoiceCreationLogComponent implements OnInit {
   private api    = inject(ApiService);
   private toast  = inject(ToastService);
   private router = inject(Router);
+  auth           = inject(AuthService);
 
   loading = signal(false);
   items   = signal<InvoiceLogRow[]>([]);
@@ -85,6 +87,12 @@ export class InvoiceCreationLogComponent implements OnInit {
   filterPeriod   = signal<string | null>(null);
   filterRooms    = signal<string[] | null>(null);
   filterNotified = signal<string | null>(null);
+  sortDir        = signal<'asc' | 'desc' | null>(null);
+
+  onSortChange(event: SortEvent): void {
+    this.sortDir.set(event.direction === 'ascend' ? 'asc' : event.direction === 'descend' ? 'desc' : null);
+    this.loadData();
+  }
 
   periodOptions = computed(() => lastNBillingPeriods(12).reverse().map(p => ({ label: `Kỳ ${p}`, value: p })));
 
@@ -134,7 +142,7 @@ export class InvoiceCreationLogComponent implements OnInit {
         showTotal: true,
       },
       columns: [
-        { key: 'roomNumber',  label: 'Phòng',      align: 'center' },
+        { key: 'roomNumber',  label: 'Phòng',      align: 'center', sortable: true },
         { key: 'tenantName',  label: 'Người thuê', align: 'center' },
         { key: 'period',      label: 'Kỳ',         align: 'center' },
         { key: 'totalAmount', label: 'Tổng tiền',  align: 'center' },
@@ -148,6 +156,38 @@ export class InvoiceCreationLogComponent implements OnInit {
   ngOnInit(): void {
     this.loadRoomOptions();
     this.loadData();
+    this.loadMergeSuggestions();
+  }
+
+  // ── Merge suggestions ──────────────────────────────────────────────────────
+  mergeSuggestions = signal<MergeSuggestion[]>([]);
+  merging          = signal<string | null>(null);
+  mergeModalOpen   = signal(false);
+
+  openMergeModal(): void {
+    this.loadMergeSuggestions();
+    this.mergeModalOpen.set(true);
+  }
+
+  closeMergeModal(): void { this.mergeModalOpen.set(false); }
+
+  loadMergeSuggestions(): void {
+    this.api.get<ApiResponse<MergeSuggestion[]>>('/invoices/merge-suggestions', { period: currentBillingPeriod() })
+      .subscribe(res => {
+        if (res.success && res.data) this.mergeSuggestions.set(res.data);
+      });
+  }
+
+  mergeGroup(group: MergeSuggestion): void {
+    this.merging.set(group.tenantId);
+    this.api.post<ApiResponse<{ mergedInvoiceId: string }>>('/invoices/merge', { invoiceIds: group.invoices.map(i => i.id) })
+      .pipe(finalize(() => this.merging.set(null)))
+      .subscribe(res => {
+        if (!res.success) return;
+        this.toast.success(`Đã gộp hoá đơn cho ${group.tenantName}.`);
+        this.loadMergeSuggestions();
+        this.loadData();
+      });
   }
 
   loadRoomOptions(): void {
@@ -163,81 +203,28 @@ export class InvoiceCreationLogComponent implements OnInit {
   loadData(): void {
     this.loading.set(true);
     const notified = this.filterNotified() === 'yes' ? 'true' : this.filterNotified() === 'no' ? 'false' : null;
-    this.api.get<ApiResponse<{
-      items: (Invoice & { room: { roomNumber: string }; contract: { tenant: { fullName: string } }; _count: { notificationLogs: number } })[];
-      total: number;
-    }>>('/invoices', {
+    this.api.get<ApiResponse<{ items: InvoiceLogRow[]; total: number }>>('/invoices', {
       period:   this.filterPeriod(),
       roomIds:  this.filterRooms()?.length ? this.filterRooms()!.join(',') : null,
       notified,
       page:     this.page(),
       pageSize: this.pageSize(),
+      sortBy:   this.sortDir() ? 'roomNumber' : null,
+      sortDir:  this.sortDir(),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
         this.total.set(res.data.total);
-        this.items.set(res.data.items.map(inv => ({
-          id:          inv.id,
-          roomNumber:  inv.room.roomNumber,
-          tenantName:  inv.contract.tenant.fullName,
-          period:      inv.period,
-          totalAmount: inv.totalAmount,
-          status:      inv.status,
-          createdAt:   inv.createdAt,
-          dueDate:     inv.dueDate,
-          notified:    inv._count.notificationLogs > 0,
-        })));
+        this.items.set(res.data.items);
       });
   }
 
   onRowClick(row: InvoiceLogRow): void {
-    this.router.navigateByUrl(`/app/invoices/${row.id}`);
-  }
-
-  // ── Bulk generate ──────────────────────────────────────────────────────────
-  generateModalOpen = signal(false);
-  generateSaving    = signal(false);
-  generatePeriod    = signal(currentBillingPeriod());
-  generateRoomIds   = signal<string[]>([]);
-  generateRooms     = signal<{ roomId: string; roomNumber: string }[]>([]);
-  generateResult    = signal<GenerateResult | null>(null);
-
-  openGenerateModal(): void {
-    this.generateResult.set(null);
-    this.generateRoomIds.set([]);
-    this.generatePeriod.set(currentBillingPeriod());
-    this.generateModalOpen.set(true);
-    this.loadGenerateRooms();
-  }
-
-  closeGenerateModal(): void { this.generateModalOpen.set(false); }
-
-  private loadGenerateRooms(): void {
-    this.api.get<ApiResponse<RoomWithUtility[]>>('/utilities')
-      .subscribe(res => {
-        if (!res.success || !res.data) return;
-        this.generateRooms.set(res.data
-          .filter(r => r.status === 'OCCUPIED' && r.utilityRecord)
-          .map(r => ({ roomId: r.roomId, roomNumber: r.roomNumber }))
-          .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true })));
-      });
-  }
-
-  submitGenerate(): void {
-    const roomIds = this.generateRoomIds();
-    if (roomIds.length === 0) {
-      this.toast.error('Chọn ít nhất một phòng.');
-      return;
+    if (row.kind === 'merged') {
+      this.router.navigateByUrl(`/app/invoices/merged/${row.id}`);
+    } else {
+      this.router.navigateByUrl(`/app/invoices/${row.id}`);
     }
-    this.generateSaving.set(true);
-    this.api.post<ApiResponse<GenerateResult>>('/invoices/generate', { period: this.generatePeriod(), roomIds })
-      .pipe(finalize(() => this.generateSaving.set(false)))
-      .subscribe(res => {
-        if (!res.success || !res.data) return;
-        this.generateResult.set(res.data);
-        this.toast.success(`Đã sinh ${res.data.created.length} hoá đơn, bỏ qua ${res.data.skipped.length} phòng.`);
-        this.loadData();
-      });
   }
 }

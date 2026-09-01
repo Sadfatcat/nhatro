@@ -6,7 +6,7 @@
   [nzMaskClosable]="false"
   [nzClosable]="!loading"
   (nzOnCancel)="onCancel()">
-  <ng-container nzModalContent>
+  <ng-container *nzModalContent>
     <ng-content />
   </ng-container>
 </nz-modal>

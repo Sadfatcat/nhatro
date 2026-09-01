@@ -32,7 +32,7 @@
     </div>
     <div class="billing-day__table" [class.billing-day__table--collapsed]="!expanded15()">
     <app-data-table
-      [config]="tableConfig(rows15())"
+      [config]="tableConfig15()"
       [cellTemplates]="cellTemplates"
       (selectChange)="onSelectChange15($event)"
       (rowClick)="onRowClick($event)"
@@ -66,14 +66,6 @@
             >
               <span nz-icon nzType="mail"></span> Gửi thông báo
             </button>
-            <button
-              *appPermission="'invoices:notify'"
-              nz-button nzType="default"
-              [disabled]="!row.invoiceId"
-              (click)="sendOneSms(row)"
-            >
-              <span nz-icon nzType="message"></span> Gửi SMS
-            </button>
           </div>
         </div>
       </ng-template>
@@ -103,7 +95,7 @@
     </div>
     <div class="billing-day__table" [class.billing-day__table--collapsed]="!expanded30()">
     <app-data-table
-      [config]="tableConfig(rows30())"
+      [config]="tableConfig30()"
       [cellTemplates]="cellTemplates"
       (selectChange)="onSelectChange30($event)"
       (rowClick)="onRowClick($event)"
@@ -136,14 +128,6 @@
               (click)="sendOne(row)"
             >
               <span nz-icon nzType="mail"></span> Gửi thông báo
-            </button>
-            <button
-              *appPermission="'invoices:notify'"
-              nz-button nzType="default"
-              [disabled]="!row.invoiceId"
-              (click)="sendOneSms(row)"
-            >
-              <span nz-icon nzType="message"></span> Gửi SMS
             </button>
           </div>
         </div>

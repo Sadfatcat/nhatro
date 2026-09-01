@@ -29,7 +29,7 @@ describe('InvoicesByBillingDayComponent — expand/collapse + multi-select', () 
     const c = createComponent();
     c.rows15.set(Array.from({ length: 8 }, (_, i) => row(`r${i}`)));
     expect(c.expanded15()).toBe(false);
-    expect(c.tableConfig(c.rows15()).data).toHaveLength(8);
+    expect(c.tableConfig15().data).toHaveLength(8);
   });
 
   it('toggleExpanded15 flips the expand flag for the "ngày 15" group only', () => {
@@ -82,5 +82,70 @@ describe('InvoicesByBillingDayComponent — expand/collapse + multi-select', () 
 
     expect(post).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalled();
+  });
+});
+
+describe('InvoicesByBillingDayComponent — tableConfig15/tableConfig30 as memoized computed signals (regression: selection must survive unrelated CD ticks)', () => {
+  it('returns the SAME reference on repeated reads when nothing it depends on changed', () => {
+    const c = createComponent();
+    c.rows15.set([row('r1')]);
+
+    const first  = c.tableConfig15();
+    const second = c.tableConfig15();
+
+    expect(second).toBe(first);
+  });
+
+  it('does NOT recompute when an unrelated signal changes (saving, selection, expanded)', () => {
+    const c = createComponent();
+    c.rows15.set([row('r1')]);
+    const before = c.tableConfig15();
+
+    c.saving.set(true);
+    c.onSelectChange15([row('r1')]);
+    c.toggleExpanded15();
+
+    expect(c.tableConfig15()).toBe(before);
+  });
+
+  it('changing rows30/loading does not affect tableConfig15\'s reference (independent groups)', () => {
+    const c = createComponent();
+    c.rows15.set([row('r1')]);
+    const before = c.tableConfig15();
+
+    c.rows30.set([row('s1')]);
+
+    expect(c.tableConfig15()).toBe(before);
+  });
+
+  it('DOES recompute (new reference) when rows15 itself changes', () => {
+    const c = createComponent();
+    c.rows15.set([row('r1')]);
+    const before = c.tableConfig15();
+
+    c.rows15.set([row('r1'), row('r2')]);
+
+    expect(c.tableConfig15()).not.toBe(before);
+    expect(c.tableConfig15().data).toHaveLength(2);
+  });
+
+  it('DOES recompute when loading toggles, since buildTableConfig reads loading()', () => {
+    const c = createComponent();
+    c.rows15.set([row('r1')]);
+    const before = c.tableConfig15();
+
+    c.loading.set(true);
+
+    expect(c.tableConfig15()).not.toBe(before);
+  });
+
+  it('tableConfig30 is independently memoized the same way', () => {
+    const c = createComponent();
+    c.rows30.set([row('s1')]);
+    const before = c.tableConfig30();
+
+    c.saving.set(true);
+
+    expect(c.tableConfig30()).toBe(before);
   });
 });
