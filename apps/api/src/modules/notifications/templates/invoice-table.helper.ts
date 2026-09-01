@@ -24,13 +24,16 @@ export function bankInfoLineSmsPlain(data: Record<string, string | number>): str
 }
 
 export function invoiceBreakdownSmsPlain(data: Record<string, string | number>): string {
-  return [
+  const lines = [
     `Phong: ${data.rentAmount}d`,
     `Dien ${data.prevElec}->${data.currElec}kWh(${data.elecUsed}kWh x ${data.elecUnitPrice}d): ${data.electricityAmount}d`,
     `Nuoc ${data.prevWater}->${data.currWater}m3(${data.waterUsed}m3 x ${data.waterUnitPrice}d): ${data.waterAmount}d`,
-    `Rac: ${data.otherFees}d`,
-    `Tong: ${data.totalAmount}d`,
-  ].join('\n');
+    `Rac: ${data.garbageFee}d`,
+  ];
+  if (data.otherFees !== '0') lines.push(`Phi khac: ${data.otherFees}d`);
+  if (data.deduction !== '0') lines.push(`Khau tru: -${data.deduction}d`);
+  lines.push(`Tong: ${data.totalAmount}d`);
+  return lines.join('\n');
 }
 
 export function invoiceTable(data: Record<string, string | number>): string {
@@ -59,8 +62,20 @@ export function invoiceTable(data: Record<string, string | number>): string {
       <tr>
         <td style="padding:8px;border:1px solid #d1d5db">Phí rác</td>
         <td style="padding:8px;border:1px solid #d1d5db">—</td>
-        <td style="text-align:right;padding:8px;border:1px solid #d1d5db">${data.otherFees} đ</td>
+        <td style="text-align:right;padding:8px;border:1px solid #d1d5db">${data.garbageFee} đ</td>
       </tr>
+      ${data.otherFees !== '0' ? `
+      <tr>
+        <td style="padding:8px;border:1px solid #d1d5db">Phí khác</td>
+        <td style="padding:8px;border:1px solid #d1d5db">—</td>
+        <td style="text-align:right;padding:8px;border:1px solid #d1d5db">${data.otherFees} đ</td>
+      </tr>` : ''}
+      ${data.deduction !== '0' ? `
+      <tr>
+        <td style="padding:8px;border:1px solid #d1d5db">Khấu trừ</td>
+        <td style="padding:8px;border:1px solid #d1d5db">—</td>
+        <td style="text-align:right;padding:8px;border:1px solid #d1d5db">−${data.deduction} đ</td>
+      </tr>` : ''}
       <tr style="background:#f3f4f6;font-weight:bold">
         <td style="padding:8px;border:1px solid #d1d5db" colspan="2">Tổng cộng</td>
         <td style="text-align:right;padding:8px;border:1px solid #d1d5db">${data.totalAmount} đ</td>

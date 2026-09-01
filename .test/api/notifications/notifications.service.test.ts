@@ -14,7 +14,7 @@ describe('NotificationsService', () => {
 
   const baseInvoice = {
     id: 'inv-1', period: '2026-08', rentAmount: 2000000, electricityAmount: 175000,
-    waterAmount: 150000, otherFees: 50000, totalAmount: 2375000, dueDate: new Date('2026-08-20'),
+    waterAmount: 150000, garbageFee: 50000, otherFees: 0, deduction: 0, totalAmount: 2375000, dueDate: new Date('2026-08-20'),
     referenceCode: 'NT-101-082026', prevElec: 100, currElec: 150, elecUnitPrice: 3500,
     prevWater: 10, currWater: 15, waterUnitPrice: 30000,
     room: { roomNumber: '101' },
