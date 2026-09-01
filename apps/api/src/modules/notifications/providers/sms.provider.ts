@@ -36,7 +36,8 @@ export class SmsProvider implements NotificationProvider {
       return { success: false, error: 'SMS_GATEWAY_URL/USER/PASSWORD chưa được cấu hình.' };
     }
 
-    const text = TEMPLATE_BUILDERS[payload.templateKey](payload.data);
+    const text  = TEMPLATE_BUILDERS[payload.templateKey](payload.data);
+    const phone = this.toE164(payload.to.phone);
 
     try {
       const res = await fetch(url, {
@@ -45,14 +46,22 @@ export class SmsProvider implements NotificationProvider {
           'Content-Type':  'application/json',
           Authorization:   `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}`,
         },
-        body: JSON.stringify({ textMessage: { text }, phoneNumbers: [payload.to.phone] }),
+        body: JSON.stringify({ textMessage: { text }, phoneNumbers: [phone] }),
       });
       if (!res.ok) {
-        return { success: false, error: `SMS gateway trả lỗi ${res.status}.` };
+        const body = await res.text().catch(() => '');
+        return { success: false, error: `SMS gateway trả lỗi ${res.status}${body ? `: ${body}` : ''}.` };
       }
       return { success: true };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : 'Lỗi không xác định.' };
     }
+  }
+
+  /** SMS gateway (cloud API) requires E.164 — local DB stores Vietnamese numbers as 0xxxxxxxxx. */
+  private toE164(phone: string): string {
+    if (phone.startsWith('+')) return phone;
+    if (phone.startsWith('0')) return `+84${phone.slice(1)}`;
+    return phone;
   }
 }
