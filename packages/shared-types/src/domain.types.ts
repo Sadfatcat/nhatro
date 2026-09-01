@@ -56,7 +56,9 @@ export interface Invoice {
   rentAmount: number;
   electricityAmount: number;
   waterAmount: number;
+  garbageFee: number;
   otherFees: number;
+  deduction: number;
   totalAmount: number;
   prevElec: number;
   currElec: number;
@@ -74,6 +76,7 @@ export interface Invoice {
   room: { roomNumber: string; floor: number };
   bankInfo?: InvoiceBankInfo;
   notificationLogs?: NotificationLog[];
+  editLogs?: InvoiceEditLog[];
 }
 
 export interface NotificationLog {
@@ -84,6 +87,14 @@ export interface NotificationLog {
   success: boolean;
   reason: string | null;
   sentAt: string;
+}
+
+export interface InvoiceEditLog {
+  id: string;
+  invoiceId: string;
+  editedBy: string | null;
+  changes: Record<string, { from: unknown; to: unknown }>;
+  editedAt: string;
 }
 
 export interface UtilityReading {

@@ -8,8 +8,8 @@ import { RequestUser } from '../../common/auth/jwt-payload.interface';
 import { ContractsService } from '../contracts/contracts.service';
 import { InvoicesService } from './invoices.service';
 import { GenerateInvoiceDto } from './dto/generate-invoice.dto';
-import { MarkPaidDto } from './dto/mark-paid.dto';
 import { BulkMarkPaidDto } from './dto/bulk-mark-paid.dto';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 const ok = <T>(data: T, msg = 'Thành công'): ApiResponse<T> => ({ success: true, data, message: msg });
@@ -37,6 +37,9 @@ export class InvoicesController {
     @Query('period') period?: string,
     @Query('roomId') roomId?: string,
     @Query('roomIds') roomIdsCsv?: string,
+    @Query('notified') notifiedRaw?: string,
+    @Query('page') pageRaw?: string,
+    @Query('pageSize') pageSizeRaw?: string,
   ): Promise<ApiResponse<unknown>> {
     let contractId: string | undefined;
     let roomIds = roomIdsCsv ? roomIdsCsv.split(',').filter(Boolean) : undefined;
@@ -51,7 +54,10 @@ export class InvoicesController {
       const contract = await this.contracts.findByRoom(roomId);
       contractId = contract?.id ?? '__none__';
     }
-    return ok(await this.svc.findAll({ status, period, roomId, roomIds, contractId }));
+    const notified = notifiedRaw === undefined ? undefined : notifiedRaw === 'true';
+    const page     = pageRaw ? parseInt(pageRaw, 10) : undefined;
+    const pageSize = pageSizeRaw ? parseInt(pageSizeRaw, 10) : undefined;
+    return ok(await this.svc.findAll({ status, period, roomId, roomIds, contractId, notified, page, pageSize }));
   }
 
   @Roles(...MANAGEMENT)
@@ -68,15 +74,21 @@ export class InvoicesController {
   }
 
   @Roles(...MANAGEMENT)
-  @Patch(':id/mark-paid')
-  async markPaid(@Param('id') id: string, @Body() dto: MarkPaidDto): Promise<ApiResponse<unknown>> {
-    return ok(await this.svc.markPaid(id, dto), 'Đã đánh dấu thanh toán.');
+  @Patch('bulk-mark-paid')
+  async bulkMarkPaid(@Body() dto: BulkMarkPaidDto, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
+    return ok(await this.svc.bulkMarkPaid(dto, user.id), 'Đã đánh dấu thanh toán hàng loạt.');
   }
 
   @Roles(...MANAGEMENT)
-  @Patch('bulk-mark-paid')
-  async bulkMarkPaid(@Body() dto: BulkMarkPaidDto): Promise<ApiResponse<unknown>> {
-    return ok(await this.svc.bulkMarkPaid(dto), 'Đã đánh dấu thanh toán hàng loạt.');
+  @Patch(':id/mark-paid')
+  async markPaid(@Param('id') id: string, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
+    return ok(await this.svc.markPaid(id, user.id), 'Đã đánh dấu thanh toán.');
+  }
+
+  @Roles(...MANAGEMENT)
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateInvoiceDto, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
+    return ok(await this.svc.update(id, dto, user.id), 'Đã cập nhật hoá đơn.');
   }
 
   @Roles(...MANAGEMENT)

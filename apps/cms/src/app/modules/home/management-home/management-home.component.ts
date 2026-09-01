@@ -210,8 +210,21 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     return id ? this.rooms().find(r => r.roomId === id) ?? null : null;
   });
 
+  /** "Hôm nay" → kỳ chốt hiện tại (rule 11→10): ngày <=10 thuộc kỳ tháng trước. */
   private monthKey(d: Date): string {
+    const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  /** Map thẳng 1 Date sang "YYYY-MM" của chính tháng đó, KHÔNG áp rule shift —
+   *  dùng cho tháng do người dùng chọn tay qua month-picker (Date đã đại diện đúng kỳ muốn nhập). */
+  private monthKeyDirect(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private periodToDate(period: string): Date {
+    const [year, month] = period.split('-').map(Number);
+    return new Date(year, month - 1, 1);
   }
 
   isChot(roomId: string): boolean {
@@ -221,9 +234,10 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   }
 
   openModal(roomId: string): void {
-    this.activeModalMonth.set(new Date());
+    const currentPeriodDate = this.periodToDate(this.monthKey(new Date()));
+    this.activeModalMonth.set(currentPeriodDate);
     this.activeModalRoomId.set(roomId);
-    this.loadReadingForMonth(roomId, new Date());
+    this.loadReadingForMonth(roomId, currentPeriodDate);
   }
 
   closeModal(): void { this.activeModalRoomId.set(null); }
@@ -237,7 +251,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
 
   private loadReadingForMonth(roomId: string, month: Date): void {
     this.modalLoading.set(true);
-    this.api.get<ApiResponse<{ utilityRecord: UtilityReading | null }>>(`/utilities/${roomId}`, { month: this.monthKey(month) })
+    this.api.get<ApiResponse<{ utilityRecord: UtilityReading | null }>>(`/utilities/${roomId}`, { month: this.monthKeyDirect(month) })
       .pipe(finalize(() => this.modalLoading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
@@ -269,7 +283,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     this.api.post<ApiResponse<unknown>>(`/utilities/${roomId}/record`, {
       currElec:     inp.currElec,
       currWater:    inp.currWater,
-      billingMonth: this.monthKey(this.activeModalMonth()),
+      billingMonth: this.monthKeyDirect(this.activeModalMonth()),
     })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
@@ -306,8 +320,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   chotReadingOf(roomId: string) {
     const room = this.rooms().find(r => r.roomId === roomId);
     if (!room?.utilityRecord) return null;
-    const now = new Date();
-    const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const key = this.monthKey(new Date());
     return room.utilityRecord.billingMonth === key ? room.utilityRecord : null;
   }
 

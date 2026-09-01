@@ -113,7 +113,9 @@ model Invoice {
   rentAmount        Int
   electricityAmount Int
   waterAmount       Int
+  garbageFee        Int           @default(50000)
   otherFees         Int           @default(0)
+  deduction         Int           @default(0)
   totalAmount       Int
   prevElec          Float         @default(0)
   currElec          Float         @default(0)
@@ -132,6 +134,7 @@ model Invoice {
   room             Room              @relation(fields: [roomId], references: [id])
   contract         Contract          @relation(fields: [contractId], references: [id])
   notificationLogs NotificationLog[]
+  editLogs         InvoiceEditLog[]
 
   @@index([status])
   @@index([period])
@@ -146,6 +149,17 @@ model NotificationLog {
   reason      String?
   sentAt      DateTime @default(now())
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model InvoiceEditLog {
+  id        String   @id @default(cuid())
+  invoiceId String
+  editedBy  String?
+  changes   Json
+  editedAt  DateTime @default(now())
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }

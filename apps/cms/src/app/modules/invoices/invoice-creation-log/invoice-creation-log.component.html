@@ -1,10 +1,21 @@
 <div class="creation-log">
-  <app-filter-panel [config]="filterConfig()" (filterChange)="onFilterChange($event)" />
+  <div class="creation-log__toolbar">
+    <app-filter-panel [config]="filterConfig()" (filterChange)="onFilterChange($event)" />
+    <button
+      *appPermission="'invoices:create'"
+      nz-button nzType="primary"
+      (click)="openGenerateModal()"
+    >
+      <span nz-icon nzType="plus"></span>
+      Sinh hoá đơn
+    </button>
+  </div>
 
   <app-data-table
     [config]="tableConfig"
     [cellTemplates]="cellTemplates"
     (rowClick)="onRowClick($event)"
+    (pageChange)="onPageChange($event)"
   >
     <ng-template #mobileCard let-row>
       <div class="invoice-log-card" (click)="onRowClick(row)">
@@ -36,3 +47,58 @@
 <ng-template #dateTpl let-value>
   {{ value | date:'dd/MM/yyyy HH:mm' }}
 </ng-template>
+
+<nz-modal
+  [nzVisible]="generateModalOpen()"
+  nzTitle="Sinh hoá đơn hàng loạt"
+  (nzOnCancel)="closeGenerateModal()"
+  [nzFooter]="null"
+>
+  <ng-container *nzModalContent>
+    <div class="generate-modal">
+      <div class="generate-modal__field">
+        <label>Kỳ</label>
+        <nz-select [(ngModel)]="generatePeriod" style="width:100%">
+          @for (opt of periodOptions(); track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+          }
+        </nz-select>
+      </div>
+
+      <div class="generate-modal__field">
+        <label>Phòng (đang thuê, đã chốt điện nước kỳ hiện tại)</label>
+        <nz-select
+          [(ngModel)]="generateRoomIds"
+          nzMode="multiple"
+          nzPlaceHolder="Chọn phòng..."
+          style="width:100%"
+        >
+          @for (room of generateRooms(); track room.roomId) {
+            <nz-option [nzValue]="room.roomId" [nzLabel]="'Phòng ' + room.roomNumber" />
+          }
+        </nz-select>
+      </div>
+
+      @if (generateResult(); as result) {
+        <div class="generate-modal__result">
+          <p class="generate-modal__result-line generate-modal__result-line--ok">
+            Đã sinh {{ result.created.length }} hoá đơn.
+          </p>
+          @if (result.skipped.length > 0) {
+            <p class="generate-modal__result-line generate-modal__result-line--skip">Bỏ qua {{ result.skipped.length }} phòng:</p>
+            <ul>
+              @for (s of result.skipped; track s.roomId) {
+                <li>Phòng {{ s.roomNumber }} — {{ s.reason }}</li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      <div class="generate-modal__actions">
+        <button nz-button nzType="default" (click)="closeGenerateModal()">Đóng</button>
+        <button nz-button nzType="primary" [nzLoading]="generateSaving()" (click)="submitGenerate()">Sinh hoá đơn</button>
+      </div>
+    </div>
+  </ng-container>
+</nz-modal>

@@ -31,7 +31,7 @@ export class NotificationsService {
     const { email, phone } = invoice.contract.tenant;
     if (!email && !phone) {
       this.logger.warn(`Người thuê phòng ${invoice.room.roomNumber} chưa có email lẫn số điện thoại — bỏ qua gửi "${templateKey}".`);
-      return { success: false, reason: 'Người thuê chưa có email lẫn số điện thoại.' };
+      return { success: false, reason: 'Không có dữ liệu người dùng.' };
     }
 
     return this.send({

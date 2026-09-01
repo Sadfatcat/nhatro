@@ -140,16 +140,20 @@ export class UtilitiesService {
     return { prevElec: prev?.currElec ?? 0, prevWater: prev?.currWater ?? 0 };
   }
 
+  /** Billing period runs 11th of month N to 10th of month N+1 — data recorded a few
+   *  days late (e.g. group "30" chốt vào 30/31 nhưng nhập trễ) still falls in the right period. */
   private currentBillingMonth(): string {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
   }
 
   private lastNMonths(n: number): string[] {
     const out: string[] = [];
-    const d = new Date();
+    const d    = new Date();
+    const base = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
     for (let i = n - 1; i >= 0; i--) {
-      const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
+      const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
       out.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
     }
     return out;

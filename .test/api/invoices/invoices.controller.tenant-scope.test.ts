@@ -40,6 +40,19 @@ describe('InvoicesController.findAll — tenant scoped to their own contract, no
     await controller.findAll({ id: 'u1', role: 'LANDLORD' }, undefined, undefined, 'room-1');
 
     expect(contracts.findByRoom).not.toHaveBeenCalled();
-    expect(svc.findAll).toHaveBeenCalledWith({ status: undefined, period: undefined, roomId: 'room-1', contractId: undefined });
+    expect(svc.findAll).toHaveBeenCalledWith({
+      status: undefined, period: undefined, roomId: 'room-1', roomIds: undefined,
+      contractId: undefined, notified: undefined, page: undefined, pageSize: undefined,
+    });
+  });
+
+  it('ADMIN/LANDLORD can pass page/pageSize/notified straight through', async () => {
+    await controller.findAll(
+      { id: 'u1', role: 'LANDLORD' }, undefined, '2026-08', undefined, 'r1,r2', 'true', '2', '20',
+    );
+
+    expect(svc.findAll).toHaveBeenCalledWith(expect.objectContaining({
+      period: '2026-08', roomIds: ['r1', 'r2'], notified: true, page: 2, pageSize: 20,
+    }));
   });
 });

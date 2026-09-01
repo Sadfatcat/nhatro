@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, TemplateRef, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, TemplateRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize, forkJoin } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
@@ -18,8 +19,6 @@ import { RoomWithUtility, Invoice, InvoiceStatus } from '@nhatro/shared-types';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
-type BillingDay = 15 | 30;
-
 type RoomInvoiceRow = {
   roomId:        string;
   roomNumber:    string;
@@ -32,7 +31,8 @@ type RoomInvoiceRow = {
 
 function currentPeriod(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
 }
 
 @Component({
@@ -43,7 +43,7 @@ function currentPeriod(): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, FormsModule,
-    NzButtonModule, NzIconModule, NzCheckboxModule,
+    NzButtonModule, NzIconModule, NzCheckboxModule, NzTooltipModule,
     DataTableComponent, StatusBadgeComponent, MoneyDisplayComponent, PermissionDirective,
   ],
 })
@@ -65,6 +65,14 @@ export class InvoicesByBillingDayComponent implements OnInit {
   rows30    = signal<RoomInvoiceRow[]>([]);
   selected15 = signal<RoomInvoiceRow[]>([]);
   selected30 = signal<RoomInvoiceRow[]>([]);
+  selectedRooms = computed(() => [...this.selected15(), ...this.selected30()]);
+
+  expanded15 = signal(false);
+  expanded30 = signal(false);
+  readonly collapsedRowCount = 5;
+
+  toggleExpanded15(): void { this.expanded15.update(v => !v); }
+  toggleExpanded30(): void { this.expanded30.update(v => !v); }
 
   get cellTemplates(): Record<string, TemplateRef<unknown>> {
     return { invoiceStatus: this.statusTpl, totalAmount: this.amountTpl, dueDate: this.dueDateTpl };
@@ -169,8 +177,8 @@ export class InvoicesByBillingDayComponent implements OnInit {
       });
   }
 
-  bulkSend(day: BillingDay): void {
-    const selected = day === 15 ? this.selected15() : this.selected30();
+  bulkSend(): void {
+    const selected = this.selectedRooms();
     const invoiceIds = selected.map(r => r.invoiceId).filter((id): id is string => !!id);
     if (invoiceIds.length === 0) {
       this.toast.error('Các phòng đã chọn chưa có hoá đơn kỳ này.');
@@ -182,7 +190,8 @@ export class InvoicesByBillingDayComponent implements OnInit {
       .subscribe(res => {
         if (!res.success || !res.data) return;
         this.toast.success(`Đã gửi ${res.data.sent}/${invoiceIds.length} thông báo.`);
-        if (day === 15) this.selected15.set([]); else this.selected30.set([]);
+        this.selected15.set([]);
+        this.selected30.set([]);
       });
   }
 }

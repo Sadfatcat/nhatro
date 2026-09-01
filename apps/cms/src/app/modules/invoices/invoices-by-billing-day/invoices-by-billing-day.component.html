@@ -1,23 +1,36 @@
 <div class="billing-day">
 
-  <p class="billing-day__hint">Kỳ hiện tại: <strong>{{ period }}</strong> — phòng chia theo ngày chốt điện nước (đồng bộ với Trang chủ Quản lý).</p>
+  <div class="billing-day__hint-row">
+    <p class="billing-day__hint">Kỳ hiện tại: <strong>{{ period }}</strong> — phòng chia theo ngày chốt điện nước (đồng bộ với Trang chủ Quản lý).</p>
+    @if (selectedRooms().length > 0) {
+      <button
+        *appPermission="'invoices:notify'"
+        nz-button nzType="primary" nzSize="small"
+        [nzLoading]="saving()"
+        (click)="bulkSend()"
+      >
+        <span nz-icon nzType="mail"></span>
+        Gửi thông báo ({{ selectedRooms().length }})
+      </button>
+    }
+  </div>
 
   <!-- Column: Ngày 15 -->
   <div class="billing-day__card">
     <div class="billing-day__card-header">
       <h2>Ngày chốt 15</h2>
-      @if (selected15().length > 0) {
+      @if (rows15().length > collapsedRowCount) {
         <button
-          *appPermission="'invoices:notify'"
-          nz-button nzType="primary" nzSize="small"
-          [nzLoading]="saving()"
-          (click)="bulkSend(15)"
-        >
-          <span nz-icon nzType="mail"></span>
-          Gửi thông báo ({{ selected15().length }})
+          nz-button nzType="text" nzSize="small"
+          class="billing-day__toggle-btn"
+          [class.billing-day__toggle-btn--expanded]="expanded15()"
+          nz-tooltip [nzTooltipTitle]="expanded15() ? 'Thu gọn' : 'Xem tất cả'"
+          (click)="toggleExpanded15()">
+          <span nz-icon nzType="down"></span>
         </button>
       }
     </div>
+    <div class="billing-day__table" [class.billing-day__table--collapsed]="!expanded15()">
     <app-data-table
       [config]="tableConfig(rows15())"
       [cellTemplates]="cellTemplates"
@@ -65,24 +78,30 @@
         </div>
       </ng-template>
     </app-data-table>
+    </div>
+    @if (!expanded15() && rows15().length > collapsedRowCount) {
+      <div class="billing-day__expand-more" (click)="toggleExpanded15()">
+        <span nz-icon nzType="down"></span>
+      </div>
+    }
   </div>
 
   <!-- Column: Ngày 30 -->
   <div class="billing-day__card">
     <div class="billing-day__card-header">
       <h2>Ngày chốt 30</h2>
-      @if (selected30().length > 0) {
+      @if (rows30().length > collapsedRowCount) {
         <button
-          *appPermission="'invoices:notify'"
-          nz-button nzType="primary" nzSize="small"
-          [nzLoading]="saving()"
-          (click)="bulkSend(30)"
-        >
-          <span nz-icon nzType="mail"></span>
-          Gửi thông báo ({{ selected30().length }})
+          nz-button nzType="text" nzSize="small"
+          class="billing-day__toggle-btn"
+          [class.billing-day__toggle-btn--expanded]="expanded30()"
+          nz-tooltip [nzTooltipTitle]="expanded30() ? 'Thu gọn' : 'Xem tất cả'"
+          (click)="toggleExpanded30()">
+          <span nz-icon nzType="down"></span>
         </button>
       }
     </div>
+    <div class="billing-day__table" [class.billing-day__table--collapsed]="!expanded30()">
     <app-data-table
       [config]="tableConfig(rows30())"
       [cellTemplates]="cellTemplates"
@@ -130,6 +149,12 @@
         </div>
       </ng-template>
     </app-data-table>
+    </div>
+    @if (!expanded30() && rows30().length > collapsedRowCount) {
+      <div class="billing-day__expand-more" (click)="toggleExpanded30()">
+        <span nz-icon nzType="down"></span>
+      </div>
+    }
   </div>
 
 </div>

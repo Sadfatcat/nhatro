@@ -8,8 +8,8 @@ import { RoomsService } from '../rooms/rooms.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { UtilitiesService } from '../utilities/utilities.service';
 import { GenerateInvoiceDto } from './dto/generate-invoice.dto';
-import { MarkPaidDto } from './dto/mark-paid.dto';
 import { BulkMarkPaidDto } from './dto/bulk-mark-paid.dto';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 
 interface InvoiceFilter {
   status?: InvoiceStatus;
@@ -17,6 +17,9 @@ interface InvoiceFilter {
   roomId?: string;
   roomIds?: string[];
   contractId?: string;
+  notified?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
 const INCLUDE_ROOM = { room: { select: { roomNumber: true, floor: true } } };
@@ -92,8 +95,10 @@ export class InvoicesService {
       const rentAmount        = room.price;
       const electricityAmount = Math.round(elecUsed * ELECTRICITY_PRICE_PER_KWH);
       const waterAmount       = Math.round(waterUsed * WATER_PRICE_PER_M3);
-      const otherFees         = TRASH_FEE_PER_ROOM;
-      const totalAmount       = rentAmount + electricityAmount + waterAmount + otherFees;
+      const garbageFee        = TRASH_FEE_PER_ROOM;
+      const otherFees         = 0;
+      const deduction         = 0;
+      const totalAmount       = rentAmount + electricityAmount + waterAmount + garbageFee + otherFees - deduction;
 
       try {
         const invoice = await this.prisma.invoice.create({
@@ -104,7 +109,9 @@ export class InvoicesService {
             rentAmount,
             electricityAmount,
             waterAmount,
+            garbageFee,
             otherFees,
+            deduction,
             totalAmount,
             referenceCode:     this.buildReferenceCode(room.roomNumber, dto.period),
             dueDate,
@@ -133,14 +140,11 @@ export class InvoicesService {
     return { created, skipped };
   }
 
-  /** Called when a utility reading is (re)saved for a period. Creates the invoice
-   *  if none exists yet for that period, or recalculates an existing non-PAID one. */
+  /** Called when a utility reading is (re)saved for a period. Recalculates an
+   *  existing non-PAID invoice for that period; does not create new invoices. */
   async syncInvoiceForPeriod(roomId: string, period: string): Promise<void> {
     const existing = await this.prisma.invoice.findFirst({ where: { roomId, period } });
-    if (!existing) {
-      await this.generate({ period, roomIds: [roomId] });
-      return;
-    }
+    if (!existing) return;
     if (existing.status === InvoiceStatus.PAID) {
       throw new BadRequestException('Hoá đơn kỳ này đã thanh toán, không thể sửa chỉ số điện nước.');
     }
@@ -153,7 +157,7 @@ export class InvoicesService {
     const waterUsed          = Math.max(0, currWater - prevWater);
     const electricityAmount  = Math.round(elecUsed * ELECTRICITY_PRICE_PER_KWH);
     const waterAmount        = Math.round(waterUsed * WATER_PRICE_PER_M3);
-    const totalAmount        = existing.rentAmount + electricityAmount + waterAmount + existing.otherFees;
+    const totalAmount        = existing.rentAmount + electricityAmount + waterAmount + existing.garbageFee + existing.otherFees - existing.deduction;
 
     await this.prisma.invoice.update({
       where: { id: existing.id },
@@ -181,20 +185,36 @@ export class InvoicesService {
   }
 
   async findAll(filter: InvoiceFilter) {
-    return this.prisma.invoice.findMany({
-      where: {
-        status:     filter.status,
-        period:     filter.period,
-        roomId:     filter.roomIds?.length ? { in: filter.roomIds } : filter.roomId,
-        contractId: filter.contractId,
-      },
-      include: {
-        ...INCLUDE_ROOM,
-        contract: { select: { tenant: { select: { fullName: true } } } },
-        _count:   { select: { notificationLogs: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const where: Prisma.InvoiceWhereInput = {
+      status:     filter.status,
+      period:     filter.period,
+      roomId:     filter.roomIds?.length ? { in: filter.roomIds } : filter.roomId,
+      contractId: filter.contractId,
+      notificationLogs: filter.notified === undefined ? undefined
+        : filter.notified ? { some: {} } : { none: {} },
+    };
+    const include = {
+      ...INCLUDE_ROOM,
+      contract: { select: { tenant: { select: { fullName: true } } } },
+      _count:   { select: { notificationLogs: true } },
+    };
+
+    if (!filter.page) {
+      return this.prisma.invoice.findMany({ where, include, orderBy: { createdAt: 'desc' } });
+    }
+
+    const pageSize = filter.pageSize ?? 10;
+    const page     = filter.page;
+    const [items, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where, include,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.invoice.count({ where }),
+    ]);
+    return { items, total };
   }
 
   async getDashboardStats() {
@@ -246,16 +266,19 @@ export class InvoicesService {
     };
   }
 
+  /** Billing period runs 11th of month N to 10th of month N+1 — see utilities.service.ts. */
   private currentBillingPeriod(): string {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
   }
 
   private lastNBillingPeriods(n: number): string[] {
     const out: string[] = [];
-    const d = new Date();
+    const d    = new Date();
+    const base = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
     for (let i = n - 1; i >= 0; i--) {
-      const dt = new Date(d.getFullYear(), d.getMonth() - i, 1);
+      const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
       out.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
     }
     return out;
@@ -264,7 +287,11 @@ export class InvoicesService {
   async findOne(id: string) {
     const invoice = await this.prisma.invoice.findUnique({
       where:   { id },
-      include: { ...INCLUDE_ROOM, notificationLogs: { orderBy: { sentAt: 'desc' } } },
+      include: {
+        ...INCLUDE_ROOM,
+        notificationLogs: { orderBy: { sentAt: 'desc' } },
+        editLogs:         { orderBy: { editedAt: 'desc' } },
+      },
     });
     if (!invoice) throw new NotFoundException('Không tìm thấy hoá đơn.');
     return {
@@ -277,33 +304,82 @@ export class InvoicesService {
     };
   }
 
-  async markPaid(id: string, dto: MarkPaidDto) {
+  async update(id: string, dto: UpdateInvoiceDto, userId: string) {
+    const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+    if (!invoice) throw new NotFoundException('Không tìm thấy hoá đơn.');
+    if (invoice.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Hoá đơn đã thanh toán, không thể sửa.');
+    }
+
+    const rentAmount        = dto.rentAmount        ?? invoice.rentAmount;
+    const electricityAmount = dto.electricityAmount ?? invoice.electricityAmount;
+    const waterAmount       = dto.waterAmount        ?? invoice.waterAmount;
+    const garbageFee        = dto.garbageFee         ?? invoice.garbageFee;
+    const otherFees         = dto.otherFees          ?? invoice.otherFees;
+    const deduction         = dto.deduction          ?? invoice.deduction;
+    const totalAmount       = rentAmount + electricityAmount + waterAmount + garbageFee + otherFees - deduction;
+    const dueDate           = dto.dueDate ? new Date(dto.dueDate) : invoice.dueDate;
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    if (dto.rentAmount        !== undefined && dto.rentAmount        !== invoice.rentAmount)        changes.rentAmount        = { from: invoice.rentAmount,        to: dto.rentAmount };
+    if (dto.electricityAmount !== undefined && dto.electricityAmount !== invoice.electricityAmount) changes.electricityAmount = { from: invoice.electricityAmount, to: dto.electricityAmount };
+    if (dto.waterAmount       !== undefined && dto.waterAmount       !== invoice.waterAmount)        changes.waterAmount       = { from: invoice.waterAmount,       to: dto.waterAmount };
+    if (dto.garbageFee        !== undefined && dto.garbageFee        !== invoice.garbageFee)         changes.garbageFee        = { from: invoice.garbageFee,        to: dto.garbageFee };
+    if (dto.otherFees         !== undefined && dto.otherFees         !== invoice.otherFees)          changes.otherFees         = { from: invoice.otherFees,         to: dto.otherFees };
+    if (dto.deduction         !== undefined && dto.deduction         !== invoice.deduction)          changes.deduction         = { from: invoice.deduction,         to: dto.deduction };
+    if (dto.dueDate           !== undefined && dueDate.getTime()     !== invoice.dueDate.getTime())  changes.dueDate           = { from: invoice.dueDate,           to: dueDate };
+
+    const updated = await this.prisma.invoice.update({
+      where: { id },
+      data:  { rentAmount, electricityAmount, waterAmount, garbageFee, otherFees, deduction, totalAmount, dueDate },
+    });
+
+    if (Object.keys(changes).length > 0) {
+      const editedBy = await this.resolveUserDisplayName(userId);
+      await this.prisma.invoiceEditLog.create({
+        data: { invoiceId: id, editedBy, changes: changes as Prisma.InputJsonValue },
+      });
+    }
+
+    return updated;
+  }
+
+  async markPaid(id: string, userId: string) {
     const invoice = await this.prisma.invoice.findUnique({ where: { id } });
     if (!invoice) throw new NotFoundException('Không tìm thấy hoá đơn.');
     if (invoice.status === InvoiceStatus.PAID) {
       throw new BadRequestException('Hoá đơn này đã được đánh dấu thanh toán.');
     }
+    const markedBy = await this.resolveUserDisplayName(userId);
     const updated = await this.prisma.invoice.update({
       where: { id },
-      data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy: dto.markedBy ?? null },
+      data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy },
     });
     this.events.emit('invoice.paid', { invoiceId: updated.id });
     return updated;
   }
 
-  async bulkMarkPaid(dto: BulkMarkPaidDto) {
+  async bulkMarkPaid(dto: BulkMarkPaidDto, userId: string) {
     const toUpdate = await this.prisma.invoice.findMany({
       where:  { id: { in: dto.ids }, status: { not: InvoiceStatus.PAID } },
       select: { id: true },
     });
+    const markedBy = await this.resolveUserDisplayName(userId);
     const result = await this.prisma.invoice.updateMany({
       where: { id: { in: toUpdate.map(i => i.id) } },
-      data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy: dto.markedBy ?? null },
+      data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy },
     });
     for (const invoice of toUpdate) {
       this.events.emit('invoice.paid', { invoiceId: invoice.id });
     }
     return { updated: result.count };
+  }
+
+  /** Resolves the display name for an audit field (markedBy/editedBy) from the
+   *  JWT-authenticated user id — never trusts a client-supplied name. */
+  private async resolveUserDisplayName(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } });
+    return user?.fullName ?? null;
   }
 
   async remove(id: string): Promise<void> {

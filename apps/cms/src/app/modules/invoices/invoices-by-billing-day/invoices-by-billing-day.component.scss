@@ -11,6 +11,13 @@
     font-size: 13px;
   }
 
+  &__hint-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
   &__card {
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
@@ -34,6 +41,50 @@
 
   &__no-invoice {
     color: var(--color-text-muted);
+  }
+
+  &__toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+
+    span[nz-icon] {
+      transition: transform $transition-fast;
+    }
+
+    &--expanded span[nz-icon] {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__table--collapsed {
+    ::ng-deep tbody tr {
+      display: none;
+    }
+    ::ng-deep .data-table-cards .billing-day-card {
+      display: none;
+    }
+  }
+
+  &__expand-more {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0;
+    border-top: 1px solid var(--color-border);
+    cursor: pointer;
+    color: var(--color-text-muted);
+
+    &:hover {
+      color: var(--color-primary);
+      background: var(--color-bg-hover);
+    }
+
+    span[nz-icon] {
+      font-size: 16px;
+    }
   }
 }
 

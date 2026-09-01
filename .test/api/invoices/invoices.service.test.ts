@@ -23,7 +23,9 @@ function duplicateKeyError() {
 describe('InvoicesService', () => {
   let service: InvoicesService;
   let prisma: {
-    invoice: { findMany: jest.Mock; findFirst: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock; delete: jest.Mock };
+    invoice: { findMany: jest.Mock; findFirst: jest.Mock; findUnique: jest.Mock; create: jest.Mock; update: jest.Mock; updateMany: jest.Mock; delete: jest.Mock; count: jest.Mock };
+    invoiceEditLog: { create: jest.Mock };
+    user: { findUnique: jest.Mock };
   };
   let rooms:     { findAll: jest.Mock };
   let contracts: { findByRoom: jest.Mock };
@@ -34,8 +36,10 @@ describe('InvoicesService', () => {
     prisma = {
       invoice: {
         findMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(),
-        create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), delete: jest.fn(),
+        create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), delete: jest.fn(), count: jest.fn(),
       },
+      invoiceEditLog: { create: jest.fn() },
+      user: { findUnique: jest.fn().mockResolvedValue({ fullName: 'Người dùng test' }) },
     };
     rooms     = { findAll: jest.fn() };
     contracts = { findByRoom: jest.fn() };
@@ -156,15 +160,12 @@ describe('InvoicesService', () => {
   });
 
   describe('syncInvoiceForPeriod', () => {
-    it('generates a new invoice when none exists yet for the period', async () => {
+    it('does NOT create an invoice for a room that has none yet this period (auto-create removed)', async () => {
       prisma.invoice.findFirst.mockResolvedValue(null);
-      rooms.findAll.mockResolvedValue([occupiedRoom('r1', '101')]);
-      contracts.findByRoom.mockResolvedValue({ id: 'c1' });
-      utilities.findByRoom.mockResolvedValue(utilityFor('2026-08', 0, 10, 0, 5));
-      prisma.invoice.create.mockImplementation(({ data }: any) => Promise.resolve(data));
 
       await service.syncInvoiceForPeriod('r1', '2026-08');
-      expect(prisma.invoice.create).toHaveBeenCalled();
+      expect(prisma.invoice.create).not.toHaveBeenCalled();
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
     });
 
     it('throws and does NOT touch the row when the existing invoice is already PAID', async () => {
@@ -175,7 +176,7 @@ describe('InvoicesService', () => {
 
     it('recalculates a non-PAID invoice from the latest meter reading', async () => {
       prisma.invoice.findFirst.mockResolvedValue({
-        id: 'inv-1', status: InvoiceStatus.SENT, rentAmount: 2000000, otherFees: 50000,
+        id: 'inv-1', status: InvoiceStatus.SENT, rentAmount: 2000000, garbageFee: 50000, otherFees: 0, deduction: 0,
       });
       utilities.findByRoom.mockResolvedValue(utilityFor('2026-08', 0, 20, 0, 3));
 
@@ -191,8 +192,29 @@ describe('InvoicesService', () => {
       });
     });
 
+    it('preserves manually-edited garbageFee/otherFees/deduction — only meter-derived fields change', async () => {
+      prisma.invoice.findFirst.mockResolvedValue({
+        id: 'inv-1', status: InvoiceStatus.SENT, rentAmount: 2000000, garbageFee: 70000, otherFees: 20000, deduction: 100000,
+      });
+      utilities.findByRoom.mockResolvedValue(utilityFor('2026-08', 0, 20, 0, 3));
+
+      await service.syncInvoiceForPeriod('r1', '2026-08');
+
+      expect(prisma.invoice.update).toHaveBeenCalledWith({
+        where: { id: 'inv-1' },
+        data: {
+          prevElec: 0, currElec: 20, prevWater: 0, currWater: 3,
+          electricityAmount: 20 * 3500,
+          waterAmount:       3 * 30000,
+          totalAmount:        2000000 + 20 * 3500 + 3 * 30000 + 70000 + 20000 - 100000,
+          elecUnitPrice:  3500,
+          waterUnitPrice: 30000,
+        },
+      });
+    });
+
     it('does nothing when the utility record does not actually match this period (edge case guard)', async () => {
-      prisma.invoice.findFirst.mockResolvedValue({ id: 'inv-1', status: InvoiceStatus.SENT, rentAmount: 1, otherFees: 0 });
+      prisma.invoice.findFirst.mockResolvedValue({ id: 'inv-1', status: InvoiceStatus.SENT, rentAmount: 1, garbageFee: 0, otherFees: 0, deduction: 0 });
       utilities.findByRoom.mockResolvedValue({ utilityRecord: null });
 
       await service.syncInvoiceForPeriod('r1', '2026-08');
@@ -203,19 +225,32 @@ describe('InvoicesService', () => {
   describe('markPaid', () => {
     it('throws NotFoundException for a missing invoice', async () => {
       prisma.invoice.findUnique.mockResolvedValue(null);
-      await expect(service.markPaid('ghost', {} as any)).rejects.toThrow(NotFoundException);
+      await expect(service.markPaid('ghost', 'u1')).rejects.toThrow(NotFoundException);
     });
 
     it('refuses to re-mark an already-PAID invoice', async () => {
       prisma.invoice.findUnique.mockResolvedValue({ id: '1', status: InvoiceStatus.PAID });
-      await expect(service.markPaid('1', {} as any)).rejects.toThrow(BadRequestException);
+      await expect(service.markPaid('1', 'u1')).rejects.toThrow(BadRequestException);
     });
 
     it('marks paid and emits invoice.paid', async () => {
       prisma.invoice.findUnique.mockResolvedValue({ id: '1', status: InvoiceStatus.SENT });
       prisma.invoice.update.mockResolvedValue({ id: '1', status: InvoiceStatus.PAID });
-      await service.markPaid('1', {} as any);
+      await service.markPaid('1', 'u1');
       expect(events.emit).toHaveBeenCalledWith('invoice.paid', { invoiceId: '1' });
+    });
+
+    it('resolves markedBy from the JWT userId (server-side), never from client input', async () => {
+      prisma.invoice.findUnique.mockResolvedValue({ id: '1', status: InvoiceStatus.SENT });
+      prisma.invoice.update.mockResolvedValue({ id: '1', status: InvoiceStatus.PAID });
+      prisma.user.findUnique.mockResolvedValue({ fullName: 'Chủ trọ A' });
+
+      await service.markPaid('1', 'u1');
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' }, select: { fullName: true } });
+      expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ markedBy: 'Chủ trọ A' }),
+      }));
     });
   });
 
@@ -224,7 +259,7 @@ describe('InvoicesService', () => {
       prisma.invoice.findMany.mockResolvedValue([{ id: '1' }, { id: '2' }]); // already excludes PAID via the where clause
       prisma.invoice.updateMany.mockResolvedValue({ count: 2 });
 
-      const result = await service.bulkMarkPaid({ ids: ['1', '2', '3-already-paid'] } as any);
+      const result = await service.bulkMarkPaid({ ids: ['1', '2', '3-already-paid'] } as any, 'u1');
 
       expect(prisma.invoice.findMany).toHaveBeenCalledWith({
         where:  { id: { in: ['1', '2', '3-already-paid'] }, status: { not: InvoiceStatus.PAID } },
@@ -232,6 +267,197 @@ describe('InvoicesService', () => {
       });
       expect(result.updated).toBe(2);
       expect(events.emit).toHaveBeenCalledTimes(2);
+    });
+
+    it('resolves markedBy from the JWT userId, not from the request body', async () => {
+      prisma.invoice.findMany.mockResolvedValue([{ id: '1' }]);
+      prisma.invoice.updateMany.mockResolvedValue({ count: 1 });
+      prisma.user.findUnique.mockResolvedValue({ fullName: 'Quản lý B' });
+
+      await service.bulkMarkPaid({ ids: ['1'] } as any, 'u2');
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'u2' }, select: { fullName: true } });
+      expect(prisma.invoice.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ markedBy: 'Quản lý B' }),
+      }));
+    });
+  });
+
+  describe('update — PATCH /invoices/:id', () => {
+    const baseInvoice = {
+      id: '1', status: InvoiceStatus.SENT, rentAmount: 2000000, electricityAmount: 175000,
+      waterAmount: 150000, garbageFee: 50000, otherFees: 0, deduction: 0, dueDate: new Date('2026-08-20'),
+    };
+
+    it('throws NotFoundException for a missing invoice', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(null);
+      await expect(service.update('ghost', {} as any, 'u1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('refuses to edit an already-PAID invoice', async () => {
+      prisma.invoice.findUnique.mockResolvedValue({ ...baseInvoice, status: InvoiceStatus.PAID });
+      await expect(service.update('1', { rentAmount: 1 } as any, 'u1')).rejects.toThrow(BadRequestException);
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
+
+    it('recomputes totalAmount from the 4 real fields — a client-supplied totalAmount is not part of the DTO and is ignored', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
+      prisma.invoice.update.mockResolvedValue({ ...baseInvoice });
+
+      // simulate a malicious/stale client trying to smuggle totalAmount through the body
+      await service.update('1', { rentAmount: 3000000, totalAmount: 999 } as any, 'u1');
+
+      expect(prisma.invoice.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: expect.objectContaining({
+          rentAmount:  3000000,
+          totalAmount: 3000000 + 175000 + 150000 + 50000, // NOT 999
+        }),
+      });
+    });
+
+    it('recomputes totalAmount with garbageFee and deduction included', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
+      prisma.invoice.update.mockResolvedValue({ ...baseInvoice });
+
+      await service.update('1', { garbageFee: 70000, deduction: 100000 } as any, 'u1');
+
+      expect(prisma.invoice.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: expect.objectContaining({
+          garbageFee:  70000,
+          deduction:   100000,
+          totalAmount: 2000000 + 175000 + 150000 + 70000 + 0 - 100000,
+        }),
+      });
+    });
+
+    it('resolves editedBy from the JWT userId (server-side), never trusts a client-supplied name', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
+      prisma.invoice.update.mockResolvedValue({ ...baseInvoice });
+      prisma.user.findUnique.mockResolvedValue({ fullName: 'Chủ trọ thật' });
+
+      await service.update('1', { rentAmount: 2500000, editedBy: 'Hacker' } as any, 'u1');
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' }, select: { fullName: true } });
+      expect(prisma.invoiceEditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ editedBy: 'Chủ trọ thật' }),
+      }));
+    });
+
+    it('does not write an edit log when nothing actually changed', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
+      prisma.invoice.update.mockResolvedValue({ ...baseInvoice });
+
+      await service.update('1', {} as any, 'u1');
+
+      expect(prisma.invoiceEditLog.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findAll — pagination', () => {
+    it('without a page param, returns a plain array (backward-compatible with old callers)', async () => {
+      prisma.invoice.findMany.mockResolvedValue([{ id: '1' }, { id: '2' }]);
+
+      const result = await service.findAll({});
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(prisma.invoice.count).not.toHaveBeenCalled();
+    });
+
+    it('with a page param, returns { items, total } and defaults pageSize to 10', async () => {
+      prisma.invoice.findMany.mockResolvedValue([{ id: '1' }]);
+      prisma.invoice.count.mockResolvedValue(23);
+
+      const result = await service.findAll({ page: 2 });
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 10, take: 10 }));
+      expect(result).toEqual({ items: [{ id: '1' }], total: 23 });
+    });
+
+    it('honors an explicit pageSize', async () => {
+      prisma.invoice.findMany.mockResolvedValue([]);
+      prisma.invoice.count.mockResolvedValue(0);
+
+      await service.findAll({ page: 3, pageSize: 5 });
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 10, take: 5 }));
+    });
+  });
+
+  describe('findAll — notified filter combined with period/roomIds', () => {
+    it('notified=true + period + roomIds all apply together (relation "some")', async () => {
+      prisma.invoice.findMany.mockResolvedValue([]);
+
+      await service.findAll({ period: '2026-08', roomIds: ['r1', 'r2'], notified: true });
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          period: '2026-08',
+          roomId: { in: ['r1', 'r2'] },
+          notificationLogs: { some: {} },
+        }),
+      }));
+    });
+
+    it('notified=false uses relation "none", still combined with period', async () => {
+      prisma.invoice.findMany.mockResolvedValue([]);
+
+      await service.findAll({ period: '2026-08', notified: false });
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ period: '2026-08', notificationLogs: { none: {} } }),
+      }));
+    });
+
+    it('notified omitted → no notificationLogs filter at all', async () => {
+      prisma.invoice.findMany.mockResolvedValue([]);
+
+      await service.findAll({ period: '2026-08' });
+
+      expect(prisma.invoice.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ notificationLogs: undefined }),
+      }));
+    });
+  });
+
+  describe('generate — bulk generate skip/create split', () => {
+    it('a room whose invoice already exists (PAID or not) lands in skipped with a reason, not duplicated', async () => {
+      rooms.findAll.mockResolvedValue([occupiedRoom('r1', '101'), occupiedRoom('r2', '102')]);
+      contracts.findByRoom.mockResolvedValue({ id: 'c1' });
+      utilities.findByRoom.mockResolvedValue(utilityFor('2026-08', 0, 10, 0, 5));
+      prisma.invoice.create
+        .mockRejectedValueOnce(duplicateKeyError())
+        .mockImplementationOnce(({ data }: any) => Promise.resolve(data));
+
+      const { created, skipped } = await service.generate({ period: '2026-08', roomIds: ['r1', 'r2'] } as any);
+
+      expect(skipped).toEqual([{ roomId: 'r1', roomNumber: '101', reason: 'Hoá đơn kỳ này đã tồn tại.' }]);
+      expect(created).toHaveLength(1);
+      expect((created[0] as any).roomId).toBe('r2');
+    });
+  });
+
+  describe('billing period boundary (11 → 10)', () => {
+    const periodOn = (isoDate: string): string => {
+      jest.useFakeTimers().setSystemTime(new Date(isoDate));
+      try {
+        return (service as any).currentBillingPeriod();
+      } finally {
+        jest.useRealTimers();
+      }
+    };
+
+    it('the 10th still belongs to the PREVIOUS month\'s period', () => {
+      expect(periodOn('2026-08-10T12:00:00Z')).toBe('2026-07');
+    });
+
+    it('the 11th rolls over into the CURRENT month\'s period', () => {
+      expect(periodOn('2026-08-11T12:00:00Z')).toBe('2026-08');
+    });
+
+    it('rolls over the year boundary (Jan 5th → December of the previous year)', () => {
+      expect(periodOn('2026-01-05T12:00:00Z')).toBe('2025-12');
     });
   });
 

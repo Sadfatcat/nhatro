@@ -45,6 +45,15 @@
           <nz-icon nzType="message" /> Gửi SMS
         </button>
         @if (inv.status !== 'PAID') {
+          @if (!editing()) {
+            <button
+              *appPermission="'invoices:update'"
+              nz-button
+              (click)="startEdit()"
+            >
+              <nz-icon nzType="edit" /> Sửa hoá đơn
+            </button>
+          }
           <button
             *appPermission="'invoices:mark-paid'"
             nz-button nzType="primary"
@@ -76,52 +85,99 @@
             <span>Chi tiết hoá đơn</span>
           </div>
           <div class="col-card__body">
-            <div class="info-grid">
-              <div class="info-row">
-                <span class="info-label">Tiền phòng</span>
-                <app-money-display [value]="inv.rentAmount" />
-              </div>
-              <div class="info-row info-row--full">
-                <div class="info-row">
-                  <span class="info-label">Tiền điện</span>
-                  <app-money-display [value]="inv.electricityAmount" />
+            @if (editing()) {
+              <div class="edit-form">
+                <div class="edit-form__row">
+                  <label>Tiền phòng</label>
+                  <nz-input-number [ngModel]="editForm().rentAmount" (ngModelChange)="patchEditForm({ rentAmount: $event })" [nzMin]="0" style="width:100%" />
                 </div>
-                <span class="usage-note">{{ inv.prevElec }} → {{ inv.currElec }} kWh (dùng {{ inv.currElec - inv.prevElec }} kWh × {{ inv.elecUnitPrice | number:'1.0-0' }}đ)</span>
-              </div>
-              <div class="info-row info-row--full">
-                <div class="info-row">
-                  <span class="info-label">Tiền nước</span>
-                  <app-money-display [value]="inv.waterAmount" />
+                <div class="edit-form__row">
+                  <label>Tiền điện</label>
+                  <nz-input-number [ngModel]="editForm().electricityAmount" (ngModelChange)="patchEditForm({ electricityAmount: $event })" [nzMin]="0" style="width:100%" />
                 </div>
-                <span class="usage-note">{{ inv.prevWater }} → {{ inv.currWater }} m³ (dùng {{ inv.currWater - inv.prevWater }} m³ × {{ inv.waterUnitPrice | number:'1.0-0' }}đ)</span>
-              </div>
-              @if (inv.otherFees > 0) {
-                <div class="info-row">
-                  <span class="info-label">Phí khác</span>
-                  <app-money-display [value]="inv.otherFees" />
+                <div class="edit-form__row">
+                  <label>Tiền nước</label>
+                  <nz-input-number [ngModel]="editForm().waterAmount" (ngModelChange)="patchEditForm({ waterAmount: $event })" [nzMin]="0" style="width:100%" />
                 </div>
-              }
-              <div class="info-row info-row--total">
-                <span class="info-label">Tổng cộng</span>
-                <app-money-display [value]="inv.totalAmount" />
-              </div>
-              <div class="info-row">
-                <span class="info-label">Hạn đóng</span>
-                <span>{{ inv.dueDate | date:'dd/MM/yyyy' }}</span>
-              </div>
-              @if (inv.paidAt) {
-                <div class="info-row">
-                  <span class="info-label">Đã đóng lúc</span>
-                  <span>{{ inv.paidAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                <div class="edit-form__row">
+                  <label>Phí rác</label>
+                  <nz-input-number [ngModel]="editForm().garbageFee" (ngModelChange)="patchEditForm({ garbageFee: $event })" [nzMin]="0" style="width:100%" />
                 </div>
-              }
-              @if (inv.markedBy) {
-                <div class="info-row">
-                  <span class="info-label">Xác nhận bởi</span>
-                  <span>{{ inv.markedBy }}</span>
+                <div class="edit-form__row">
+                  <label>Phí khác</label>
+                  <nz-input-number [ngModel]="editForm().otherFees" (ngModelChange)="patchEditForm({ otherFees: $event })" [nzMin]="0" style="width:100%" />
                 </div>
-              }
-            </div>
+                <div class="edit-form__row">
+                  <label>Khấu trừ</label>
+                  <nz-input-number [ngModel]="editForm().deduction" (ngModelChange)="patchEditForm({ deduction: $event })" [nzMin]="0" style="width:100%" />
+                </div>
+                <div class="edit-form__row">
+                  <label>Hạn đóng</label>
+                  <nz-date-picker [ngModel]="editForm().dueDate" (ngModelChange)="patchEditForm({ dueDate: $event })" style="width:100%" />
+                </div>
+                <div class="edit-form__actions">
+                  <button nz-button nzType="default" (click)="cancelEdit()">Huỷ</button>
+                  <button nz-button nzType="primary" [nzLoading]="saving()" (click)="submitEdit()">Lưu</button>
+                </div>
+              </div>
+            } @else {
+              <div class="info-grid">
+                <div class="info-row">
+                  <span class="info-label">Tiền phòng</span>
+                  <app-money-display [value]="inv.rentAmount" />
+                </div>
+                <div class="info-row info-row--full">
+                  <div class="info-row">
+                    <span class="info-label">Tiền điện</span>
+                    <app-money-display [value]="inv.electricityAmount" />
+                  </div>
+                  <span class="usage-note">{{ inv.prevElec }} → {{ inv.currElec }} kWh (dùng {{ inv.currElec - inv.prevElec }} kWh × {{ inv.elecUnitPrice | number:'1.0-0' }}đ)</span>
+                </div>
+                <div class="info-row info-row--full">
+                  <div class="info-row">
+                    <span class="info-label">Tiền nước</span>
+                    <app-money-display [value]="inv.waterAmount" />
+                  </div>
+                  <span class="usage-note">{{ inv.prevWater }} → {{ inv.currWater }} m³ (dùng {{ inv.currWater - inv.prevWater }} m³ × {{ inv.waterUnitPrice | number:'1.0-0' }}đ)</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Phí rác</span>
+                  <app-money-display [value]="inv.garbageFee" />
+                </div>
+                @if (inv.otherFees > 0) {
+                  <div class="info-row">
+                    <span class="info-label">Phí khác</span>
+                    <app-money-display [value]="inv.otherFees" />
+                  </div>
+                }
+                @if (inv.deduction > 0) {
+                  <div class="info-row">
+                    <span class="info-label">Khấu trừ</span>
+                    <span class="deduction-value">− <app-money-display [value]="inv.deduction" /></span>
+                  </div>
+                }
+                <div class="info-row info-row--total">
+                  <span class="info-label">Tổng cộng</span>
+                  <app-money-display [value]="inv.totalAmount" />
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Hạn đóng</span>
+                  <span>{{ inv.dueDate | date:'dd/MM/yyyy' }}</span>
+                </div>
+                @if (inv.paidAt) {
+                  <div class="info-row">
+                    <span class="info-label">Đã đóng lúc</span>
+                    <span>{{ inv.paidAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                }
+                @if (inv.markedBy) {
+                  <div class="info-row">
+                    <span class="info-label">Xác nhận bởi</span>
+                    <span>{{ inv.markedBy }}</span>
+                  </div>
+                }
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -165,42 +221,32 @@
 
     </div>
 
-    <!-- Lịch sử gửi thông báo -->
+    <!-- Nhật ký hoạt động -->
     <div class="col-card notify-log-card">
       <div class="col-card__header">
         <nz-icon nzType="history" />
-        <span>Lịch sử gửi thông báo</span>
+        <span>Nhật ký hoạt động</span>
       </div>
       <div class="col-card__body">
-        @if (inv.notificationLogs && inv.notificationLogs.length > 0) {
-          <table class="notify-log-table">
-            <thead>
-              <tr>
-                <th>Thời gian</th>
-                <th>Loại thông báo</th>
-                <th>Kênh</th>
-                <th>Kết quả</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (log of inv.notificationLogs; track log.id) {
-                <tr>
-                  <td>{{ log.sentAt | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td>{{ templateLabel(log.templateKey) }}</td>
-                  <td>{{ channelLabel(log.channel) }}</td>
-                  <td>
-                    @if (log.success) {
-                      <span class="notify-log-result notify-log-result--ok">Thành công</span>
-                    } @else {
-                      <span class="notify-log-result notify-log-result--fail">Thất bại — {{ log.reason }}</span>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        @if (inv.editLogs && inv.editLogs.length > 0) {
+          <p class="edit-delta">
+            Tổng chênh lệch sau sửa:
+            <strong [class.edit-delta--up]="totalEditDelta() > 0" [class.edit-delta--down]="totalEditDelta() < 0">
+              {{ totalEditDelta() > 0 ? '+' : '' }}{{ totalEditDelta() | number:'1.0-0' }}đ
+            </strong>
+          </p>
+        }
+        @if (activityLog().length > 0) {
+          <ul class="activity-log">
+            @for (event of activityLog(); track event.id) {
+              <li class="activity-log__item activity-log__item--{{ event.color }}">
+                <span class="activity-log__time">{{ event.at | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span class="activity-log__text">{{ event.text }}</span>
+              </li>
+            }
+          </ul>
         } @else {
-          <p class="bank-empty">Chưa gửi thông báo nào cho hoá đơn này.</p>
+          <p class="bank-empty">Chưa có hoạt động nào cho hoá đơn này.</p>
         }
       </div>
     </div>

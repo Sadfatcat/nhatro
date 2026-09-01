@@ -7,10 +7,11 @@ function rolesOf(method: string): string[] | undefined {
 }
 
 describe('InvoicesController — route role assignments', () => {
-  it('generate/markPaid/bulkMarkPaid/remove require ADMIN or LANDLORD', () => {
+  it('generate/markPaid/bulkMarkPaid/update/remove require ADMIN or LANDLORD', () => {
     expect(rolesOf('generate')).toEqual(['ADMIN', 'LANDLORD']);
     expect(rolesOf('markPaid')).toEqual(['ADMIN', 'LANDLORD']);
     expect(rolesOf('bulkMarkPaid')).toEqual(['ADMIN', 'LANDLORD']);
+    expect(rolesOf('update')).toEqual(['ADMIN', 'LANDLORD']);
     expect(rolesOf('remove')).toEqual(['ADMIN', 'LANDLORD']);
   });
 

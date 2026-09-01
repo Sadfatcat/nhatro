@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UtilitiesService } from '../../../apps/api/src/modules/utilities/utilities.service';
 import { PrismaService } from '../../../apps/api/src/prisma/prisma.service';
@@ -40,14 +40,14 @@ describe('UtilitiesService', () => {
   describe('record — the exact bug fixed this session: per-month history, not overwrite-in-place', () => {
     it('throws NotFoundException for a missing room', async () => {
       prisma.room.findUnique.mockResolvedValue(null);
-      await expect(service.record('ghost', { currElec: 10, currWater: 5 })).rejects.toThrow(NotFoundException);
+      await expect(service.record('ghost', { currElec: 10, currWater: 5 }, 'ADMIN')).rejects.toThrow(NotFoundException);
     });
 
     it('blocks the write entirely when the period already has a PAID invoice, with a clear message', async () => {
       prisma.room.findUnique.mockResolvedValue({ id: 'r1' });
       prisma.invoice.findFirst.mockResolvedValue({ id: 'inv-1', status: 'PAID' });
 
-      await expect(service.record('r1', { currElec: 10, currWater: 5, billingMonth: '2026-08' }))
+      await expect(service.record('r1', { currElec: 10, currWater: 5, billingMonth: '2026-08' }, 'ADMIN'))
         .rejects.toThrow('Hoá đơn kỳ này đã thanh toán, không thể sửa chỉ số điện nước.');
       expect(prisma.utilityRecord.upsert).not.toHaveBeenCalled();
     });
@@ -58,7 +58,7 @@ describe('UtilitiesService', () => {
       prisma.utilityRecord.findFirst.mockResolvedValue({ billingMonth: '2026-07', currElec: 170, currWater: 30 });
       prisma.utilityRecord.upsert.mockResolvedValue({});
 
-      await service.record('r1', { currElec: 220, currWater: 45, billingMonth: '2026-09' });
+      await service.record('r1', { currElec: 220, currWater: 45, billingMonth: '2026-09' }, 'ADMIN');
 
       expect(prisma.utilityRecord.findFirst).toHaveBeenCalledWith({
         where:   { roomId: 'r1', billingMonth: { lt: '2026-09' } },
@@ -76,7 +76,7 @@ describe('UtilitiesService', () => {
       prisma.utilityRecord.findFirst.mockResolvedValue(null);
       prisma.utilityRecord.upsert.mockResolvedValue({});
 
-      await service.record('r1', { currElec: 90, currWater: 8, billingMonth: '2026-07' });
+      await service.record('r1', { currElec: 90, currWater: 8, billingMonth: '2026-07' }, 'ADMIN');
 
       expect(prisma.utilityRecord.upsert).toHaveBeenCalledWith(expect.objectContaining({
         update: expect.objectContaining({ prevElec: 0, prevWater: 0 }),
@@ -89,7 +89,7 @@ describe('UtilitiesService', () => {
       prisma.utilityRecord.findFirst.mockResolvedValue(null);
       prisma.utilityRecord.upsert.mockResolvedValue({});
 
-      await service.record('r1', { currElec: 1, currWater: 1 });
+      await service.record('r1', { currElec: 1, currWater: 1 }, 'ADMIN');
 
       expect(prisma.invoice.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { roomId: 'r1', period: '2026-08', status: 'PAID' } }));
     });
@@ -100,8 +100,38 @@ describe('UtilitiesService', () => {
       prisma.utilityRecord.findFirst.mockResolvedValue(null);
       prisma.utilityRecord.upsert.mockResolvedValue({});
 
-      await service.record('r1', { currElec: 1, currWater: 1, billingMonth: '2026-06' });
+      await service.record('r1', { currElec: 1, currWater: 1, billingMonth: '2026-06' }, 'ADMIN');
       expect(events.emit).toHaveBeenCalledWith('utility.recorded', { roomId: 'r1', billingMonth: '2026-06' });
+    });
+  });
+
+  describe('record — LANDLORD role is restricted to the current billing month only', () => {
+    it('LANDLORD recording the current month succeeds', async () => {
+      prisma.room.findUnique.mockResolvedValue({ id: 'r1' });
+      prisma.invoice.findFirst.mockResolvedValue(null);
+      prisma.utilityRecord.findFirst.mockResolvedValue(null);
+      prisma.utilityRecord.upsert.mockResolvedValue({});
+
+      await expect(service.record('r1', { currElec: 1, currWater: 1, billingMonth: '2026-08' }, 'LANDLORD'))
+        .resolves.toBeDefined();
+    });
+
+    it('LANDLORD trying to record a past/future month is rejected with ForbiddenException', async () => {
+      prisma.room.findUnique.mockResolvedValue({ id: 'r1' });
+
+      await expect(service.record('r1', { currElec: 1, currWater: 1, billingMonth: '2026-07' }, 'LANDLORD'))
+        .rejects.toThrow(ForbiddenException);
+      expect(prisma.utilityRecord.upsert).not.toHaveBeenCalled();
+    });
+
+    it('ADMIN is NOT restricted — can record any past month', async () => {
+      prisma.room.findUnique.mockResolvedValue({ id: 'r1' });
+      prisma.invoice.findFirst.mockResolvedValue(null);
+      prisma.utilityRecord.findFirst.mockResolvedValue(null);
+      prisma.utilityRecord.upsert.mockResolvedValue({});
+
+      await expect(service.record('r1', { currElec: 1, currWater: 1, billingMonth: '2026-03' }, 'ADMIN'))
+        .resolves.toBeDefined();
     });
   });
 
@@ -177,6 +207,30 @@ describe('UtilitiesService', () => {
       expect(prisma.room.findMany).toHaveBeenCalledWith(expect.objectContaining({
         include: expect.objectContaining({ utilityRecords: { where: { billingMonth: '2026-08' } } }),
       }));
+    });
+  });
+
+  describe('billing period boundary (11 → 10) via findByRoom\'s default month', () => {
+    const defaultMonthOn = async (isoDate: string): Promise<string> => {
+      jest.useFakeTimers().setSystemTime(new Date(isoDate));
+      prisma.room.findUnique.mockResolvedValue({ id: 'r1' });
+      prisma.utilityRecord.findUnique.mockResolvedValue(null);
+      prisma.utilityRecord.findFirst.mockResolvedValue(null);
+      await service.findByRoom('r1');
+      const [{ where }] = prisma.utilityRecord.findUnique.mock.calls.at(-1)!;
+      return where.roomId_billingMonth.billingMonth;
+    };
+
+    it('the 10th still belongs to the PREVIOUS month\'s period', async () => {
+      expect(await defaultMonthOn('2026-08-10T12:00:00Z')).toBe('2026-07');
+    });
+
+    it('the 11th rolls over into the CURRENT month\'s period', async () => {
+      expect(await defaultMonthOn('2026-08-11T12:00:00Z')).toBe('2026-08');
+    });
+
+    it('rolls over the year boundary (Jan 5th → December of the previous year)', async () => {
+      expect(await defaultMonthOn('2026-01-05T12:00:00Z')).toBe('2025-12');
     });
   });
 });

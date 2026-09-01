@@ -3,13 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../../../apps/api/src/modules/notifications/notifications.service';
 import { PrismaService } from '../../../apps/api/src/prisma/prisma.service';
 import { EmailProvider } from '../../../apps/api/src/modules/notifications/providers/email.provider';
-import { ZaloProvider } from '../../../apps/api/src/modules/notifications/providers/zalo.provider';
+import { SmsProvider } from '../../../apps/api/src/modules/notifications/providers/sms.provider';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
-  let prisma: { invoice: { findUnique: jest.Mock } };
-  let email:  { send: jest.Mock };
-  let zalo:   { send: jest.Mock };
+  let prisma: { invoice: { findUnique: jest.Mock }; notificationLog: { create: jest.Mock } };
+  let email: { send: jest.Mock };
+  let sms:   { send: jest.Mock };
   let config: Record<string, string | undefined>;
 
   const baseInvoice = {
@@ -18,21 +18,22 @@ describe('NotificationsService', () => {
     referenceCode: 'NT-101-082026', prevElec: 100, currElec: 150, elecUnitPrice: 3500,
     prevWater: 10, currWater: 15, waterUnitPrice: 30000,
     room: { roomNumber: '101' },
-    contract: { tenant: { email: 'tenant@example.com' } },
+    contract: { tenant: { email: 'tenant@example.com', phone: '0900000000' } },
   };
 
   beforeEach(async () => {
-    prisma = { invoice: { findUnique: jest.fn() } };
+    prisma = { invoice: { findUnique: jest.fn() }, notificationLog: { create: jest.fn().mockResolvedValue({}) } };
     email  = { send: jest.fn() };
-    zalo   = { send: jest.fn() };
-    config = { NOTIFICATION_PRIMARY_PROVIDER: 'email', NOTIFICATION_FALLBACK_PROVIDER: '' };
+    sms    = { send: jest.fn() };
+    // Real project config: SMS is primary, email is the fallback (SMS is cheaper).
+    config = { NOTIFICATION_PRIMARY_PROVIDER: 'sms', NOTIFICATION_FALLBACK_PROVIDER: 'email' };
 
     const module = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
         { provide: EmailProvider, useValue: email },
-        { provide: ZaloProvider, useValue: zalo },
+        { provide: SmsProvider,   useValue: sms },
         { provide: ConfigService, useValue: { get: (k: string) => config[k] } },
       ],
     }).compile();
@@ -46,72 +47,93 @@ describe('NotificationsService', () => {
       expect(result).toEqual({ success: false, reason: 'Không tìm thấy hoá đơn.' });
     });
 
-    it('fails cleanly when the tenant has no email on file — does not call the provider at all', async () => {
-      prisma.invoice.findUnique.mockResolvedValue({ ...baseInvoice, contract: { tenant: { email: null } } });
+    it('fails cleanly with no exception when the tenant has neither email nor phone', async () => {
+      prisma.invoice.findUnique.mockResolvedValue({ ...baseInvoice, contract: { tenant: { email: null, phone: null } } });
       const result = await service.sendForInvoice('inv-1', 'invoice-created');
-      expect(result).toEqual({ success: false, reason: 'Người thuê chưa có email.' });
+      expect(result).toEqual({ success: false, reason: 'Không có dữ liệu người dùng.' });
+      expect(sms.send).not.toHaveBeenCalled();
       expect(email.send).not.toHaveBeenCalled();
     });
 
-    it('computes elecUsed/waterUsed correctly from the invoice snapshot for the email template', async () => {
+    it('still attempts to send when only phone is present (no email on file)', async () => {
+      prisma.invoice.findUnique.mockResolvedValue({ ...baseInvoice, contract: { tenant: { email: null, phone: '0900000000' } } });
+      sms.send.mockResolvedValue({ success: true });
+
+      const result = await service.sendForInvoice('inv-1', 'invoice-created');
+      expect(result).toEqual({ success: true });
+      expect(sms.send).toHaveBeenCalled();
+    });
+
+    it('computes elecUsed/waterUsed correctly from the invoice snapshot for the template', async () => {
       prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
-      email.send.mockResolvedValue({ success: true });
+      sms.send.mockResolvedValue({ success: true });
 
       await service.sendForInvoice('inv-1', 'invoice-created');
 
-      const [[payload]] = email.send.mock.calls;
+      const [[payload]] = sms.send.mock.calls;
       expect(payload.data.elecUsed).toBe(50);
       expect(payload.data.waterUsed).toBe(5);
-      expect(payload.to).toEqual({ email: 'tenant@example.com' });
+      expect(payload.to).toEqual({ email: 'tenant@example.com', phone: '0900000000' });
+    });
+
+    it('forceChannel="sms" bypasses the primary/fallback chain entirely (manual SMS-only trigger)', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(baseInvoice);
+      sms.send.mockResolvedValue({ success: true });
+
+      await service.sendForInvoice('inv-1', 'invoice-created', 'sms');
+
+      expect(sms.send).toHaveBeenCalled();
+      expect(email.send).not.toHaveBeenCalled();
     });
   });
 
-  describe('send — provider fallback chain', () => {
+  describe('send — SMS-first fallback chain', () => {
     it('fails clearly when the configured primary provider name is invalid', async () => {
-      config.NOTIFICATION_PRIMARY_PROVIDER = 'sms-carrier-pigeon';
-      const result = await service.send({ to: { email: 'x@x.com' }, templateKey: 'invoice-created', data: {} });
+      config.NOTIFICATION_PRIMARY_PROVIDER = 'carrier-pigeon';
+      const result = await service.send({ to: { phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
       expect(result.success).toBe(false);
+      expect(sms.send).not.toHaveBeenCalled();
       expect(email.send).not.toHaveBeenCalled();
     });
 
-    it('succeeds via the primary provider without ever touching the fallback', async () => {
+    it('succeeds via SMS (primary) without ever touching the email fallback', async () => {
+      sms.send.mockResolvedValue({ success: true });
+      const result = await service.send({ to: { phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
+      expect(result).toEqual({ success: true });
+      expect(email.send).not.toHaveBeenCalled();
+    });
+
+    it('falls back to email when SMS (primary) fails', async () => {
+      sms.send.mockResolvedValue({ success: false, error: 'SMS gateway down' });
       email.send.mockResolvedValue({ success: true });
-      const result = await service.send({ to: { email: 'x@x.com' }, templateKey: 'invoice-created', data: {} });
+
+      const result = await service.send({ to: { email: 'x@x.com', phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
       expect(result).toEqual({ success: true });
-      expect(zalo.send).not.toHaveBeenCalled();
+      expect(email.send).toHaveBeenCalled();
     });
 
-    it('falls back to the secondary provider when the primary fails', async () => {
-      config.NOTIFICATION_FALLBACK_PROVIDER = 'zalo';
+    it('when BOTH sms and email fail, returns { success: false, reason } — does not throw', async () => {
+      sms.send.mockResolvedValue({ success: false, error: 'SMS gateway down' });
       email.send.mockResolvedValue({ success: false, error: 'SMTP down' });
-      zalo.send.mockResolvedValue({ success: true });
 
-      const result = await service.send({ to: { email: 'x@x.com' }, templateKey: 'invoice-created', data: {} });
-      expect(result).toEqual({ success: true });
-      expect(zalo.send).toHaveBeenCalled();
-    });
-
-    it('reports the PRIMARY error when both primary and fallback fail', async () => {
-      config.NOTIFICATION_FALLBACK_PROVIDER = 'zalo';
-      email.send.mockResolvedValue({ success: false, error: 'SMTP down' });
-      zalo.send.mockResolvedValue({ success: false, error: 'Zalo API error' });
-
-      const result = await service.send({ to: { email: 'x@x.com' }, templateKey: 'invoice-created', data: {} });
-      expect(result).toEqual({ success: false, reason: 'Zalo API error' });
+      const result = await service.send({ to: { email: 'x@x.com', phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
+      expect(result).toEqual({ success: false, reason: 'SMTP down' });
     });
 
     it('does not crash the whole flow when a provider throws instead of rejecting cleanly', async () => {
-      email.send.mockRejectedValue(new Error('network unreachable'));
-      const result = await service.send({ to: { email: 'x@x.com' }, templateKey: 'invoice-created', data: {} });
+      sms.send.mockRejectedValue(new Error('network unreachable'));
+      email.send.mockResolvedValue({ success: false, error: 'SMTP down' });
+      const result = await service.send({ to: { email: 'x@x.com', phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
       expect(result.success).toBe(false);
-      expect(result.reason).toBe('network unreachable');
+      expect(result.reason).toBe('SMTP down');
     });
 
-    it('returns the primary error (not a crash) when no fallback is configured and primary fails', async () => {
+    it('returns the primary (SMS) error, unmodified, when no fallback is configured and primary fails', async () => {
       config.NOTIFICATION_FALLBACK_PROVIDER = '';
-      email.send.mockResolvedValue({ success: false, error: 'SMTP down' });
-      const result = await service.send({ to: { email: 'x@x.com' }, templateKey: 'invoice-created', data: {} });
-      expect(result).toEqual({ success: false, reason: 'SMTP down' });
+      sms.send.mockResolvedValue({ success: false, error: 'SMS gateway down' });
+      const result = await service.send({ to: { phone: '0900000000' }, templateKey: 'invoice-created', data: {} });
+      expect(result).toEqual({ success: false, reason: 'SMS gateway down' });
+      expect(email.send).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Invoice" ADD COLUMN     "garbageFee" INTEGER NOT NULL DEFAULT 50000,
+ADD COLUMN     "deduction" INTEGER NOT NULL DEFAULT 0;
