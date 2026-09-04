@@ -106,6 +106,10 @@ export class InvoiceCreationLogComponent implements OnInit {
         { label: 'Đã gửi',  value: 'yes' },
         { label: 'Chưa gửi', value: 'no' },
       ] },
+      { key: 'sort', label: 'Sắp xếp', type: 'select', span: 6, options: [
+        { label: 'Phòng: nhỏ → lớn', value: 'asc' },
+        { label: 'Phòng: lớn → nhỏ', value: 'desc' },
+      ] },
     ],
     autoSearch: true,
     debounceMs: 0,
@@ -115,6 +119,7 @@ export class InvoiceCreationLogComponent implements OnInit {
     this.filterPeriod.set((value['period'] as string) ?? null);
     this.filterRooms.set((value['roomIds'] as string[]) ?? null);
     this.filterNotified.set((value['notified'] as string) ?? null);
+    this.sortDir.set((value['sort'] as 'asc' | 'desc') ?? null);
     this.page.set(1);
     this.loadData();
   }
@@ -191,12 +196,12 @@ export class InvoiceCreationLogComponent implements OnInit {
   }
 
   loadRoomOptions(): void {
-    this.api.get<ApiResponse<{ id: string; roomNumber: string }[]>>('/rooms')
+    this.api.get<ApiResponse<{ roomId: string; roomNumber: string }[]>>('/rooms')
       .subscribe(res => {
         if (!res.success || !res.data) return;
         this.roomOptions.set(res.data
           .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true }))
-          .map(r => ({ label: r.roomNumber, value: r.id })));
+          .map(r => ({ label: r.roomNumber, value: r.roomId })));
       });
   }
 

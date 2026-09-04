@@ -109,6 +109,20 @@ export class InvoicesController {
     return ok(await this.svc.markMergedInvoicePaid(id, user.id), 'Đã đánh dấu thanh toán hoá đơn gộp.');
   }
 
+  @Roles('ADMIN')
+  @Post('merged/:id/unmerge')
+  async unmerge(@Param('id') id: string): Promise<ApiResponse<null>> {
+    await this.svc.unmergeInvoice(id);
+    return ok(null, 'Đã tách hoá đơn gộp.');
+  }
+
+  @Roles(...MANAGEMENT)
+  @Delete('merged/:id')
+  async removeMerged(@Param('id') id: string): Promise<ApiResponse<null>> {
+    await this.svc.removeMerged(id);
+    return ok(null, 'Đã xoá hoá đơn gộp.');
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
     const invoice = await this.svc.findOne(id);

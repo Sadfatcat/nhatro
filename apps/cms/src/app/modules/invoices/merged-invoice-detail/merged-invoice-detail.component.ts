@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { finalize } from 'rxjs';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
@@ -15,6 +16,7 @@ import { ToastService } from '../../../shared/components/feedback/toast/toast.se
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
@@ -26,7 +28,7 @@ interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterModule, FormsModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzInputNumberModule, NzDatePickerModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzModalModule, NzInputNumberModule, NzDatePickerModule,
     MoneyDisplayComponent, StatusBadgeComponent, PermissionDirective,
   ],
 })
@@ -35,10 +37,75 @@ export class MergedInvoiceDetailComponent implements OnInit {
   private router = inject(Router);
   private api    = inject(ApiService);
   private toast  = inject(ToastService);
+  auth           = inject(AuthService);
 
   merged  = signal<MergedInvoice | null>(null);
   loading = signal(true);
   saving  = signal(false);
+  showDeleteModal  = signal(false);
+  showUnmergeModal = signal(false);
+
+  /** Timeline merged from every child invoice's notification/edit logs, prefixed with the room
+   *  number so each entry is traceable to its source invoice — copied pattern from
+   *  invoice-detail.component.ts's activityLog(), no new DB fields. */
+  activityLog = computed<{ id: string; at: string; color: 'white' | 'red' | 'green' | 'orange'; text: string }[]>(() => {
+    const merged = this.merged();
+    if (!merged) return [];
+    const events: { id: string; at: string; color: 'white' | 'red' | 'green' | 'orange'; text: string }[] = [];
+
+    for (const inv of merged.invoices) {
+      const roomPrefix = `[Phòng ${inv.room.roomNumber}] `;
+      for (const log of inv.notificationLogs ?? []) {
+        events.push({
+          id:    `notify-${log.id}`,
+          at:    log.sentAt,
+          color: 'white',
+          text:  `${roomPrefix}Đã gửi thông báo "${this.templateLabel(log.templateKey)}" qua ${this.channelLabel(log.channel)}${log.success ? '' : ' — thất bại: ' + log.reason}`,
+        });
+      }
+      for (const log of inv.editLogs ?? []) {
+        events.push({
+          id:    `edit-${log.id}`,
+          at:    log.editedAt,
+          color: 'orange',
+          text:  `${roomPrefix}Sửa thủ công${log.editedBy ? ' bởi ' + log.editedBy : ''}: ${this.describeChanges(log.changes)}`,
+        });
+      }
+    }
+    if (merged.status === 'PAID' && merged.paidAt) {
+      events.push({ id: 'paid', at: merged.paidAt, color: 'green', text: 'Đã thanh toán hoá đơn gộp' });
+    }
+    if (merged.status === 'OVERDUE') {
+      events.push({ id: 'overdue', at: merged.dueDate, color: 'red', text: 'Quá hạn thanh toán' });
+    }
+
+    return events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  });
+
+  private describeChanges(changes: Record<string, { from: unknown; to: unknown }>): string {
+    const labels: Record<string, string> = {
+      rentAmount:        'Tiền phòng',
+      electricityAmount: 'Tiền điện',
+      waterAmount:       'Tiền nước',
+      garbageFee:        'Phí rác',
+      otherFees:         'Phí khác',
+      deduction:         'Khấu trừ',
+      dueDate:           'Hạn đóng',
+    };
+    return Object.entries(changes)
+      .map(([key, { from, to }]) => `${labels[key] ?? key}: ${from} → ${to}`)
+      .join(', ');
+  }
+
+  templateLabel(key: string): string {
+    const labels: Record<string, string> = {
+      'invoice-created':  'Hoá đơn mới',
+      'invoice-due-soon': 'Nhắc sắp đến hạn',
+      'invoice-overdue':  'Quá hạn',
+      'invoice-paid':     'Đã thanh toán',
+    };
+    return labels[key] ?? key;
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -144,5 +211,39 @@ export class MergedInvoiceDetailComponent implements OnInit {
     const num = this.merged()?.bankInfo?.bankAccountNumber;
     if (!num) return;
     navigator.clipboard.writeText(num).then(() => this.toast.success('Đã sao chép số tài khoản.'));
+  }
+
+  confirmDelete(): void {
+    const merged = this.merged();
+    if (!merged) return;
+    this.saving.set(true);
+    this.api.delete<ApiResponse<null>>(`/invoices/merged/${merged.id}`)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: res => {
+          if (!res.success) return;
+          this.toast.success('Đã xoá hoá đơn gộp.');
+          this.showDeleteModal.set(false);
+          this.router.navigate(['/app/invoices']);
+        },
+        error: err => this.toast.error(err?.error?.message ?? 'Không xoá được hoá đơn gộp.'),
+      });
+  }
+
+  confirmUnmerge(): void {
+    const merged = this.merged();
+    if (!merged) return;
+    this.saving.set(true);
+    this.api.post<ApiResponse<null>>(`/invoices/merged/${merged.id}/unmerge`, {})
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: res => {
+          if (!res.success) return;
+          this.toast.success('Đã tách hoá đơn gộp.');
+          this.showUnmergeModal.set(false);
+          this.router.navigate(['/app/invoices']);
+        },
+        error: err => this.toast.error(err?.error?.message ?? 'Không tách được hoá đơn gộp.'),
+      });
   }
 }

@@ -8,12 +8,13 @@
 
   &__toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
     padding: 12px 12px 0;
 
-    app-filter-panel { flex: 1; }
+    app-filter-panel { flex: 1; min-width: 280px; }
   }
 }
 

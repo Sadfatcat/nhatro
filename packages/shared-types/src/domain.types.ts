@@ -46,6 +46,9 @@ export interface InvoiceBankInfo {
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
+  bank2Name: string | null;
+  bank2AccountNumber: string | null;
+  bank2AccountName: string | null;
 }
 
 export interface MergedInvoiceChildInvoice {
@@ -68,6 +71,8 @@ export interface MergedInvoiceChildInvoice {
   referenceCode: string;
   status: InvoiceStatus;
   room: { roomNumber: string };
+  notificationLogs?: NotificationLog[];
+  editLogs?: InvoiceEditLog[];
 }
 
 export interface MergedInvoice {

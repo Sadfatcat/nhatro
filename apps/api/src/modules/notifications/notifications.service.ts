@@ -121,6 +121,7 @@ export class NotificationsService {
         tenant:   { select: { email: true, phone: true } },
         invoices: {
           select: {
+            id: true,
             rentAmount: true, electricityAmount: true, waterAmount: true, garbageFee: true,
             otherFees: true, deduction: true, totalAmount: true,
             prevElec: true, currElec: true, prevWater: true, currWater: true,
@@ -146,6 +147,7 @@ export class NotificationsService {
     return this.send({
       to:   { email: email ?? undefined, phone: phone ?? undefined },
       templateKey: 'invoice-merged',
+      invoiceIds: merged.invoices.map(inv => inv.id),
       data: {
         period:      merged.period,
         breakdownHtml,
@@ -162,6 +164,7 @@ export class NotificationsService {
         tenant:   { select: { email: true, phone: true } },
         invoices: {
           select: {
+            id: true,
             rentAmount: true, electricityAmount: true, waterAmount: true, garbageFee: true,
             otherFees: true, deduction: true, totalAmount: true,
             prevElec: true, currElec: true, prevWater: true, currWater: true,
@@ -187,6 +190,7 @@ export class NotificationsService {
     return this.send({
       to:   { email: email ?? undefined, phone: phone ?? undefined },
       templateKey: 'invoice-merged-paid',
+      invoiceIds: merged.invoices.map(inv => inv.id),
       data: {
         period:      merged.period,
         breakdownHtml,
@@ -203,9 +207,10 @@ export class NotificationsService {
   }
 
   private logAttempt(payload: NotificationPayload, channel: string, success: boolean, reason?: string): void {
-    if (!payload.invoiceId) return;
-    this.prisma.notificationLog.create({
-      data: { invoiceId: payload.invoiceId, templateKey: payload.templateKey, channel, success, reason },
+    const invoiceIds = payload.invoiceIds?.length ? payload.invoiceIds : payload.invoiceId ? [payload.invoiceId] : [];
+    if (!invoiceIds.length) return;
+    this.prisma.notificationLog.createMany({
+      data: invoiceIds.map(invoiceId => ({ invoiceId, templateKey: payload.templateKey, channel, success, reason })),
     }).catch(err => this.logger.error(`Không ghi được notification log: ${err instanceof Error ? err.message : err}`));
   }
 

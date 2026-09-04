@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { InvoicesService } from '../invoices/invoices.service';
 import { NotificationsService } from './notifications.service';
 
@@ -14,7 +13,8 @@ export class NotificationsCron {
     private readonly notifications: NotificationsService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  // Auto due-soon reminder cron disabled (landlord sends manually now) — kept as a plain
+  // method, not @Cron, so a future manual "gửi nhắc sắp đến hạn" button can reuse it.
   async checkDueSoon(): Promise<void> {
     const dueSoon = await this.invoices.findDueSoon(DUE_SOON_DAYS_AHEAD);
     for (const invoice of dueSoon) {

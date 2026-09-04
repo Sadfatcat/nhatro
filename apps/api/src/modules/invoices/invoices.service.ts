@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, InvoiceStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RoomsService } from '../rooms/rooms.service';
@@ -38,10 +37,11 @@ export class InvoicesService {
     private readonly rooms:      RoomsService,
     private readonly contracts:  ContractsService,
     private readonly utilities:  UtilitiesService,
-    private readonly events:     EventEmitter2,
     private readonly config:     ConfigService,
   ) {}
 
+  /** Only auto-transitions status to OVERDUE — auto-notification on overdue was removed
+   *  (landlord now sends reminders manually via the "Gửi thông báo" button). */
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async checkOverdue(): Promise<void> {
     const overdue = await this.prisma.invoice.findMany({
@@ -53,10 +53,6 @@ export class InvoicesService {
         where: { id: { in: overdue.map(i => i.id) } },
         data:  { status: InvoiceStatus.OVERDUE },
       });
-
-      for (const invoice of overdue) {
-        this.events.emit('invoice.overdue', { invoiceId: invoice.id });
-      }
       this.logger.log(`Đã chuyển ${overdue.length} hoá đơn sang OVERDUE.`);
     }
 
@@ -69,9 +65,6 @@ export class InvoicesService {
         where: { id: { in: overdueMerged.map(m => m.id) } },
         data:  { status: InvoiceStatus.OVERDUE },
       });
-      for (const m of overdueMerged) {
-        this.events.emit('merged-invoice.overdue', { mergedInvoiceId: m.id });
-      }
     }
   }
 
@@ -281,10 +274,16 @@ export class InvoicesService {
       status: InvoiceStatus; createdAt: Date; dueDate: Date; notified: boolean; kind: 'invoice' | 'merged';
     };
 
+    const roomIds = filter.roomIds?.length ? filter.roomIds : filter.roomId ? [filter.roomId] : undefined;
+    const skipMerged = filter.notified !== undefined || filter.contractId !== undefined;
+
     const [invoices, mergedInvoices] = await Promise.all([
       this.prisma.invoice.findMany({ where, include }),
-      this.prisma.mergedInvoice.findMany({
-        where:   { period: filter.period },
+      skipMerged ? Promise.resolve([]) : this.prisma.mergedInvoice.findMany({
+        where: {
+          period:   filter.period,
+          invoices: roomIds ? { some: { roomId: { in: roomIds } } } : undefined,
+        },
         include: { tenant: { select: { fullName: true } } },
       }),
     ]);
@@ -408,13 +407,17 @@ export class InvoicesService {
       },
     });
     if (!invoice) throw new NotFoundException('Không tìm thấy hoá đơn.');
+    return { ...invoice, bankInfo: this.buildBankInfo() };
+  }
+
+  private buildBankInfo() {
     return {
-      ...invoice,
-      bankInfo: {
-        bankName:          this.config.get<string>('LANDLORD_BANK_NAME') ?? null,
-        bankAccountNumber: this.config.get<string>('LANDLORD_BANK_ACCOUNT_NUMBER') ?? null,
-        bankAccountName:   this.config.get<string>('LANDLORD_BANK_ACCOUNT_NAME') ?? null,
-      },
+      bankName:          this.config.get<string>('LANDLORD_BANK_NAME') ?? null,
+      bankAccountNumber: this.config.get<string>('LANDLORD_BANK_ACCOUNT_NUMBER') ?? null,
+      bankAccountName:   this.config.get<string>('LANDLORD_BANK_ACCOUNT_NAME') ?? null,
+      bank2Name:          this.config.get<string>('LANDLORD_BANK_2_NAME') ?? null,
+      bank2AccountNumber: this.config.get<string>('LANDLORD_BANK_2_ACCOUNT_NUMBER') ?? null,
+      bank2AccountName:   this.config.get<string>('LANDLORD_BANK_2_ACCOUNT_NAME') ?? null,
     };
   }
 
@@ -486,7 +489,6 @@ export class InvoicesService {
       where: { id },
       data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy },
     });
-    this.events.emit('invoice.paid', { invoiceId: updated.id });
     return updated;
   }
 
@@ -500,9 +502,6 @@ export class InvoicesService {
       where: { id: { in: toUpdate.map(i => i.id) } },
       data:  { status: InvoiceStatus.PAID, paidAt: new Date(), markedBy },
     });
-    for (const invoice of toUpdate) {
-      this.events.emit('invoice.paid', { invoiceId: invoice.id });
-    }
     return { updated: result.count };
   }
 
@@ -634,19 +633,47 @@ export class InvoicesService {
             prevElec: true, currElec: true, prevWater: true, currWater: true,
             elecUnitPrice: true, waterUnitPrice: true, dueDate: true, referenceCode: true, status: true,
             room: { select: { roomNumber: true } },
+            notificationLogs: { orderBy: { sentAt: 'desc' } },
+            editLogs:         { orderBy: { editedAt: 'desc' } },
           },
         },
       },
     });
     if (!merged) throw new NotFoundException('Không tìm thấy hoá đơn gộp.');
-    return {
-      ...merged,
-      bankInfo: {
-        bankName:          this.config.get<string>('LANDLORD_BANK_NAME') ?? null,
-        bankAccountNumber: this.config.get<string>('LANDLORD_BANK_ACCOUNT_NUMBER') ?? null,
-        bankAccountName:   this.config.get<string>('LANDLORD_BANK_ACCOUNT_NAME') ?? null,
-      },
-    };
+    return { ...merged, bankInfo: this.buildBankInfo() };
+  }
+
+  /** Splits a merged invoice back into its standalone child invoices. Blocked once the
+   *  merged invoice is PAID — a paid merge must stay intact for accounting history. */
+  async unmergeInvoice(mergedInvoiceId: string): Promise<void> {
+    const merged = await this.prisma.mergedInvoice.findUnique({ where: { id: mergedInvoiceId } });
+    if (!merged) throw new NotFoundException('Không tìm thấy hoá đơn gộp.');
+    if (merged.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Không thể tách hoá đơn đã thanh toán.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.invoice.updateMany({
+        where: { mergedInvoiceId },
+        data:  { mergedInvoiceId: null },
+      }),
+      this.prisma.mergedInvoice.delete({ where: { id: mergedInvoiceId } }),
+    ]);
+  }
+
+  /** Deletes a merged invoice together with all of its child invoices — MergedInvoice→Invoice
+   *  has no cascade, so children must be removed explicitly (their notification/edit logs cascade). */
+  async removeMerged(mergedInvoiceId: string): Promise<void> {
+    const merged = await this.prisma.mergedInvoice.findUnique({ where: { id: mergedInvoiceId } });
+    if (!merged) throw new NotFoundException('Không tìm thấy hoá đơn gộp.');
+    if (merged.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Không thể xoá hoá đơn đã thanh toán.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.invoice.deleteMany({ where: { mergedInvoiceId } }),
+      this.prisma.mergedInvoice.delete({ where: { id: mergedInvoiceId } }),
+    ]);
   }
 
   async markMergedInvoicePaid(mergedInvoiceId: string, userId: string) {

@@ -45,6 +45,23 @@
           >
             <nz-icon nzType="check-circle" /> Đánh dấu đã thanh toán
           </button>
+          @if (auth.hasRole('ADMIN')) {
+            <button
+              nz-button
+              [nzLoading]="saving()"
+              (click)="showUnmergeModal.set(true)"
+            >
+              <nz-icon nzType="split-cells" /> Tách hoá đơn
+            </button>
+          }
+          <button
+            *appPermission="'invoices:delete'"
+            nz-button nzDanger
+            [nzLoading]="saving()"
+            (click)="showDeleteModal.set(true)"
+          >
+            <nz-icon nzType="delete" /> Xoá hoá đơn gộp
+          </button>
         }
       </div>
     </div>
@@ -182,9 +199,79 @@
         } @else {
           <p class="bank-empty">Chưa cấu hình thông tin chuyển khoản.</p>
         }
+        @if (m.bankInfo?.bank2AccountNumber) {
+          <div class="info-grid">
+            <div class="info-row">
+              <span class="info-label">Ngân hàng 2</span>
+              <span>{{ m.bankInfo?.bank2Name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Số TK</span>
+              <span>{{ m.bankInfo?.bank2AccountNumber }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Chủ TK</span>
+              <span>{{ m.bankInfo?.bank2AccountName }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Nhật ký hoạt động -->
+    <div class="col-card notify-log-card">
+      <div class="col-card__header">
+        <nz-icon nzType="history" />
+        <span>Nhật ký hoạt động</span>
+      </div>
+      <div class="col-card__body">
+        @if (activityLog().length > 0) {
+          <ul class="activity-log">
+            @for (event of activityLog(); track event.id) {
+              <li class="activity-log__item activity-log__item--{{ event.color }}">
+                <span class="activity-log__time">{{ event.at | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span class="activity-log__text">{{ event.text }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="bank-empty">Chưa có hoạt động nào cho hoá đơn gộp này.</p>
+        }
       </div>
     </div>
 
   }
 
 </section>
+
+<!-- Confirm Delete -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showDeleteModal()"
+  nzTitle="Xác nhận xoá"
+  nzOkText="Xoá"
+  nzOkDanger
+  [nzOkLoading]="saving()"
+  (nzOnOk)="confirmDelete()"
+  (nzOnCancel)="showDeleteModal.set(false)"
+>
+  <ng-container *nzModalContent>
+    <p>Bạn có chắc muốn xoá hoá đơn gộp <strong>{{ merged()?.roomLabel }}</strong>?</p>
+    <p style="color: var(--color-text-muted); font-size: 13px;">Xoá hoá đơn gộp sẽ xoá luôn tất cả hoá đơn phòng con bên trong.</p>
+  </ng-container>
+</nz-modal>
+
+<!-- Confirm Unmerge -->
+<nz-modal
+  [nzMaskClosable]="false"
+  [nzVisible]="showUnmergeModal()"
+  nzTitle="Xác nhận tách hoá đơn"
+  nzOkText="Tách"
+  [nzOkLoading]="saving()"
+  (nzOnOk)="confirmUnmerge()"
+  (nzOnCancel)="showUnmergeModal.set(false)"
+>
+  <ng-container *nzModalContent>
+    <p>Bạn có chắc muốn tách hoá đơn gộp <strong>{{ merged()?.roomLabel }}</strong> trở lại thành các hoá đơn riêng lẻ?</p>
+  </ng-container>
+</nz-modal>

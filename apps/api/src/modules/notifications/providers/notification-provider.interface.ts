@@ -11,6 +11,8 @@ export interface NotificationPayload {
   templateKey: NotificationTemplateKey;
   data: Record<string, string | number>;
   invoiceId?: string;
+  /** For a merged-invoice send: log the attempt against each child invoice (no MergedInvoice FK exists on NotificationLog). */
+  invoiceIds?: string[];
 }
 
 export interface NotificationSendResult {

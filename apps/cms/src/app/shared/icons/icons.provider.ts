@@ -56,6 +56,8 @@ import {
   EllipsisOutline,
   KeyOutline,
   MessageOutline,
+  HistoryOutline,
+  SplitCellsOutline,
 } from '@ant-design/icons-angular/icons';
 
 export const APP_ICONS = [
@@ -105,6 +107,8 @@ export const APP_ICONS = [
   EllipsisOutline,
   KeyOutline,
   MessageOutline,
+  HistoryOutline,
+  SplitCellsOutline,
 ];
 
 export const provideAppIcons = () => provideNzIcons(APP_ICONS);

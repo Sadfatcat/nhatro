@@ -30,6 +30,7 @@
 // ── Page header ───────────────────────────────────────────────────────────────
 .detail-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -45,6 +46,7 @@
 
   &__right {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
   }
@@ -171,6 +173,50 @@
   font-size: 12px;
   color: var(--color-text-muted);
 }
+
+// ── Activity log ──────────────────────────────────────────────────────────────
+.activity-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.activity-log__item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: $radius-sm;
+}
+.activity-log__time { font-size: 12px; flex-shrink: 0; text-shadow: inherit; }
+.activity-log__text { text-shadow: inherit; }
+
+.activity-log__item--white {
+  background: linear-gradient(to right, #d1d5db, #ffffff);
+  color: var(--color-text-primary, #1f2937);
+}
+.activity-log__item--red {
+  background: linear-gradient(to right, #8b0000, #ffffff);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+.activity-log__item--green {
+  background: linear-gradient(to right, #14532d, #ffffff);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+.activity-log__item--orange {
+  background: linear-gradient(to right, #92400e, #ffffff);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+.activity-log__item--white .activity-log__time { color: var(--color-text-muted); }
+.activity-log__item--red .activity-log__time,
+.activity-log__item--green .activity-log__time,
+.activity-log__item--orange .activity-log__time { color: rgba(255, 255, 255, 0.9); }
 
 // ── Ghost button ──────────────────────────────────────────────────────────────
 .btn--ghost {

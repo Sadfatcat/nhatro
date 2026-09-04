@@ -14,7 +14,7 @@
       <nz-row [nzGutter]="[16, 8]" nzAlign="bottom">
 
         @for (field of config.fields; track field.key) {
-          <nz-col [nzSpan]="field.span ?? 6">
+          <nz-col [nzXs]="24" [nzMd]="field.span ?? 6">
             <nz-form-item>
               <nz-form-label>{{ field.label }}</nz-form-label>
               <nz-form-control>
@@ -53,6 +53,7 @@
                       [nzPlaceHolder]="field.placeholder ?? 'Chọn ' + field.label"
                       nzMode="multiple"
                       nzAllowClear
+                      nzShowSearch
                       style="width: 100%">
                       @for (opt of field.options; track opt.value) {
                         <nz-option [nzLabel]="opt.label" [nzValue]="opt.value" />
@@ -97,7 +98,7 @@
           </nz-col>
         }
 
-        <nz-col [nzSpan]="6">
+        <nz-col [nzXs]="24" [nzMd]="6">
           <nz-form-item>
             <nz-form-control>
               <div class="filter-actions">
