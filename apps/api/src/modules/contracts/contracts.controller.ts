@@ -12,18 +12,15 @@ import { RequestUser } from '../../common/auth/jwt-payload.interface';
 import { ContractsService } from './contracts.service';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-const ok = <T>(data: T, msg = 'Thành công'): ApiResponse<T> => ({ success: true, data, message: msg });
-
-const MANAGEMENT = ['ADMIN', 'LANDLORD'];
+import { ApiResponse, ok } from '../../common/api-response';
+import { MANAGEMENT_ROLES } from '../../common/auth/roles.constants';
 
 @ApiTags('contracts')
 @Controller('contracts')
 export class ContractsController {
   constructor(private readonly svc: ContractsService) {}
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Get()
   async findAll(): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.findAll());
@@ -45,13 +42,13 @@ export class ContractsController {
     return ok(contract);
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Post('preview')
   async preview(@Body() dto: CreateContractDto): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.preview(dto), 'Xem trước hợp đồng thành công.');
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Post()
   async create(@Body() dto: CreateContractDto): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.create(dto), 'Đã tạo hợp đồng thành công.');
@@ -83,7 +80,7 @@ export class ContractsController {
     res.end(buffer);
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Post(':id/upload')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
   async upload(

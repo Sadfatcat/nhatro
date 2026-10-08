@@ -5,6 +5,8 @@ import { NotificationPayload, NotificationProvider, NotificationTemplateKey } fr
 import { EmailProvider } from './providers/email.provider';
 import { SmsProvider } from './providers/sms.provider';
 
+const NO_CONTACT_CHANNEL = 'none'; // logged when nothing was attempted because the tenant has no email/phone
+
 const INCLUDE_TENANT = {
   room:     { select: { roomNumber: true } },
   contract: { select: { tenant: { select: { email: true, phone: true } } } },
@@ -30,8 +32,10 @@ export class NotificationsService {
 
     const { email, phone } = invoice.contract.tenant;
     if (!email && !phone) {
+      const reason = 'Không có dữ liệu người dùng.';
       this.logger.warn(`Người thuê phòng ${invoice.room.roomNumber} chưa có email lẫn số điện thoại — bỏ qua gửi "${templateKey}".`);
-      return { success: false, reason: 'Không có dữ liệu người dùng.' };
+      this.logAttempt({ to: {}, templateKey, invoiceId, data: {} }, NO_CONTACT_CHANNEL, false, reason);
+      return { success: false, reason };
     }
 
     return this.send({
@@ -64,6 +68,9 @@ export class NotificationsService {
         bank2Name:          this.config.get<string>('LANDLORD_BANK_2_NAME') ?? '',
         bank2AccountNumber: this.config.get<string>('LANDLORD_BANK_2_ACCOUNT_NUMBER') ?? '',
         bank2AccountName:   this.config.get<string>('LANDLORD_BANK_2_ACCOUNT_NAME') ?? '',
+        bank3Name:          this.config.get<string>('LANDLORD_BANK_3_NAME') ?? '',
+        bank3AccountNumber: this.config.get<string>('LANDLORD_BANK_3_ACCOUNT_NUMBER') ?? '',
+        bank3AccountName:   this.config.get<string>('LANDLORD_BANK_3_ACCOUNT_NAME') ?? '',
       },
     });
   }

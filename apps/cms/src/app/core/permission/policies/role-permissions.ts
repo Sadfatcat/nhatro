@@ -37,8 +37,7 @@ export type Permission =
   | 'accounts:view'
   | 'accounts:create'
   | 'accounts:landlords'
-  | 'utilities:record'
-  | 'utilities:set-billing-day';
+  | 'utilities:record';
 
 export interface RoutePermissionData {
   permissions?: Permission[];
@@ -81,7 +80,6 @@ export const ALL_PERMISSIONS: Permission[] = [
   'accounts:create',
   'accounts:landlords',
   'utilities:record',
-  'utilities:set-billing-day',
 ];
 
 // ── Role assignments ──────────────────────────────────────────────────────────
@@ -117,7 +115,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'accounts:create',
     'dashboard:view',
     'utilities:record',
-    'utilities:set-billing-day',
   ],
   [UserRole.ADMIN]: ALL_PERMISSIONS,
 };

@@ -18,8 +18,7 @@ import { LayoutService } from '../../../../core/services/layout.service';
 import { ApiService } from '../../../../core/services/api.service';
 import { ToastService } from '../../feedback/toast/toast.service';
 import { Router } from '@angular/router';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
+import { ApiResponse } from '@nhatro/shared-types';
 
 @Component({
   selector:        'app-topbar',

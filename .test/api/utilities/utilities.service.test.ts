@@ -191,7 +191,7 @@ describe('UtilitiesService', () => {
     });
 
     it('returns utilityRecord: null (does NOT create a row) when nothing exists for that month', async () => {
-      prisma.room.findUnique.mockResolvedValue({ id: 'r1', roomNumber: '101', floor: 1, price: 1, status: 'OCCUPIED', billingDay: 15 });
+      prisma.room.findUnique.mockResolvedValue({ id: 'r1', roomNumber: '101', floor: 1, price: 1, status: 'OCCUPIED' });
       prisma.utilityRecord.findUnique.mockResolvedValue(null);
       const result = await service.findByRoom('r1', '2026-03');
       expect(result.utilityRecord).toBeNull();

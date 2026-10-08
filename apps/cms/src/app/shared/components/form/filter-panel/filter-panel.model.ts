@@ -28,6 +28,9 @@ export interface FilterConfig {
   collapsible?: boolean;
   autoSearch?:  boolean;
   debounceMs?:  number;
+  /** Remembers the filter values in localStorage under this key and re-applies them on the next visit.
+   *  Date and daterange fields are not restored (they do not survive JSON). */
+  storageKey?:  string;
 }
 
 export type FilterValue = Record<string, unknown>;

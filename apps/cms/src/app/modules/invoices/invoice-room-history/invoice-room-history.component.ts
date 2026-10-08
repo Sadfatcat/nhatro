@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { finalize } from 'rxjs';
+import { currentBillingPeriod } from '../../../shared/utils/billing-period';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
@@ -13,9 +14,7 @@ import { DataTableComponent } from '../../../shared/components/display/data-tabl
 import { TableConfig } from '../../../shared/components/display/data-table/data-table.model';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
-import { Invoice } from '@nhatro/shared-types';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
+import { ApiResponse, Invoice } from '@nhatro/shared-types';
 
 interface GenerateResult {
   created: unknown[];
@@ -29,12 +28,6 @@ type InvoiceRow = {
   status:        Invoice['status'];
   dueDate:       string;
 } & Record<string, unknown>;
-
-function currentPeriod(): string {
-  const d = new Date();
-  const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-}
 
 @Component({
   selector:        'app-invoice-room-history',
@@ -122,7 +115,7 @@ export class InvoiceRoomHistoryComponent implements OnInit {
     if (!this.roomId) return;
     this.saving.set(true);
     this.api.post<ApiResponse<GenerateResult>>('/invoices/generate', {
-      period: currentPeriod(),
+      period: currentBillingPeriod(),
       roomIds: [this.roomId],
     }).pipe(finalize(() => this.saving.set(false)))
       .subscribe(res => {

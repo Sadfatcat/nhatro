@@ -16,7 +16,7 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize } from 'rxjs';
-import { ContractStatus, RoomStatus } from '@nhatro/shared-types';
+import { ApiResponse, ContractStatus, RoomStatus } from '@nhatro/shared-types';
 import { AuthService } from '../../core/auth/services/auth.service';
 import { PermissionService } from '../../core/permission/services/permission.service';
 import { ApiService } from '../../core/services/api.service';
@@ -28,8 +28,6 @@ import { PermissionDirective } from '../../core/permission/directives/permission
 import { LayoutService } from '../../core/services/layout.service';
 
 const PAGE_SIZE = 10;
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 interface ContractRoom   { roomId: string; roomNumber: string; floor: number; price: number; }
 interface ContractTenant { tenantId: string; fullName: string; phone: string | null; dateOfBirth: string | null; hometown: string | null; nationalId: string | null; }

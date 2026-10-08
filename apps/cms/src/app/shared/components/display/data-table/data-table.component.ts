@@ -9,6 +9,7 @@ import {
   OnChanges,
   Output,
   signal,
+  SimpleChanges,
   TemplateRef,
 } from '@angular/core';
 
@@ -68,9 +69,10 @@ export class DataTableComponent<T extends Record<string, unknown>> implements On
     (this.config?.columns ?? []).filter(c => !c.hide),
   );
 
-  ngOnChanges(): void {
-    // reset selection when data changes
-    this.selectedKeys.set(new Set());
+  ngOnChanges(changes: SimpleChanges): void {
+    const { previousValue, currentValue } = changes['config'] ?? {};
+    // reset selection only when the data array itself is replaced
+    if (previousValue?.data !== currentValue?.data) this.selectedKeys.set(new Set());
   }
 
   onSort(column: string, direction: 'ascend' | 'descend' | null): void {

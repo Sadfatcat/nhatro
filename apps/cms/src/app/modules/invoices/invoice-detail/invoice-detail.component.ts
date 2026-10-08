@@ -9,15 +9,13 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { finalize } from 'rxjs';
-import { Invoice } from '@nhatro/shared-types';
+import { ApiResponse, Invoice } from '@nhatro/shared-types';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 @Component({
   selector:        'app-invoice-detail',

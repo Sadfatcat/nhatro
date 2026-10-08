@@ -4,13 +4,10 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { ApiResponse, ok } from '../../common/api-response';
+import { MANAGEMENT_ROLES } from '../../common/auth/roles.constants';
 
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-const ok = <T>(data: T, msg = 'Thành công'): ApiResponse<T> => ({ success: true, data, message: msg });
-
-const MANAGEMENT = ['ADMIN', 'LANDLORD'];
-
-@Roles(...MANAGEMENT)
+@Roles(...MANAGEMENT_ROLES)
 @ApiTags('tenants')
 @Controller('tenants')
 export class TenantsController {

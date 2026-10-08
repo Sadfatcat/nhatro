@@ -10,11 +10,9 @@ import { finalize } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { UserRole } from '../../../core/auth/auth.types';
-import { RoomWithUtility, Invoice, UtilityHistoryPoint } from '@nhatro/shared-types';
+import { ApiResponse, RoomWithUtility, Invoice, UtilityHistoryPoint } from '@nhatro/shared-types';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 Chart.register(...registerables);
 

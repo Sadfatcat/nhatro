@@ -6,146 +6,145 @@ import { ApiService } from '../../../apps/cms/src/app/core/services/api.service'
 import { ToastService } from '../../../apps/cms/src/app/shared/components/feedback/toast/toast.service';
 import { LayoutService } from '../../../apps/cms/src/app/core/services/layout.service';
 
-function createComponent() {
+const row = (roomId: string, overrides: Record<string, unknown> = {}) => ({
+  roomId, roomNumber: roomId, tenantName: 'A', invoiceId: `inv-${roomId}`,
+  invoiceStatus: 'SENT' as const, totalAmount: 100, dueDate: '2026-08-20',
+  mergedInvoiceId: null, sent: false, lastFailReason: null, ...overrides,
+});
+
+const batch = (id: string, rooms: ReturnType<typeof row>[]) => ({ id, period: '2026-09', closedAt: '2026-10-08T08:15:00.000Z', rooms });
+
+function createComponent(overrides: { post?: ReturnType<typeof vi.fn>; toast?: Record<string, unknown> } = {}) {
+  const post  = overrides.post ?? vi.fn().mockReturnValue(of({ success: true, data: { sent: 0, failed: [] } }));
+  const toast = overrides.toast ?? { error: vi.fn(), success: vi.fn() };
   TestBed.configureTestingModule({
     imports: [InvoicesByBillingDayComponent],
     providers: [
-      { provide: ApiService, useValue: { get: () => of({ success: true, data: [] }), post: vi.fn() } },
-      { provide: ToastService, useValue: { error: () => {}, success: () => {} } },
+      { provide: ApiService, useValue: { get: () => of({ success: true, data: { items: [], total: 0 } }), post } },
+      { provide: ToastService, useValue: toast },
       { provide: LayoutService, useValue: { isMobile: () => false } },
     ],
   });
-  const fixture = TestBed.createComponent(InvoicesByBillingDayComponent);
-  return fixture.componentInstance;
+  const component = TestBed.createComponent(InvoicesByBillingDayComponent).componentInstance;
+  (component as any).confirmDialog = { confirm: () => of(true) };
+  return { component, post, toast };
 }
 
-const row = (roomId: string) => ({
-  roomId, roomNumber: roomId, tenantName: 'A', invoiceId: `inv-${roomId}`,
-  invoiceStatus: 'SENT' as const, totalAmount: 100, dueDate: '2026-08-20',
+describe('InvoicesByBillingDayComponent — batch tiers', () => {
+  it('splits a batch into unsent, sent and merged tiers; merged rooms never appear in the send tiers', () => {
+    const { component } = createComponent();
+    component.batches.set([batch('b1', [
+      row('r1'), row('r2', { sent: true }), row('r3', { mergedInvoiceId: 'm1' }), row('r4', { mergedInvoiceId: 'm1', sent: true }),
+    ])]);
+
+    const [view] = component.batchViews();
+
+    expect(view.unsentRows.map(r => r.roomId)).toEqual(['r1']);
+    expect(view.sentRows.map(r => r.roomId)).toEqual(['r2']);
+    expect(view.mergedRows.map(r => r.roomId)).toEqual(['r3', 'r4']);
+  });
+
+  it('only the unsent tier is selectable', () => {
+    const { component } = createComponent();
+    component.batches.set([batch('b1', [row('r1')])]);
+
+    const [view] = component.batchViews();
+
+    expect(view.unsentConfig.selectable).toBe(true);
+    expect(view.sentConfig.selectable).toBe(false);
+    expect(view.mergedConfig.selectable).toBe(false);
+  });
+
+  it('formats the title period as MM/YYYY', () => {
+    const { component } = createComponent();
+    component.batches.set([batch('b1', [])]);
+
+    expect(component.batchViews()[0].periodLabel).toBe('09/2026');
+  });
 });
 
-describe('InvoicesByBillingDayComponent — expand/collapse + multi-select', () => {
-  it('collapses by default, per group — table still receives ALL rows (select-all must cover the whole group)', () => {
-    const c = createComponent();
-    c.rows15.set(Array.from({ length: 8 }, (_, i) => row(`r${i}`)));
-    expect(c.expanded15()).toBe(false);
-    expect(c.tableConfig15().data).toHaveLength(8);
+describe('InvoicesByBillingDayComponent — table configs as memoized computed (regression: selection must survive unrelated CD ticks)', () => {
+  it('returns the SAME views on repeated reads when nothing changed', () => {
+    const { component } = createComponent();
+    component.batches.set([batch('b1', [row('r1')])]);
+
+    expect(component.batchViews()).toBe(component.batchViews());
   });
 
-  it('toggleExpanded15 flips the expand flag for the "ngày 15" group only', () => {
-    const c = createComponent();
-    c.rows15.set(Array.from({ length: 8 }, (_, i) => row(`r${i}`)));
-    c.rows30.set(Array.from({ length: 8 }, (_, i) => row(`s${i}`)));
+  it('does NOT recompute when saving, loading or a selection changes', () => {
+    const { component } = createComponent();
+    component.batches.set([batch('b1', [row('r1')])]);
+    const before = component.batchViews();
 
-    c.toggleExpanded15();
+    component.saving.set(true);
+    component.loading.set(true);
+    component.onSelectChange('b1', [row('r1')]);
 
-    expect(c.expanded15()).toBe(true);
-    expect(c.expanded30()).toBe(false); // untouched
+    expect(component.batchViews()).toBe(before);
   });
 
-  it('toggling back collapses again', () => {
-    const c = createComponent();
-    c.toggleExpanded15();
-    c.toggleExpanded15();
-    expect(c.expanded15()).toBe(false);
+  it('DOES recompute when the batches are reloaded', () => {
+    const { component } = createComponent();
+    component.batches.set([batch('b1', [row('r1')])]);
+    const before = component.batchViews();
+
+    component.batches.set([batch('b1', [row('r1'), row('r2')])]);
+
+    expect(component.batchViews()).not.toBe(before);
+    expect(component.batchViews()[0].unsentConfig.data).toHaveLength(2);
+  });
+});
+
+describe('InvoicesByBillingDayComponent — bulk send', () => {
+  it('sendSelected sends only the ticked rooms of that batch, not the whole tier', () => {
+    const { component, post } = createComponent();
+    component.batches.set([batch('b1', [row('r1'), row('r2'), row('r3')]), batch('b2', [row('s1')])]);
+    const [view] = component.batchViews();
+
+    component.onSelectChange('b1', [row('r1'), row('r3')]);
+    component.sendSelected(view);
+
+    expect(post).toHaveBeenCalledWith('/notifications/send-bulk', { invoiceIds: ['inv-r1', 'inv-r3'] });
   });
 
-  it('selectedRooms merges selections from BOTH the ngày-15 and ngày-30 groups', () => {
-    const c = createComponent();
-    c.onSelectChange15([row('r1'), row('r2')]);
-    c.onSelectChange30([row('s1')]);
+  it('sendAllUnsent sends every unsent room with an invoice and skips rooms without one', () => {
+    const { component, post } = createComponent();
+    component.batches.set([batch('b1', [row('r1'), row('r2', { invoiceId: null }), row('r3', { sent: true })])]);
 
-    expect(c.selectedRooms().map(r => r.roomId)).toEqual(['r1', 'r2', 's1']);
+    component.sendAllUnsent(component.batchViews()[0]);
+
+    expect(post).toHaveBeenCalledWith('/notifications/send-bulk', { invoiceIds: ['inv-r1'] });
   });
 
-  it('bulkSend sends the merged invoiceIds from both groups in one request', () => {
-    const c = createComponent();
-    const post = vi.fn().mockReturnValue(of({ success: true, data: { sent: 2, failed: [] } }));
-    (c as any).api = { get: () => of({ success: true, data: [] }), post };
+  it('refuses when none of the rooms has an invoice yet', () => {
+    const { component, post, toast } = createComponent();
+    component.batches.set([batch('b1', [row('r1', { invoiceId: null })])]);
 
-    c.onSelectChange15([row('r1')]);
-    c.onSelectChange30([row('s1')]);
-    c.bulkSend();
-
-    expect(post).toHaveBeenCalledWith('/notifications/send-bulk', { invoiceIds: ['inv-r1', 'inv-s1'] });
-  });
-
-  it('bulkSend refuses when none of the selected rooms have an invoice yet this period', () => {
-    const c = createComponent();
-    const post = vi.fn();
-    const toastError = vi.fn();
-    (c as any).api = { get: () => of({ success: true, data: [] }), post };
-    (c as any).toast = { error: toastError, success: vi.fn() };
-
-    c.onSelectChange15([{ ...row('r1'), invoiceId: null }]);
-    c.bulkSend();
+    component.sendAllUnsent(component.batchViews()[0]);
 
     expect(post).not.toHaveBeenCalled();
-    expect(toastError).toHaveBeenCalled();
-  });
-});
-
-describe('InvoicesByBillingDayComponent — tableConfig15/tableConfig30 as memoized computed signals (regression: selection must survive unrelated CD ticks)', () => {
-  it('returns the SAME reference on repeated reads when nothing it depends on changed', () => {
-    const c = createComponent();
-    c.rows15.set([row('r1')]);
-
-    const first  = c.tableConfig15();
-    const second = c.tableConfig15();
-
-    expect(second).toBe(first);
+    expect(toast['error']).toHaveBeenCalled();
   });
 
-  it('does NOT recompute when an unrelated signal changes (saving, selection, expanded)', () => {
-    const c = createComponent();
-    c.rows15.set([row('r1')]);
-    const before = c.tableConfig15();
+  it('does not send when the user cancels the confirmation', () => {
+    const { component, post } = createComponent();
+    (component as any).confirmDialog = { confirm: () => of(false) };
+    component.batches.set([batch('b1', [row('r1')])]);
 
-    c.saving.set(true);
-    c.onSelectChange15([row('r1')]);
-    c.toggleExpanded15();
+    component.sendAllUnsent(component.batchViews()[0]);
 
-    expect(c.tableConfig15()).toBe(before);
+    expect(post).not.toHaveBeenCalled();
   });
 
-  it('changing rows30/loading does not affect tableConfig15\'s reference (independent groups)', () => {
-    const c = createComponent();
-    c.rows15.set([row('r1')]);
-    const before = c.tableConfig15();
+  it('reports failed rooms by room number with the reason, and reloads the batches', () => {
+    const post = vi.fn().mockReturnValue(of({ success: true, data: { sent: 1, failed: [{ invoiceId: 'inv-r2', reason: 'no phone' }] } }));
+    const { component, toast } = createComponent({ post });
+    const loadData = vi.spyOn(component, 'loadData').mockImplementation(() => {});
+    component.batches.set([batch('b1', [row('r1'), row('r2')])]);
 
-    c.rows30.set([row('s1')]);
+    component.sendAllUnsent(component.batchViews()[0]);
 
-    expect(c.tableConfig15()).toBe(before);
-  });
-
-  it('DOES recompute (new reference) when rows15 itself changes', () => {
-    const c = createComponent();
-    c.rows15.set([row('r1')]);
-    const before = c.tableConfig15();
-
-    c.rows15.set([row('r1'), row('r2')]);
-
-    expect(c.tableConfig15()).not.toBe(before);
-    expect(c.tableConfig15().data).toHaveLength(2);
-  });
-
-  it('DOES recompute when loading toggles, since buildTableConfig reads loading()', () => {
-    const c = createComponent();
-    c.rows15.set([row('r1')]);
-    const before = c.tableConfig15();
-
-    c.loading.set(true);
-
-    expect(c.tableConfig15()).not.toBe(before);
-  });
-
-  it('tableConfig30 is independently memoized the same way', () => {
-    const c = createComponent();
-    c.rows30.set([row('s1')]);
-    const before = c.tableConfig30();
-
-    c.saving.set(true);
-
-    expect(c.tableConfig30()).toBe(before);
+    expect(toast['error']).toHaveBeenCalledWith(expect.stringContaining('P.r2: no phone'));
+    expect(loadData).toHaveBeenCalled();
   });
 });

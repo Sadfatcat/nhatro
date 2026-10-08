@@ -4,11 +4,10 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { NotificationsService } from './notifications.service';
 import { SendNotificationDto } from './dto/send-notification.dto';
 import { SendBulkNotificationDto } from './dto/send-bulk-notification.dto';
+import { ApiResponse, ok } from '../../common/api-response';
+import { MANAGEMENT_ROLES } from '../../common/auth/roles.constants';
 
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-const ok = <T>(data: T, msg = 'Thành công'): ApiResponse<T> => ({ success: true, data, message: msg });
-
-@Roles('ADMIN', 'LANDLORD')
+@Roles(...MANAGEMENT_ROLES)
 @ApiTags('notifications')
 @Controller('notifications')
 export class NotificationsController {

@@ -25,22 +25,23 @@ model User {
 }
 
 model Room {
-  id             String          @id @default(cuid())
-  roomNumber     String          @unique
-  floor          Int
-  price          Int
-  status         String          @default("AVAILABLE")
-  description    String?
-  branchId       String?
-  landlordId     String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  billingDay     Int             @default(15)
-  contracts      Contract[]
-  invoices       Invoice[]
-  landlord       Landlord?       @relation(fields: [landlordId], references: [id])
-  account        User?
-  utilityRecords UtilityRecord[]
+  id                String             @id @default(cuid())
+  roomNumber        String             @unique
+  floor             Int
+  price             Int
+  status            String             @default("AVAILABLE")
+  description       String?
+  branchId          String?
+  landlordId        String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  inClosingList     Boolean            @default(false)
+  contracts         Contract[]
+  invoices          Invoice[]
+  landlord          Landlord?          @relation(fields: [landlordId], references: [id])
+  account           User?
+  utilityRecords    UtilityRecord[]
+  closingBatchItems ClosingBatchItem[]
 }
 
 model UtilityRecord {
@@ -134,11 +135,12 @@ model Invoice {
 
   mergedInvoiceId String?
 
-  room             Room              @relation(fields: [roomId], references: [id])
-  contract         Contract          @relation(fields: [contractId], references: [id])
-  notificationLogs NotificationLog[]
-  editLogs         InvoiceEditLog[]
-  mergedInvoice    MergedInvoice?    @relation(fields: [mergedInvoiceId], references: [id])
+  room              Room               @relation(fields: [roomId], references: [id])
+  contract          Contract           @relation(fields: [contractId], references: [id])
+  notificationLogs  NotificationLog[]
+  editLogs          InvoiceEditLog[]
+  mergedInvoice     MergedInvoice?     @relation(fields: [mergedInvoiceId], references: [id])
+  closingBatchItems ClosingBatchItem[]
 
   @@index([status])
   @@index([period])
@@ -162,6 +164,30 @@ model MergedInvoice {
 
   @@index([tenantId])
   @@index([period])
+}
+
+model ClosingBatch {
+  id       String             @id @default(cuid())
+  period   String
+  closedAt DateTime           @default(now())
+  closedBy String
+  items    ClosingBatchItem[]
+
+  @@index([closedAt])
+}
+
+model ClosingBatchItem {
+  id        String  @id @default(cuid())
+  batchId   String
+  roomId    String
+  invoiceId String?
+
+  batch   ClosingBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  room    Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  invoice Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, roomId])
+  @@index([invoiceId])
 }
 
 model NotificationLog {

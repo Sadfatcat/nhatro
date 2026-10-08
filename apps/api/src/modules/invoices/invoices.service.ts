@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, InvoiceStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { currentBillingPeriod, lastNBillingPeriods } from '../../common/billing-period';
 import { RoomsService } from '../rooms/rooms.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { UtilitiesService } from '../utilities/utilities.service';
@@ -331,8 +332,8 @@ export class InvoicesService {
   }
 
   async getDashboardStats() {
-    const currentPeriod = this.currentBillingPeriod();
-    const trendPeriods  = this.lastNBillingPeriods(6);
+    const currentPeriod = currentBillingPeriod();
+    const trendPeriods  = lastNBillingPeriods(6);
 
     const [pending, currentIncome, trendGrouped, recent] = await Promise.all([
       this.prisma.invoice.aggregate({
@@ -377,24 +378,6 @@ export class InvoicesService {
         createdAt:   inv.createdAt,
       })),
     };
-  }
-
-  /** Billing period runs 11th of month N to 10th of month N+1 — see utilities.service.ts. */
-  private currentBillingPeriod(): string {
-    const d = new Date();
-    const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
-    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  private lastNBillingPeriods(n: number): string[] {
-    const out: string[] = [];
-    const d    = new Date();
-    const base = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
-    for (let i = n - 1; i >= 0; i--) {
-      const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
-      out.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
-    }
-    return out;
   }
 
   async findOne(id: string) {

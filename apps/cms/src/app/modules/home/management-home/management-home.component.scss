@@ -325,10 +325,10 @@
   &__actions { display: flex; gap: 8px; }
 }
 
-// ── Kanban 2 cột ─────────────────────────────────────────────────────────────
+// ── Phòng cần chốt ─────────────────────────────────────────────────────────────
 .kanban-wrap {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 16px;
   align-items: start;
 

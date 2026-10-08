@@ -118,22 +118,30 @@
     </div>
   </div>
 
-  <!-- ── Kanban: 2 cột cạnh nhau ── -->
+  <!-- ── Phòng cần chốt ── -->
   <div class="kanban-wrap">
-
-    @for (day of billingDays; track day) {
     <div class="kanban-col">
       <div class="kanban-col__header">
         <div class="kanban-col__title-group">
-          <span class="kanban-day-badge" [class.kanban-day-badge--30]="day === 30">Ngày {{ day }}</span>
-          <span class="kanban-col__count">{{ (day === 15 ? rooms15() : rooms30()).length }} phòng</span>
+          <span class="kanban-day-badge">Phòng cần chốt</span>
+          <span class="kanban-col__count">{{ closingRooms().length }} phòng</span>
         </div>
-        <button type="button" class="add-link" (click)="openAddModal(day)">+ Thêm</button>
+        <div style="display:flex; align-items:center; gap:12px">
+          <button type="button" class="add-link" (click)="openAddModal()">+ Thêm</button>
+          <button nz-button nzType="primary" nzSize="small"
+            [disabled]="!canCompleteClosing() || saving()"
+            (click)="completeClosing()">Hoàn tất chốt</button>
+        </div>
       </div>
 
       <div class="kanban-col__body">
+        @if (roomsWithoutReadingCount() > 0) {
+          <p style="margin:0 0 8px; font-size:13px; color:var(--color-text-muted)">
+            Còn {{ roomsWithoutReadingCount() }} phòng chưa nhập chỉ số kỳ này.
+          </p>
+        }
         <div class="kanban-list">
-          @for (room of roomsForDay(day); track room.roomId) {
+          @for (room of roomsOnPage(); track room.roomId) {
             <div class="kcard">
               <span class="kcard__number">{{ room.roomNumber }}</span>
               <div class="kcard__readings">
@@ -150,30 +158,28 @@
                 } @else {
                   <span class="status-badge status-badge--wait">CHỜ</span>
                 }
-                <button type="button" class="kcard__remove" (click)="removeFromDay(room.roomId)">✕</button>
+                <button type="button" class="kcard__remove" (click)="removeFromClosingList(room.roomId)">✕</button>
                 <button type="button" class="kcard__update-link" (click)="openModal(room.roomId)">Cập nhật</button>
               </div>
             </div>
           }
-          @if ((day === 15 ? rooms15() : rooms30()).length === 0) {
+          @if (closingRooms().length === 0) {
             <div class="kanban-col__empty">Chưa có phòng</div>
           }
         </div>
-        @if ((day === 15 ? totalPages15() : totalPages30()) > 1) {
+        @if (totalPages() > 1) {
           <div class="kanban-pagination">
-            <button nz-button nzType="default" nzSize="small" [disabled]="(day === 15 ? page15() : page30()) === 1" (click)="prevPage(day)">
+            <button nz-button nzType="default" nzSize="small" [disabled]="page() === 1" (click)="prevPage()">
               <nz-icon nzType="left" />
             </button>
-            <span>{{ day === 15 ? page15() : page30() }} / {{ day === 15 ? totalPages15() : totalPages30() }}</span>
-            <button nz-button nzType="default" nzSize="small" [disabled]="(day === 15 ? page15() : page30()) === (day === 15 ? totalPages15() : totalPages30())" (click)="nextPage(day)">
+            <span>{{ page() }} / {{ totalPages() }}</span>
+            <button nz-button nzType="default" nzSize="small" [disabled]="page() === totalPages()" (click)="nextPage()">
               <nz-icon nzType="right" />
             </button>
           </div>
         }
       </div>
     </div>
-    }
-
   </div>
 
 </div>
@@ -257,14 +263,14 @@
 <!-- ── Add rooms modal ── -->
 <nz-modal
   [nzMaskClosable]="false"
-  [nzVisible]="!!showAddModal()"
-  [nzTitle]="'Thêm phòng vào Ngày ' + showAddModal()"
+  [nzVisible]="showAddModal()"
+  [nzTitle]="'Thêm phòng cần chốt'"
   nzOkText="Thêm"
   nzCancelText="Hủy"
   [nzOkDisabled]="selectedRoomIds().size === 0"
   [nzOkLoading]="saving()"
-  (nzOnOk)="confirmAddToDay()"
-  (nzOnCancel)="showAddModal.set(null)"
+  (nzOnOk)="confirmAddToClosingList()"
+  (nzOnCancel)="showAddModal.set(false)"
   [nzWidth]="layout.isMobile() ? '100vw' : 480"
   [nzClassName]="layout.isMobile() ? 'fullscreen' : ''">
 

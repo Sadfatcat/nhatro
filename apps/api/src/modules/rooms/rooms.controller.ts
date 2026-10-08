@@ -2,14 +2,10 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RoomsService } from './rooms.service';
+import { ApiResponse, ok } from '../../common/api-response';
+import { MANAGEMENT_ROLES } from '../../common/auth/roles.constants';
 
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-
-function ok<T>(data: T, message = 'Thành công'): ApiResponse<T> {
-  return { success: true, data, message };
-}
-
-@Roles('ADMIN', 'LANDLORD')
+@Roles(...MANAGEMENT_ROLES)
 @ApiTags('rooms')
 @Controller('rooms')
 export class RoomsController {

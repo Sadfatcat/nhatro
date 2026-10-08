@@ -12,20 +12,20 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
-import { finalize } from 'rxjs';
+import { filter, finalize, switchMap } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
+import { ConfirmDialogService } from '../../../shared/components/feedback/confirm-dialog/confirm-dialog.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { UserRole } from '../../../core/auth/auth.types';
-import { RoomWithUtility, UtilityReading } from '@nhatro/shared-types';
+import { ApiResponse, RoomWithUtility, UtilityReading } from '@nhatro/shared-types';
 import { LayoutService } from '../../../core/services/layout.service';
 import { MonthPickerComponent } from '../../../shared/components/form/month-picker/month-picker.component';
+import { currentBillingPeriod, monthKeyDirect, periodToDate } from '../../../shared/utils/billing-period';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-type BillingDay = 15 | 30;
 type ReadingInput = { currElec: number; currWater: number };
 
 @Component({
@@ -33,6 +33,7 @@ type ReadingInput = { currElec: number; currWater: number };
   standalone:  true,
   templateUrl: './management-home.component.html',
   styleUrls:   ['./management-home.component.scss'],
+  providers:   [ConfirmDialogService], // needs the NzModalService provided by NzModalModule below
   imports:     [CommonModule, DatePipe, FormsModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzDividerModule, NzButtonModule, MonthPickerComponent],
 })
 export class ManagementHomeComponent implements OnInit, AfterViewInit {
@@ -40,6 +41,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
 
   private api    = inject(ApiService);
   private toast  = inject(ToastService);
+  private confirmDialog = inject(ConfirmDialogService);
   private router = inject(Router);
   readonly auth  = inject(AuthService);
   layout = inject(LayoutService);
@@ -51,7 +53,6 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   }
 
   readonly today        = new Date();
-  readonly billingDays: BillingDay[] = [15, 30];
 
   // ── State ─────────────────────────────────────────────────────────────────
   loading = signal(false);
@@ -87,66 +88,49 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     this.totalRooms() ? Math.round(this.occupiedCount() / this.totalRooms() * 100) : 0
   );
 
-  // ── Kanban — grouped by billingDay from real data ─────────────────────────
-  private toNum = (s: string) => parseInt(s.replace(/\D/g, ''), 10) || 0;
-  private sortRooms = (a: RoomWithUtility, b: RoomWithUtility) => this.toNum(a.roomNumber) - this.toNum(b.roomNumber);
+  // ── Closing list — rooms waiting to be chốt ───────────────────────────────
+  private compareRoomNumber = (a: RoomWithUtility, b: RoomWithUtility) =>
+    a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true });
 
-  rooms15 = computed(() => this.rooms().filter(r => r.billingDay === 15 && r.status === 'OCCUPIED').sort(this.sortRooms));
-  rooms30 = computed(() => this.rooms().filter(r => r.billingDay === 30 && r.status === 'OCCUPIED').sort(this.sortRooms));
+  closingRooms = computed(() =>
+    this.rooms().filter(r => r.inClosingList && r.status === 'OCCUPIED').sort(this.compareRoomNumber));
 
-  rooms15Ids = signal<string[]>([]);
-  rooms30Ids = signal<string[]>([]);
+  roomsWithoutReadingCount = computed(() => this.closingRooms().filter(r => !this.isChot(r.roomId)).length);
+  canCompleteClosing       = computed(() => this.closingRooms().length > 0 && this.roomsWithoutReadingCount() === 0);
 
   readonly PAGE_SIZE = 5;
-  page15 = signal(1);
-  page30 = signal(1);
+  page       = signal(1);
+  totalPages = computed(() => Math.ceil(this.closingRooms().length / this.PAGE_SIZE));
+  roomsOnPage = computed(() =>
+    this.closingRooms().slice((this.page() - 1) * this.PAGE_SIZE, this.page() * this.PAGE_SIZE));
 
-  totalPages15 = computed(() => Math.ceil(this.rooms15().length / this.PAGE_SIZE));
-  totalPages30 = computed(() => Math.ceil(this.rooms30().length / this.PAGE_SIZE));
-
-  roomsForDay(day: BillingDay): RoomWithUtility[] {
-    const rooms = day === 15 ? this.rooms15() : this.rooms30();
-    const page  = day === 15 ? this.page15()  : this.page30();
-    return rooms.slice((page - 1) * this.PAGE_SIZE, page * this.PAGE_SIZE);
-  }
-
-  prevPage(day: BillingDay): void {
-    if (day === 15) this.page15.update(p => Math.max(1, p - 1));
-    else            this.page30.update(p => Math.max(1, p - 1));
-  }
-
-  nextPage(day: BillingDay): void {
-    const total = day === 15 ? this.totalPages15() : this.totalPages30();
-    if (day === 15) this.page15.update(p => Math.min(total, p + 1));
-    else            this.page30.update(p => Math.min(total, p + 1));
-  }
+  prevPage(): void { this.page.update(p => Math.max(1, p - 1)); }
+  nextPage(): void { this.page.update(p => Math.min(this.totalPages(), p + 1)); }
 
   // ── Add-room modal ────────────────────────────────────────────────────────
-  showAddModal    = signal<BillingDay | null>(null);
+  showAddModal    = signal(false);
   addSearchQuery  = signal('');
   selectedRoomIds = signal<Set<string>>(new Set());
 
   addSearchValue = ''; // mirror for ngModel
 
   availableRooms = computed(() => {
-    const day = this.showAddModal();
-    if (!day) return [];
-    const taken = [...this.rooms15Ids(), ...this.rooms30Ids()];
+    if (!this.showAddModal()) return [];
     const query = this.addSearchQuery().toLowerCase();
     return this.rooms()
       .filter(r =>
         r.status === 'OCCUPIED' &&
-        !taken.includes(r.roomId) &&
+        !r.inClosingList &&
         (query === '' || r.roomNumber.toLowerCase().includes(query))
       )
-      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, 'vi', { numeric: true }));
+      .sort(this.compareRoomNumber);
   });
 
-  openAddModal(day: BillingDay): void {
+  openAddModal(): void {
     this.selectedRoomIds.set(new Set());
     this.addSearchQuery.set('');
     this.addSearchValue = '';
-    this.showAddModal.set(day);
+    this.showAddModal.set(true);
   }
 
   toggleRoomSelect(roomId: string): void {
@@ -175,28 +159,50 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     }
   }
 
-  confirmAddToDay(): void {
-    const day = this.showAddModal();
+  confirmAddToClosingList(): void {
     const ids = [...this.selectedRoomIds()];
-    if (!day || ids.length === 0) return;
+    if (ids.length === 0) return;
+    this.updateClosingList(ids, true, () => this.showAddModal.set(false));
+  }
+
+  removeFromClosingList(roomId: string): void {
+    this.updateClosingList([roomId], false);
+  }
+
+  private updateClosingList(roomIds: string[], add: boolean, onDone?: () => void): void {
     this.saving.set(true);
-    this.api.patch<ApiResponse<unknown>>('/utilities/bulk/billing-day', { roomIds: ids, billingDay: day })
+    this.api.patch<ApiResponse<unknown>>('/utilities/closing-list', { roomIds, add })
       .pipe(finalize(() => this.saving.set(false)))
-      .subscribe(() => {
-        this.showAddModal.set(null);
-        this.loadData();
+      .subscribe({
+        next: () => {
+          onDone?.();
+          this.loadData(true);
+        },
+        error: err => this.toast.error(err?.error?.message ?? 'Không cập nhật được danh sách phòng cần chốt.'),
       });
   }
 
-  removeFromDay(roomId: string): void {
-    this.rooms15Ids.update(ids => ids.filter(id => id !== roomId));
-    this.rooms30Ids.update(ids => ids.filter(id => id !== roomId));
-    const room = this.rooms().find(r => r.roomId === roomId);
-    if (room?.status === 'OCCUPIED') {
-      this.api.patch<ApiResponse<unknown>>(`/utilities/${roomId}/billing-day`, { billingDay: 0 }).subscribe();
-    }
+  completeClosing(): void {
+    const roomCount = this.closingRooms().length;
+    this.confirmDialog.confirm({
+      title:   `Hoàn tất chốt ${roomCount} phòng?`,
+      content: 'Hoá đơn của các phòng này sẽ được gom thành một đợt trong "Xem chốt theo ngày" và danh sách chốt được làm trống.',
+      okText:  'Hoàn tất chốt',
+    }).pipe(
+      filter(confirmed => confirmed),
+      switchMap(() => {
+        this.saving.set(true);
+        return this.api.post<ApiResponse<unknown>>('/closing-batches', {}).pipe(finalize(() => this.saving.set(false)));
+      }),
+    ).subscribe({
+      next: res => {
+        if (!res.success) return;
+        this.toast.success(`Đã hoàn tất chốt ${roomCount} phòng.`);
+        this.loadData();
+      },
+      error: err => this.toast.error(err?.error?.message ?? 'Không hoàn tất chốt được.'),
+    });
   }
-
 
   // ── Reading modal ─────────────────────────────────────────────────────────
   activeModalRoomId = signal<string | null>(null);
@@ -210,31 +216,14 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     return id ? this.rooms().find(r => r.roomId === id) ?? null : null;
   });
 
-  /** "Hôm nay" → kỳ chốt hiện tại (rule 11→10): ngày <=10 thuộc kỳ tháng trước. */
-  private monthKey(d: Date): string {
-    const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
-    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  /** Map thẳng 1 Date sang "YYYY-MM" của chính tháng đó, KHÔNG áp rule shift —
-   *  dùng cho tháng do người dùng chọn tay qua month-picker (Date đã đại diện đúng kỳ muốn nhập). */
-  private monthKeyDirect(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  private periodToDate(period: string): Date {
-    const [year, month] = period.split('-').map(Number);
-    return new Date(year, month - 1, 1);
-  }
-
   isChot(roomId: string): boolean {
     const room = this.rooms().find(r => r.roomId === roomId);
     if (!room?.utilityRecord) return false;
-    return room.utilityRecord.billingMonth === this.monthKey(new Date());
+    return room.utilityRecord.billingMonth === currentBillingPeriod(new Date());
   }
 
   openModal(roomId: string): void {
-    const currentPeriodDate = this.periodToDate(this.monthKey(new Date()));
+    const currentPeriodDate = periodToDate(currentBillingPeriod(new Date()));
     this.activeModalMonth.set(currentPeriodDate);
     this.activeModalRoomId.set(roomId);
     this.loadReadingForMonth(roomId, currentPeriodDate);
@@ -251,7 +240,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
 
   private loadReadingForMonth(roomId: string, month: Date): void {
     this.modalLoading.set(true);
-    this.api.get<ApiResponse<{ utilityRecord: UtilityReading | null }>>(`/utilities/${roomId}`, { month: this.monthKeyDirect(month) })
+    this.api.get<ApiResponse<{ utilityRecord: UtilityReading | null }>>(`/utilities/${roomId}`, { month: monthKeyDirect(month) })
       .pipe(finalize(() => this.modalLoading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
@@ -283,7 +272,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
     this.api.post<ApiResponse<unknown>>(`/utilities/${roomId}/record`, {
       currElec:     inp.currElec,
       currWater:    inp.currWater,
-      billingMonth: this.monthKeyDirect(this.activeModalMonth()),
+      billingMonth: monthKeyDirect(this.activeModalMonth()),
     })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
@@ -320,7 +309,7 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   chotReadingOf(roomId: string) {
     const room = this.rooms().find(r => r.roomId === roomId);
     if (!room?.utilityRecord) return null;
-    const key = this.monthKey(new Date());
+    const key = currentBillingPeriod(new Date());
     return room.utilityRecord.billingMonth === key ? room.utilityRecord : null;
   }
 
@@ -334,25 +323,13 @@ export class ManagementHomeComponent implements OnInit, AfterViewInit {
   }
 
   loadData(keepPage = false): void {
-    const savedPage15 = this.page15();
-    const savedPage30 = this.page30();
     this.loading.set(true);
     this.api.get<ApiResponse<RoomWithUtility[]>>('/utilities')
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(res => {
         if (!res.success || !res.data) return;
         this.rooms.set(res.data);
-        const toNum = (s: string) => parseInt(s.replace(/\D/g, ''), 10) || 0;
-        const sort = (a: RoomWithUtility, b: RoomWithUtility) => toNum(a.roomNumber) - toNum(b.roomNumber);
-        this.rooms15Ids.set(res.data.filter(r => r.billingDay === 15 && r.status === 'OCCUPIED').sort(sort).map(r => r.roomId));
-        this.rooms30Ids.set(res.data.filter(r => r.billingDay === 30 && r.status === 'OCCUPIED').sort(sort).map(r => r.roomId));
-        if (keepPage) {
-          this.page15.set(Math.min(savedPage15, this.totalPages15() || 1));
-          this.page30.set(Math.min(savedPage30, this.totalPages30() || 1));
-        } else {
-          this.page15.set(1);
-          this.page30.set(1);
-        }
+        this.page.set(keepPage ? Math.min(this.page(), this.totalPages() || 1) : 1);
         this.rebuildDonut();
       });
   }

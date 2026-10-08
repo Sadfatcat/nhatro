@@ -4,19 +4,17 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { assertOwnRoomOrManagement } from '../../common/auth/assert-own-room';
 import { RequestUser } from '../../common/auth/jwt-payload.interface';
+import { SetClosingListDto } from './dto/set-closing-list.dto';
 import { UtilitiesService } from './utilities.service';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-const ok = <T>(data: T, msg = 'Thành công'): ApiResponse<T> => ({ success: true, data, message: msg });
-
-const MANAGEMENT = ['ADMIN', 'LANDLORD'];
+import { ApiResponse, ok } from '../../common/api-response';
+import { MANAGEMENT_ROLES } from '../../common/auth/roles.constants';
 
 @ApiTags('utilities')
 @Controller('utilities')
 export class UtilitiesController {
   constructor(private readonly svc: UtilitiesService) {}
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Get()
   async findAll(): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.findAll());
@@ -42,7 +40,7 @@ export class UtilitiesController {
     return ok(await this.svc.findByRoom(roomId, month));
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Post(':roomId/record')
   async record(
     @Param('roomId') roomId: string,
@@ -52,20 +50,9 @@ export class UtilitiesController {
     return ok(await this.svc.record(roomId, body, user.role), 'Đã chốt số điện nước thành công.');
   }
 
-  @Roles(...MANAGEMENT)
-  @Patch('bulk/billing-day')
-  async setBillingDayBulk(
-    @Body() body: { roomIds: string[]; billingDay: number },
-  ): Promise<ApiResponse<unknown>> {
-    return ok(await this.svc.setBillingDayBulk(body.roomIds, body.billingDay), 'Đã cập nhật ngày chốt.');
-  }
-
-  @Roles(...MANAGEMENT)
-  @Patch(':roomId/billing-day')
-  async setBillingDay(
-    @Param('roomId') roomId: string,
-    @Body() body: { billingDay: number },
-  ): Promise<ApiResponse<unknown>> {
-    return ok(await this.svc.setBillingDay(roomId, body.billingDay), 'Đã cập nhật ngày chốt.');
+  @Roles(...MANAGEMENT_ROLES)
+  @Patch('closing-list')
+  async setClosingList(@Body() body: SetClosingListDto): Promise<ApiResponse<unknown>> {
+    return ok(await this.svc.setClosingList(body.roomIds, body.add), 'Đã cập nhật danh sách phòng cần chốt.');
   }
 }

@@ -12,7 +12,11 @@ export class StorageService {
   }
 
   set(key: string, value: unknown): void {
-    localStorage.setItem(key, JSON.stringify(value));
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // storage unavailable (private mode / quota) — callers treat persistence as best-effort
+    }
   }
 
   remove(key: string): void {

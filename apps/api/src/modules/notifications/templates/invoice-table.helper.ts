@@ -1,25 +1,30 @@
+// [bank name key, account number key, account holder key] per configured landlord bank account
+const BANK_ACCOUNT_KEYS = [
+  ['bankName',  'bankAccountNumber',  'bankAccountName'],
+  ['bank2Name', 'bank2AccountNumber', 'bank2AccountName'],
+  ['bank3Name', 'bank3AccountNumber', 'bank3AccountName'],
+] as const;
+
+function configuredBankAccounts(data: Record<string, string | number>) {
+  return BANK_ACCOUNT_KEYS
+    .filter(([, numberKey]) => data[numberKey])
+    .map(([nameKey, numberKey, holderKey]) => ({ name: data[nameKey], number: data[numberKey], holder: data[holderKey] }));
+}
+
 export function bankInfoBlockHtml(data: Record<string, string | number>): string {
-  const accounts = [
-    data.bankAccountNumber ? `${data.bankName} — <strong>${data.bankAccountNumber}</strong> (${data.bankAccountName})` : null,
-    data.bank2AccountNumber ? `${data.bank2Name} — <strong>${data.bank2AccountNumber}</strong> (${data.bank2AccountName})` : null,
-  ].filter(Boolean);
+  const accounts = configuredBankAccounts(data).map(a => `${a.name} — <strong>${a.number}</strong> (${a.holder})`);
   if (accounts.length === 0) return '';
-  return `<p>Chuyển khoản tới 1 trong 2 số tài khoản sau:<br>${accounts.join('<br>')}</p>`;
+  const heading = accounts.length === 1 ? 'Chuyển khoản tới số tài khoản sau:' : `Chuyển khoản tới 1 trong ${accounts.length} số tài khoản sau:`;
+  return `<p>${heading}<br>${accounts.join('<br>')}</p>`;
 }
 
 export function bankInfoLineSms(data: Record<string, string | number>): string {
-  const accounts = [
-    data.bankAccountNumber ? `${data.bankAccountNumber} (${data.bankName})` : null,
-    data.bank2AccountNumber ? `${data.bank2AccountNumber} (${data.bank2Name})` : null,
-  ].filter(Boolean);
+  const accounts = configuredBankAccounts(data).map(a => `${a.number} (${a.name})`);
   return accounts.length ? ` CK: ${accounts.join(' hoặc ')}.` : '';
 }
 
 export function bankInfoLineSmsPlain(data: Record<string, string | number>): string {
-  const accounts = [
-    data.bankAccountNumber ? `${data.bankAccountNumber} (${data.bankName})` : null,
-    data.bank2AccountNumber ? `${data.bank2AccountNumber} (${data.bank2Name})` : null,
-  ].filter(Boolean);
+  const accounts = configuredBankAccounts(data).map(a => `${a.number} (${a.name})`);
   return accounts.length ? `\nCK: ${accounts.join(' hoac ')}` : '';
 }
 

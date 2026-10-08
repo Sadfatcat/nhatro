@@ -4,6 +4,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ClosingBatchesModule } from './modules/closing-batches/closing-batches.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -20,6 +21,7 @@ import { UtilitiesModule } from './modules/utilities/utilities.module';
     PrismaModule,
     AuthModule,
     AccountsModule,
+    ClosingBatchesModule,
     ContractsModule,
     InvoicesModule,
     NotificationsModule,

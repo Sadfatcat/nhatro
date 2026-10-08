@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { currentBillingPeriod, lastNBillingPeriods } from '../../common/billing-period';
 
 interface RecordDto {
   currElec:     number;
@@ -16,7 +17,7 @@ export class UtilitiesService {
   ) {}
 
   async findAll() {
-    const billingMonth = this.currentBillingMonth();
+    const billingMonth = currentBillingPeriod();
     const rooms = await this.prisma.room.findMany({
       orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
       include: {
@@ -46,7 +47,7 @@ export class UtilitiesService {
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Không tìm thấy phòng.');
 
-    const billingMonth  = month ?? this.currentBillingMonth();
+    const billingMonth  = month ?? currentBillingPeriod();
     const utilityRecord = await this.prisma.utilityRecord.findUnique({
       where: { roomId_billingMonth: { roomId, billingMonth } },
     });
@@ -71,7 +72,7 @@ export class UtilitiesService {
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Không tìm thấy phòng.');
 
-    const monthKeys = this.lastNMonths(months);
+    const monthKeys = lastNBillingPeriods(months);
     const records = await this.prisma.utilityRecord.findMany({
       where: { roomId, billingMonth: { in: monthKeys } },
     });
@@ -97,9 +98,9 @@ export class UtilitiesService {
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Không tìm thấy phòng.');
 
-    const billingMonth = dto.billingMonth ?? this.currentBillingMonth();
+    const billingMonth = dto.billingMonth ?? currentBillingPeriod();
 
-    if (role === 'LANDLORD' && billingMonth !== this.currentBillingMonth()) {
+    if (role === 'LANDLORD' && billingMonth !== currentBillingPeriod()) {
       throw new ForbiddenException('Chủ trọ chỉ được cập nhật chỉ số điện nước của tháng hiện tại.');
     }
 
@@ -122,14 +123,9 @@ export class UtilitiesService {
     return record;
   }
 
-  async setBillingDay(roomId: string, billingDay: number) {
-    const room = await this.prisma.room.findUnique({ where: { id: roomId } });
-    if (!room) throw new NotFoundException('Không tìm thấy phòng.');
-    return this.prisma.room.update({ where: { id: roomId }, data: { billingDay } });
-  }
-
-  async setBillingDayBulk(roomIds: string[], billingDay: number) {
-    return this.prisma.room.updateMany({ where: { id: { in: roomIds } }, data: { billingDay } });
+  async setClosingList(roomIds: string[], add: boolean) {
+    const where = { id: { in: roomIds }, ...(add && { status: 'OCCUPIED' }) };
+    return this.prisma.room.updateMany({ where, data: { inClosingList: add } });
   }
 
   private async resolvePrevReading(roomId: string, billingMonth: string): Promise<{ prevElec: number; prevWater: number }> {
@@ -140,25 +136,6 @@ export class UtilitiesService {
     return { prevElec: prev?.currElec ?? 0, prevWater: prev?.currWater ?? 0 };
   }
 
-  /** Billing period runs 11th of month N to 10th of month N+1 — data recorded a few
-   *  days late (e.g. group "30" chốt vào 30/31 nhưng nhập trễ) still falls in the right period. */
-  private currentBillingMonth(): string {
-    const d = new Date();
-    const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
-    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  private lastNMonths(n: number): string[] {
-    const out: string[] = [];
-    const d    = new Date();
-    const base = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
-    for (let i = n - 1; i >= 0; i--) {
-      const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
-      out.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
-    }
-    return out;
-  }
-
   private mapRoom(room: any, username: string | null = null) {
     const tenant = room.contracts?.[0]?.tenant ?? null;
     return {
@@ -167,7 +144,7 @@ export class UtilitiesService {
       floor:        room.floor,
       price:        room.price,
       status:       room.status,
-      billingDay:   room.billingDay,
+      inClosingList: room.inClosingList,
       tenant:       tenant ? {
         tenantId: tenant.id,
         fullName: tenant.fullName,

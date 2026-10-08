@@ -6,9 +6,7 @@ import { RequestUser } from '../../common/auth/jwt-payload.interface';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-const ok = <T>(data: T, msg = 'Thành công'): ApiResponse<T> => ({ success: true, data, message: msg });
+import { ApiResponse, ok } from '../../common/api-response';
 
 @ApiTags('auth')
 @Controller('auth')

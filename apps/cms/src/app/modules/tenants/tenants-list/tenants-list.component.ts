@@ -16,8 +16,7 @@ import { FormBuilderComponent } from '../../../shared/components/form/form-build
 import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { PermissionService } from '../../../core/permission/services/permission.service';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
+import { ApiResponse } from '@nhatro/shared-types';
 
 type TenantRow = {
   tenantId:   string;

@@ -6,6 +6,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { finalize } from 'rxjs';
+import { currentBillingPeriod, lastNBillingPeriods } from '../../../shared/utils/billing-period';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
@@ -15,9 +16,7 @@ import { StatusBadgeComponent } from '../../../shared/components/display/status-
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { FilterPanelComponent } from '../../../shared/components/form/filter-panel/filter-panel.component';
 import { FilterConfig, FilterValue } from '../../../shared/components/form/filter-panel/filter-panel.model';
-import { Invoice } from '@nhatro/shared-types';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
+import { ApiResponse, Invoice } from '@nhatro/shared-types';
 
 type InvoiceLogRow = {
   id:            string;
@@ -37,23 +36,6 @@ interface MergeSuggestion {
   tenantName:  string;
   totalAmount: number;
   invoices:    { id: string; roomNumber: string; totalAmount: number }[];
-}
-
-function currentBillingPeriod(): string {
-  const d = new Date();
-  const dt = new Date(d.getFullYear(), d.getDate() <= 10 ? d.getMonth() - 1 : d.getMonth(), 1);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function lastNBillingPeriods(n: number): string[] {
-  const out: string[] = [];
-  const base = currentBillingPeriod();
-  const [y, m] = base.split('-').map(Number);
-  for (let i = n - 1; i >= 0; i--) {
-    const dt = new Date(y, m - 1 - i, 1);
-    out.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`);
-  }
-  return out;
 }
 
 @Component({
@@ -113,6 +95,7 @@ export class InvoiceCreationLogComponent implements OnInit {
     ],
     autoSearch: true,
     debounceMs: 0,
+    storageKey: 'invoice-creation-log',
   }));
 
   onFilterChange(value: FilterValue): void {
@@ -160,7 +143,6 @@ export class InvoiceCreationLogComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRoomOptions();
-    this.loadData();
     this.loadMergeSuggestions();
   }
 

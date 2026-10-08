@@ -15,15 +15,13 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { finalize } from 'rxjs';
-import { ContractStatus } from '@nhatro/shared-types';
+import { ApiResponse, ContractStatus } from '@nhatro/shared-types';
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
 import { MoneyDisplayComponent } from '../../../shared/components/display/money-display/money-display.component';
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { LayoutService } from '../../../core/services/layout.service';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 interface ContractRow {
   id: string; roomId: string; tenantId: string;

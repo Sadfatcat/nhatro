@@ -6,16 +6,8 @@
   gap: 16px;
 
   &__hint {
-    margin: 0;
     color: var(--color-text-secondary);
     font-size: 13px;
-  }
-
-  &__hint-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
   }
 
   &__card {
@@ -26,65 +18,52 @@
   }
 
   &__card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+
+  &__tier-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 18px;
+    gap: 12px;
+    padding: 12px 18px;
+    background: var(--color-bg-subtle);
     border-bottom: 1px solid var(--color-border);
 
-    h2 {
+    h3 {
       margin: 0;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 600;
+      color: var(--color-text-secondary);
     }
+  }
+
+  &__tier-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 24px 0;
+    text-align: center;
+    color: var(--color-text-muted);
+  }
+
+  &__load-more {
+    align-self: center;
   }
 
   &__no-invoice {
     color: var(--color-text-muted);
-  }
-
-  &__toggle-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    width: 28px;
-    height: 28px;
-
-    span[nz-icon] {
-      transition: transform $transition-fast;
-    }
-
-    &--expanded span[nz-icon] {
-      transform: rotate(180deg);
-    }
-  }
-
-  &__table--collapsed {
-    ::ng-deep tbody tr {
-      display: none;
-    }
-    ::ng-deep .data-table-cards .billing-day-card {
-      display: none;
-    }
-  }
-
-  &__expand-more {
-    display: flex;
-    justify-content: center;
-    padding: 6px 0;
-    border-top: 1px solid var(--color-border);
-    cursor: pointer;
-    color: var(--color-text-muted);
-
-    &:hover {
-      color: var(--color-primary);
-      background: var(--color-bg-hover);
-    }
-
-    span[nz-icon] {
-      font-size: 16px;
-    }
   }
 }
 
@@ -112,6 +91,11 @@
     color: var(--color-text-secondary);
     font-size: 13px;
     cursor: pointer;
+  }
+
+  &__reason {
+    font-size: 12px;
+    color: var(--color-error, #ba1a1a);
   }
 
   &__footer {

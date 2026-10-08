@@ -7,7 +7,7 @@ import { SmsProvider } from '../../../apps/api/src/modules/notifications/provide
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
-  let prisma: { invoice: { findUnique: jest.Mock }; notificationLog: { create: jest.Mock } };
+  let prisma: { invoice: { findUnique: jest.Mock }; notificationLog: { create: jest.Mock; createMany: jest.Mock } };
   let email: { send: jest.Mock };
   let sms:   { send: jest.Mock };
   let config: Record<string, string | undefined>;
@@ -22,7 +22,7 @@ describe('NotificationsService', () => {
   };
 
   beforeEach(async () => {
-    prisma = { invoice: { findUnique: jest.fn() }, notificationLog: { create: jest.fn().mockResolvedValue({}) } };
+    prisma = { invoice: { findUnique: jest.fn() }, notificationLog: { create: jest.fn().mockResolvedValue({}), createMany: jest.fn().mockResolvedValue({}) } };
     email  = { send: jest.fn() };
     sms    = { send: jest.fn() };
     // Real project config: SMS is primary, email is the fallback (SMS is cheaper).
@@ -53,6 +53,14 @@ describe('NotificationsService', () => {
       expect(result).toEqual({ success: false, reason: 'Không có dữ liệu người dùng.' });
       expect(sms.send).not.toHaveBeenCalled();
       expect(email.send).not.toHaveBeenCalled();
+    });
+
+    it('records the missing-contact failure in the notification log so the batch view can show why it was not sent', async () => {
+      prisma.invoice.findUnique.mockResolvedValue({ ...baseInvoice, contract: { tenant: { email: null, phone: null } } });
+      await service.sendForInvoice('inv-1', 'invoice-created');
+      expect(prisma.notificationLog.createMany).toHaveBeenCalledWith({
+        data: [{ invoiceId: 'inv-1', templateKey: 'invoice-created', channel: 'none', success: false, reason: 'Không có dữ liệu người dùng.' }],
+      });
     });
 
     it('still attempts to send when only phone is present (no email on file)', async () => {

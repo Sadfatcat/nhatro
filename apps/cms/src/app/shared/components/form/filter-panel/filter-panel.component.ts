@@ -19,6 +19,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { StorageService } from '../../../../core/services/storage.service';
 import { FilterConfig, FilterValue } from './filter-panel.model';
 
 @Component({
@@ -50,10 +51,11 @@ export class FilterPanelComponent implements OnInit {
   form!: FormGroup;
   collapsed = signal(false);
 
-  constructor(private fb: FormBuilder) {}
+  constructor(private fb: FormBuilder, private storage: StorageService) {}
 
   ngOnInit(): void {
     this.buildForm();
+    this.restoreSavedValue();
 
     if (this.config.autoSearch) {
       this.form.valueChanges
@@ -61,8 +63,33 @@ export class FilterPanelComponent implements OnInit {
           debounceTime(this.config.debounceMs ?? 400),
           distinctUntilChanged(),
         )
-        .subscribe(values => this.filterChange.emit(this.cleanValue(values)));
+        .subscribe(values => this.emitFilter(values));
     }
+
+    // Parent relies on this single initial emit to load data with the restored filters.
+    if (this.config.storageKey) queueMicrotask(() => this.filterChange.emit(this.cleanValue(this.form.value)));
+  }
+
+  private storageKeyOrNull(): string | null {
+    return this.config.storageKey ? `nhatro:filter:${this.config.storageKey}` : null;
+  }
+
+  private restoreSavedValue(): void {
+    const key = this.storageKeyOrNull();
+    const saved = key && this.storage.get<FilterValue>(key);
+    if (!saved) return;
+    const restorableKeys = this.config.fields
+      .filter(f => f.type !== 'date' && f.type !== 'daterange')
+      .map(f => f.key);
+    const restorable = Object.fromEntries(Object.entries(saved).filter(([k]) => restorableKeys.includes(k)));
+    this.form.patchValue(restorable, { emitEvent: false });
+  }
+
+  private emitFilter(rawValue: FilterValue): void {
+    const value = this.cleanValue(rawValue);
+    const key = this.storageKeyOrNull();
+    if (key) this.storage.set(key, value);
+    this.filterChange.emit(value);
   }
 
   private buildForm(): void {
@@ -74,7 +101,7 @@ export class FilterPanelComponent implements OnInit {
   }
 
   onSearch(): void {
-    this.filterChange.emit(this.cleanValue(this.form.value));
+    this.emitFilter(this.form.value);
   }
 
   onReset(): void {
@@ -85,7 +112,7 @@ export class FilterPanelComponent implements OnInit {
       }
     });
     this.filterReset.emit();
-    this.filterChange.emit({});
+    this.emitFilter({});
   }
 
   toggleCollapse(): void {

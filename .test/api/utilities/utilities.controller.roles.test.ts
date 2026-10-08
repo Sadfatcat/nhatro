@@ -7,11 +7,10 @@ function rolesOf(method: string): string[] | undefined {
 }
 
 describe('UtilitiesController — route role assignments (previously had NO auth check at all)', () => {
-  it('findAll/record/setBillingDay(Bulk) require ADMIN or LANDLORD', () => {
+  it('findAll/record/setClosingList require ADMIN or LANDLORD', () => {
     expect(rolesOf('findAll')).toEqual(['ADMIN', 'LANDLORD']);
     expect(rolesOf('record')).toEqual(['ADMIN', 'LANDLORD']);
-    expect(rolesOf('setBillingDayBulk')).toEqual(['ADMIN', 'LANDLORD']);
-    expect(rolesOf('setBillingDay')).toEqual(['ADMIN', 'LANDLORD']);
+    expect(rolesOf('setClosingList')).toEqual(['ADMIN', 'LANDLORD']);
   });
 
   it('findByRoom/history carry no @Roles() — tenant-home reads its own room this way', () => {

@@ -19,10 +19,8 @@ import { EmptyStateComponent } from '../../../shared/components/feedback/empty-s
 import { FormBuilderComponent } from '../../../shared/components/form/form-builder/form-builder.component';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { FormSchema } from '../../../shared/components/form/form-builder/form-schema.model';
-import { RoomStatus } from '@nhatro/shared-types';
+import { ApiResponse, RoomStatus } from '@nhatro/shared-types';
 import { LayoutService } from '../../../core/services/layout.service';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 const PAGE_SIZE = 10;
 

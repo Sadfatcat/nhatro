@@ -1,147 +1,118 @@
 <div class="billing-day">
 
-  <div class="billing-day__hint-row">
-    <p class="billing-day__hint">Kỳ hiện tại: <strong>{{ period }}</strong> — phòng chia theo ngày chốt điện nước (đồng bộ với Trang chủ Quản lý).</p>
-    @if (selectedRooms().length > 0) {
-      <button
-        *appPermission="'invoices:notify'"
-        nz-button nzType="primary" nzSize="small"
-        [nzLoading]="saving()"
-        (click)="bulkSend()"
+  <app-filter-panel [config]="filterConfig" (filterChange)="onFilterChange($event)" />
+
+  @for (view of batchViews(); track view.id) {
+    <section class="billing-day__card">
+      <header class="billing-day__card-header">
+        <h2 class="billing-day__title">
+          {{ view.closedAt | date:'dd/MM/yyyy' }} · Kỳ {{ view.periodLabel }} · {{ view.closedAt | date:'HH:mm' }}
+        </h2>
+      </header>
+
+      <!-- Chưa gửi -->
+      <div class="billing-day__tier-header">
+        <h3>Chưa gửi ({{ view.unsentRows.length }})</h3>
+        @if (view.unsentRows.length > 0) {
+          <div class="billing-day__tier-actions" *appPermission="'invoices:notify'">
+            @if (selectedCount(view.id) > 0) {
+              <button nz-button nzType="primary" nzSize="small" [nzLoading]="saving()" (click)="sendSelected(view)">
+                <span nz-icon nzType="mail"></span> Gửi đã chọn ({{ selectedCount(view.id) }})
+              </button>
+            }
+            <button nz-button nzType="default" nzSize="small" [nzLoading]="saving()" (click)="sendAllUnsent(view)">
+              Gửi tất cả ({{ view.sendableUnsentCount }})
+            </button>
+          </div>
+        }
+      </div>
+      <app-data-table
+        [config]="view.unsentConfig"
+        [cellTemplates]="cellTemplates"
+        (selectChange)="onSelectChange(view.id, $event)"
+        (rowClick)="onRowClick($event)"
       >
-        <span nz-icon nzType="mail"></span>
-        Gửi thông báo ({{ selectedRooms().length }})
-      </button>
-    }
-  </div>
+        <ng-template #mobileCard let-row let-selected="selected" let-toggle="toggle">
+          <ng-container *ngTemplateOutlet="roomCardTpl; context: { $implicit: row, selected: selected, toggle: toggle, selectable: true }" />
+        </ng-template>
+      </app-data-table>
 
-  <!-- Column: Ngày 15 -->
-  <div class="billing-day__card">
-    <div class="billing-day__card-header">
-      <h2>Ngày chốt 15</h2>
-      @if (rows15().length > collapsedRowCount) {
-        <button
-          nz-button nzType="text" nzSize="small"
-          class="billing-day__toggle-btn"
-          [class.billing-day__toggle-btn--expanded]="expanded15()"
-          nz-tooltip [nzTooltipTitle]="expanded15() ? 'Thu gọn' : 'Xem tất cả'"
-          (click)="toggleExpanded15()">
-          <span nz-icon nzType="down"></span>
-        </button>
-      }
-    </div>
-    <div class="billing-day__table" [class.billing-day__table--collapsed]="!expanded15()">
-    <app-data-table
-      [config]="tableConfig15()"
-      [cellTemplates]="cellTemplates"
-      (selectChange)="onSelectChange15($event)"
-      (rowClick)="onRowClick($event)"
-    >
-      <ng-template #mobileCard let-row let-selected="selected" let-toggle="toggle">
-        <div class="billing-day-card">
-          <div class="billing-day-card__header">
-            <label nz-checkbox [ngModel]="selected" (ngModelChange)="toggle()" (click)="$event.stopPropagation()"></label>
-            <strong (click)="onRowClick(row)">Phòng {{ row.roomNumber }}</strong>
-            @if (row.invoiceStatus) {
-              <app-status-badge [status]="row.invoiceStatus" />
-            } @else {
-              <span class="billing-day__no-invoice">Chưa sinh hoá đơn</span>
-            }
-          </div>
-          <div class="billing-day-card__body" (click)="onRowClick(row)">
-            <span>{{ row.tenantName }}</span>
-            @if (row.totalAmount !== null) {
-              <app-money-display [value]="row.totalAmount" />
-            } @else {
-              <span class="billing-day__no-invoice">—</span>
-            }
-          </div>
-          <div class="billing-day-card__footer">
-            <span>Hạn: {{ row.dueDate ? (row.dueDate | date:'dd/MM/yyyy') : '—' }}</span>
-            <button
-              *appPermission="'invoices:notify'"
-              nz-button nzType="default"
-              [disabled]="!row.invoiceId"
-              (click)="sendOne(row)"
-            >
-              <span nz-icon nzType="mail"></span> Gửi thông báo
-            </button>
-          </div>
-        </div>
-      </ng-template>
-    </app-data-table>
-    </div>
-    @if (!expanded15() && rows15().length > collapsedRowCount) {
-      <div class="billing-day__expand-more" (click)="toggleExpanded15()">
-        <span nz-icon nzType="down"></span>
+      <!-- Đã gửi -->
+      <div class="billing-day__tier-header">
+        <h3>Đã gửi ({{ view.sentRows.length }})</h3>
       </div>
-    }
-  </div>
+      <app-data-table [config]="view.sentConfig" [cellTemplates]="cellTemplates" (rowClick)="onRowClick($event)">
+        <ng-template #mobileCard let-row>
+          <ng-container *ngTemplateOutlet="roomCardTpl; context: { $implicit: row, selectable: false }" />
+        </ng-template>
+      </app-data-table>
 
-  <!-- Column: Ngày 30 -->
-  <div class="billing-day__card">
-    <div class="billing-day__card-header">
-      <h2>Ngày chốt 30</h2>
-      @if (rows30().length > collapsedRowCount) {
-        <button
-          nz-button nzType="text" nzSize="small"
-          class="billing-day__toggle-btn"
-          [class.billing-day__toggle-btn--expanded]="expanded30()"
-          nz-tooltip [nzTooltipTitle]="expanded30() ? 'Thu gọn' : 'Xem tất cả'"
-          (click)="toggleExpanded30()">
-          <span nz-icon nzType="down"></span>
-        </button>
-      }
-    </div>
-    <div class="billing-day__table" [class.billing-day__table--collapsed]="!expanded30()">
-    <app-data-table
-      [config]="tableConfig30()"
-      [cellTemplates]="cellTemplates"
-      (selectChange)="onSelectChange30($event)"
-      (rowClick)="onRowClick($event)"
-    >
-      <ng-template #mobileCard let-row let-selected="selected" let-toggle="toggle">
-        <div class="billing-day-card">
-          <div class="billing-day-card__header">
-            <label nz-checkbox [ngModel]="selected" (ngModelChange)="toggle()" (click)="$event.stopPropagation()"></label>
-            <strong (click)="onRowClick(row)">Phòng {{ row.roomNumber }}</strong>
-            @if (row.invoiceStatus) {
-              <app-status-badge [status]="row.invoiceStatus" />
-            } @else {
-              <span class="billing-day__no-invoice">Chưa sinh hoá đơn</span>
-            }
-          </div>
-          <div class="billing-day-card__body" (click)="onRowClick(row)">
-            <span>{{ row.tenantName }}</span>
-            @if (row.totalAmount !== null) {
-              <app-money-display [value]="row.totalAmount" />
-            } @else {
-              <span class="billing-day__no-invoice">—</span>
-            }
-          </div>
-          <div class="billing-day-card__footer">
-            <span>Hạn: {{ row.dueDate ? (row.dueDate | date:'dd/MM/yyyy') : '—' }}</span>
-            <button
-              *appPermission="'invoices:notify'"
-              nz-button nzType="default"
-              [disabled]="!row.invoiceId"
-              (click)="sendOne(row)"
-            >
-              <span nz-icon nzType="mail"></span> Gửi thông báo
-            </button>
-          </div>
+      <!-- Đã gộp hoá đơn: gửi từ trang hoá đơn gộp -->
+      @if (view.mergedRows.length > 0) {
+        <div class="billing-day__tier-header">
+          <h3>Đã gộp hoá đơn ({{ view.mergedRows.length }})</h3>
+          <span class="billing-day__hint">Gửi từ trang hoá đơn gộp.</span>
         </div>
-      </ng-template>
-    </app-data-table>
-    </div>
-    @if (!expanded30() && rows30().length > collapsedRowCount) {
-      <div class="billing-day__expand-more" (click)="toggleExpanded30()">
-        <span nz-icon nzType="down"></span>
-      </div>
+        <app-data-table [config]="view.mergedConfig" [cellTemplates]="cellTemplates" (rowClick)="onRowClick($event)">
+          <ng-template #mobileCard let-row>
+            <ng-container *ngTemplateOutlet="roomCardTpl; context: { $implicit: row, selectable: false }" />
+          </ng-template>
+        </app-data-table>
+      }
+    </section>
+  } @empty {
+    @if (!loading()) {
+      <p class="billing-day__empty">Chưa có đợt chốt nào.</p>
     }
-  </div>
+  }
+
+  @if (canLoadMore()) {
+    <button nz-button nzType="default" class="billing-day__load-more" [nzLoading]="loading()" (click)="loadMore()">
+      Xem thêm
+    </button>
+  }
 
 </div>
+
+<ng-template #roomCardTpl let-row let-selected="selected" let-toggle="toggle" let-selectable="selectable">
+  <div class="billing-day-card">
+    <div class="billing-day-card__header">
+      @if (selectable) {
+        <label nz-checkbox [ngModel]="selected" (ngModelChange)="toggle()" (click)="$event.stopPropagation()"></label>
+      }
+      <strong (click)="onRowClick(row)">Phòng {{ row.roomNumber }}</strong>
+      @if (row.invoiceStatus) {
+        <app-status-badge [status]="row.invoiceStatus" />
+      } @else {
+        <span class="billing-day__no-invoice">Chưa sinh hoá đơn</span>
+      }
+    </div>
+    <div class="billing-day-card__body" (click)="onRowClick(row)">
+      <span>{{ row.tenantName ?? '—' }}</span>
+      @if (row.totalAmount !== null) {
+        <app-money-display [value]="row.totalAmount" />
+      } @else {
+        <span class="billing-day__no-invoice">—</span>
+      }
+    </div>
+    @if (selectable && row.lastFailReason) {
+      <div class="billing-day-card__reason">{{ row.lastFailReason }}</div>
+    }
+    <div class="billing-day-card__footer">
+      <span>Hạn: {{ row.dueDate ? (row.dueDate | date:'dd/MM/yyyy') : '—' }}</span>
+      @if (selectable) {
+        <button
+          *appPermission="'invoices:notify'"
+          nz-button nzType="default"
+          [disabled]="!row.invoiceId"
+          (click)="sendOne(row)"
+        >
+          <span nz-icon nzType="mail"></span> Gửi thông báo
+        </button>
+      }
+    </div>
+  </div>
+</ng-template>
 
 <ng-template #statusTpl let-value>
   @if (value) {

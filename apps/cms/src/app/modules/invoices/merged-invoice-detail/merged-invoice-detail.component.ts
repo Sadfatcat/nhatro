@@ -9,7 +9,7 @@ import { finalize } from 'rxjs';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { FormsModule } from '@angular/forms';
-import { MergedInvoice } from '@nhatro/shared-types';
+import { ApiResponse, MergedInvoice } from '@nhatro/shared-types';
 
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/feedback/toast/toast.service';
@@ -17,8 +17,6 @@ import { MoneyDisplayComponent } from '../../../shared/components/display/money-
 import { StatusBadgeComponent } from '../../../shared/components/display/status-badge/status-badge.component';
 import { PermissionDirective } from '../../../core/permission/directives/permission.directive';
 import { AuthService } from '../../../core/auth/services/auth.service';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
 
 @Component({
   selector:        'app-merged-invoice-detail',

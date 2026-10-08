@@ -8,7 +8,6 @@ export interface Room {
   floor: number;
   price: number;
   status: RoomStatus;
-  billingDay: number;
   description?: string;
   branchId?: string;
 }
@@ -19,7 +18,7 @@ export interface RoomWithUtility {
   floor:        number;
   price:        number;
   status:       RoomStatus;
-  billingDay:   number;
+  inClosingList: boolean;
   tenant:       { tenantId: string; fullName: string; username: string | null } | null;
   utilityRecord: UtilityReading | null;
 }

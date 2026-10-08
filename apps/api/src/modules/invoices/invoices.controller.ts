@@ -12,11 +12,8 @@ import { GenerateInvoiceDto } from './dto/generate-invoice.dto';
 import { BulkMarkPaidDto } from './dto/bulk-mark-paid.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { MergeInvoicesDto } from './dto/merge-invoices.dto';
-
-interface ApiResponse<T> { success: boolean; data: T | null; message: string; }
-const ok = <T>(data: T, msg = 'Thành công'): ApiResponse<T> => ({ success: true, data, message: msg });
-
-const MANAGEMENT = ['ADMIN', 'LANDLORD'];
+import { ApiResponse, ok } from '../../common/api-response';
+import { MANAGEMENT_ROLES } from '../../common/auth/roles.constants';
 
 @ApiTags('invoices')
 @Controller('invoices')
@@ -28,7 +25,7 @@ export class InvoicesController {
     private readonly notifications: NotificationsService,
   ) {}
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Post('generate')
   async generate(@Body() dto: GenerateInvoiceDto): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.generate(dto), 'Đã sinh hoá đơn.');
@@ -72,7 +69,7 @@ export class InvoicesController {
     return ok(await this.svc.findAll({ status, period, roomId, roomIds, contractId, notified, page, pageSize }));
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Get('stats/dashboard')
   async dashboardStats(): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.getDashboardStats());
@@ -90,20 +87,20 @@ export class InvoicesController {
     return ok(await this.svc.mergeInvoices(dto.invoiceIds), 'Đã gộp hoá đơn.');
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Get('merged/:id')
   async getMerged(@Param('id') id: string): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.getMergedInvoice(id));
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Post('merged/:id/notify')
   async notifyMerged(@Param('id') id: string): Promise<ApiResponse<unknown>> {
     const result = await this.notifications.sendMergedInvoice(id);
     return ok(result, result.success ? 'Đã gửi thông báo.' : (result.reason ?? 'Gửi thông báo thất bại.'));
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Patch('merged/:id/pay')
   async markMergedPaid(@Param('id') id: string, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.markMergedInvoicePaid(id, user.id), 'Đã đánh dấu thanh toán hoá đơn gộp.');
@@ -116,7 +113,7 @@ export class InvoicesController {
     return ok(null, 'Đã tách hoá đơn gộp.');
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Delete('merged/:id')
   async removeMerged(@Param('id') id: string): Promise<ApiResponse<null>> {
     await this.svc.removeMerged(id);
@@ -130,25 +127,25 @@ export class InvoicesController {
     return ok(invoice);
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Patch('bulk-mark-paid')
   async bulkMarkPaid(@Body() dto: BulkMarkPaidDto, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.bulkMarkPaid(dto, user.id), 'Đã đánh dấu thanh toán hàng loạt.');
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Patch(':id/mark-paid')
   async markPaid(@Param('id') id: string, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.markPaid(id, user.id), 'Đã đánh dấu thanh toán.');
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateInvoiceDto, @CurrentUser() user: RequestUser): Promise<ApiResponse<unknown>> {
     return ok(await this.svc.update(id, dto, user.id), 'Đã cập nhật hoá đơn.');
   }
 
-  @Roles(...MANAGEMENT)
+  @Roles(...MANAGEMENT_ROLES)
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<ApiResponse<null>> {
     await this.svc.remove(id);
